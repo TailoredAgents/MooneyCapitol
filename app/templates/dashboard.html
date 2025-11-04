@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trading Agent Dashboard</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif; margin: 24px; }
+      .layout { display: flex; gap: 16px; }
+      .lane { flex: 1; }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+      .title { font-weight: 600; }
+      .muted { color: #666; font-size: 12px; }
+      .pills { margin-top: 4px; }
+      .pill { display: inline-block; padding: 2px 6px; border-radius: 12px; background: #eee; font-size: 11px; margin-right: 4px; }
+      .right-panel { width: 260px; }
+    </style>
+  </head>
+  <body>
+    <h2>Trading Agent — Armed / PRIMED / Active</h2>
+    <div class="layout">
+      <div class="lane">
+        <h3>Armed</h3>
+        <div id="armed-list" class="lane-body"></div>
+      </div>
+      <div class="lane">
+        <h3>PRIMED</h3>
+        <div id="primed-list" class="lane-body"></div>
+      </div>
+      <div class="lane">
+        <h3>Active</h3>
+        <div id="active-list" class="lane-body"></div>
+      </div>
+      <div class="right-panel">
+        <h3>Depth Snapshot</h3>
+        <div id="depth-panel" class="card"><div class="muted">Waiting for symbols…</div></div>
+      </div>
+    </div>
+
+    <script>
+      const armedList = document.getElementById('armed-list');
+      const primedList = document.getElementById('primed-list');
+      const activeList = document.getElementById('active-list');
+      const depthPanel = document.getElementById('depth-panel');
+      const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live`);
+
+      function renderLane(container, items, emptyText) {
+        if (!items || items.length === 0) {
+          container.innerHTML = `<div class="card"><div class="title">${emptyText}</div><div class="muted">Scanning…</div></div>`;
+          return;
+        }
+        container.innerHTML = items
+          .map((item) => {
+            const spread = typeof item.spread === 'number' ? item.spread.toFixed(1) : (item.spread || 'n/a');
+            const rvol = typeof item.rvol === 'number' ? item.rvol.toFixed(2) : (item.rvol || '0.00');
+            const rr = typeof item.rr === 'number' ? item.rr.toFixed(2) : (item.rr || 'n/a');
+            const target = typeof item.target === 'number' ? item.target.toFixed(2) : (item.target || 'n/a');
+            const pills = (item.pills || []).map((p) => `<span class="pill">${p}</span>`).join('');
+            const entryValue = parseFloat(item.entry);
+            const stopValue = parseFloat(item.stop);
+            const entryText = Number.isFinite(entryValue) ? entryValue.toFixed(2) : (item.entry || 'n/a');
+            const stopText = Number.isFinite(stopValue) ? stopValue.toFixed(2) : (item.stop || 'n/a');
+            const statusText = item.status && item.status !== 'open' ? `<div class="muted">Status ${item.status}</div>` : '';
+            return `
+            <div class="card">
+              <div class="title">${item.symbol} · ${item.direction?.toUpperCase() || ''}</div>
+              <div class="muted">Entry ${entryText} · Stop ${stopText} · Target ${target}</div>
+              <div>R:R ${rr} · Spread ${spread}¢ · RVOL ${rvol}</div>
+              ${item.l2 ? `<div>L2 ${item.l2}</div>` : ''}
+              ${statusText}
+              <div class="pills">${pills}</div>
+            </div>
+          `;
+          })
+          .join('');
+      }
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'lanes') {
+            const lanes = data.lanes || {};
+            renderLane(armedList, lanes.armed, 'No armed boxes');
+            renderLane(primedList, lanes.primed, 'No primed setups');
+            renderLane(activeList, lanes.active, 'No active triggers');
+            const meta = lanes.meta || {};
+            depthPanel.innerHTML = `<div class="muted">Subscribed symbols: ${(meta.symbols || []).join(', ') || 'None'}</div>`;
+          }
+        } catch (err) {
+          console.error('ws message parse error', err);
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.error('ws error', err);
+      };
+    </script>
+  </body>
+  </html>

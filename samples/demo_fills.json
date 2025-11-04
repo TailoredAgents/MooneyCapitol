@@ -1,0 +1,48 @@
+{
+  "fills": [
+    {
+      "ext_trade_id": "demo-1",
+      "account": "demo",
+      "symbol": "XYZ",
+      "ts": "2025-11-03T14:05:00Z",
+      "side": "BUY",
+      "qty": 500,
+      "price": 4.12,
+      "fee": 2.5,
+      "setup_id": null
+    },
+    {
+      "ext_trade_id": "demo-2",
+      "account": "demo",
+      "symbol": "XYZ",
+      "ts": "2025-11-03T14:07:00Z",
+      "side": "SELL",
+      "qty": 500,
+      "price": 4.24,
+      "fee": 2.5,
+      "setup_id": null
+    },
+    {
+      "ext_trade_id": "demo-3",
+      "account": "demo",
+      "symbol": "ABC",
+      "ts": "2025-11-03T15:12:00Z",
+      "side": "SELL",
+      "qty": 400,
+      "price": 7.48,
+      "fee": 2.0,
+      "setup_id": null
+    },
+    {
+      "ext_trade_id": "demo-4",
+      "account": "demo",
+      "symbol": "ABC",
+      "ts": "2025-11-03T15:16:00Z",
+      "side": "BUY",
+      "qty": 400,
+      "price": 7.30,
+      "fee": 2.0,
+      "setup_id": null
+    }
+  ]
+}

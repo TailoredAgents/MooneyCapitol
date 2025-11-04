@@ -1,0 +1,28 @@
+# Python / build
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Envs / local
+.env
+.venv/
+venv/
+
+# Artifacts / logs
+artifacts/
+*.log
+
+# SQLite or local DBs
+*.db
+demo.db
+
+# Node/web cache (if added later)
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
