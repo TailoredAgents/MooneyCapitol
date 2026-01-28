@@ -16,6 +16,7 @@ from app.adapters.ibkr_depth import DemoDepthProvider
 from app.adapters.polygon_client import PolygonClient
 from app.adapters.slack import SlackAdapter
 from app.core.config_store import CONFIG
+from app.core.config_store import ensure_config_initialized, refresh_config
 from app.core.detectors.consolidation import Box, Candle, find_consolidation_box
 from app.core.detectors.trigger import check_break_and_retest
 from app.core.rr import project_rr
@@ -28,7 +29,8 @@ from app.services.learning import bucket_price, bucket_time, get_learning_servic
 from app.services.ledger import get_ledger_service
 from app.services.levels import find_gap_edges, find_htf_levels, nearest_target
 from app.services.live_state import set_lanes
-from app.services.runtime import update_worker_tick
+from app.services.live_state import ensure_lanes_initialized
+from app.services.runtime import ensure_worker_tick_initialized, update_worker_tick
 from app.services.watchlist import (
     WatchlistItem,
     get_or_create_symbol,
@@ -36,6 +38,7 @@ from app.services.watchlist import (
 )
 from app.utils.time import is_rth, now_et, seconds_until
 from app.workers.budget import PingBudget
+from app.services.kv_store import StateStoreError, assert_store_available
 
 
 logger = get_logger("worker")
@@ -119,6 +122,7 @@ class WorkerContext:
         self.depth_symbols: set[str] = set()
         self.ping_budget = PingBudget(limit=CONFIG.alerts.per_minute_budget_open)
         self.last_learning_report: dict | None = None
+        self._last_config_refresh: datetime | None = None
 
     def load_ranker(self):
         if self.model_loaded:
@@ -153,6 +157,7 @@ class WorkerContext:
         return self.thresholds.get("buckets", {}).get(key)
 
     def reset_if_new_day(self):
+        self.maybe_refresh_config()
         today = now_et().date()
         if self.watchlist.trade_date != today:
             logger.info("watchlist.reset", previous=str(self.watchlist.trade_date), current=str(today))
@@ -165,6 +170,15 @@ class WorkerContext:
             return []
         return [item.ticker for item in self.watchlist.finalized]
 
+    def maybe_refresh_config(self, min_interval_s: float = 15.0) -> None:
+        now = now_et()
+        if self._last_config_refresh and (now - self._last_config_refresh).total_seconds() < min_interval_s:
+            return
+        refreshed = refresh_config()
+        if refreshed:
+            logger.info("config.refreshed")
+        self._last_config_refresh = now
+
 
 CTX = WorkerContext()
 
@@ -173,6 +187,9 @@ async def every(interval_s: float, func, *args, **kwargs):
     while True:
         try:
             await func(*args, **kwargs)
+        except StateStoreError as exc:
+            logger.error("state_store.fatal", err=str(exc), job=getattr(func, "__name__", "unknown"))
+            os._exit(1)
         except Exception as exc:  # pragma: no cover - guardrails
             logger.error("job.error", err=str(exc), job=getattr(func, "__name__", "unknown"))
         await asyncio.sleep(interval_s)
@@ -743,7 +760,7 @@ async def scan_consolidations(ctx: WorkerContext):
                             state_from="armed",
                             state_to="primed",
                             direction=direction,
-                            setup_id=direction_state.setup_id,
+                            setup_id=dstate.setup_id,
                         )
                         threshold = ctx.threshold_for(symbol, dstate.features)
                         meets_threshold = True
@@ -1044,6 +1061,11 @@ async def scheduler():
 
 def main():
     logger.info("worker.start", pid=os.getpid(), t=datetime.utcnow().isoformat() + "Z")
+    assert_store_available()
+    ensure_config_initialized()
+    ensure_lanes_initialized()
+    ensure_worker_tick_initialized()
+    refresh_config()
     asyncio.run(scheduler())
 
 

@@ -37,6 +37,8 @@ Local setup
    - `python -m venv .venv && source .venv/bin/activate`
    - `pip install -r requirements.txt`
 3) Copy `.env.sample` (or `.env.example`) to `.env` and fill values.
+   - For local dev without Postgres, set `STATE_STORE=mem` (dashboard/config will be process-local).
+   - For Render/production, set `STATE_STORE=db` so API + worker share state via Postgres.
 4) Ensure Postgres is available and `DATABASE_URL` points to it.
 5) Initialize DB tables (temporary, until Alembic is wired):
    - `python -m app.db.init_db`
@@ -64,6 +66,7 @@ Deploy on Render
   - Web Service `api`: FastAPI app.
   - Worker `worker`: scheduled scans and jobs.
   - Managed Postgres database.
+- `STATE_STORE=db` is required on Render so the API and worker share config, live lanes, worker tick, and learning artifacts via Postgres.
 - Fill required env vars in the Render dashboard or `render.yaml` envVars.
 
 Notes

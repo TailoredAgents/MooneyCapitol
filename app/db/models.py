@@ -14,6 +14,7 @@ from sqlalchemy import (
     Boolean,
     UniqueConstraint,
 )
+from sqlalchemy import LargeBinary
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -147,3 +148,21 @@ class Trade(Base):
     p_and_l = Column(Float, nullable=True)
     realized_r = Column(Float, nullable=True)
     exit_reason = Column(String(32), nullable=True)
+
+
+class KVStore(Base):
+    """Small key/value store for cross-service state.
+
+    Render runs API and worker in separate services; their local files and
+    in-memory globals are not shared. This table is used to persist:
+    - app config
+    - worker tick
+    - dashboard lanes
+    - learning artifacts (thresholds/report/model bytes)
+    """
+
+    __tablename__ = "kv_store"
+    key = Column(String(128), primary_key=True)
+    value_json = Column(JSONB, nullable=True)
+    value_bytes = Column(LargeBinary, nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)

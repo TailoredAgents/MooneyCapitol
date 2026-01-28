@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 from dataclasses import dataclass
@@ -19,12 +20,19 @@ from sqlalchemy import select
 from app.db.models import Alert, Setup
 from app.db.session import get_session
 from app.observability.logging import get_logger
+from app.services.kv_store import get_bytes, get_json, set_bytes, set_json
 
 
 logger = get_logger("learning")
 
 ARTIFACT_DIR = Path("artifacts")
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+
+_MODEL_KEY = "learning_model_alert_ranker"
+_SCALER_KEY = "learning_model_alert_ranker_scaler"
+_THRESHOLDS_KEY = "learning_thresholds"
+_CANARY_KEY = "learning_thresholds_canary"
+_REPORT_KEY = "learning_report"
 
 
 PRICE_BUCKETS = [
@@ -188,14 +196,31 @@ class LearningService:
             preds[test_idx] = model.predict_proba(X_scaled[test_idx])[:, 1]
 
         model.fit(X_scaled, y)
-        joblib.dump(model, self.artifacts.model_path)
-        joblib.dump(scaler, self.artifacts.scaler_path)
+        # Persist model/scaler to DB so worker + API share artifacts across services.
+        model_buf = io.BytesIO()
+        scaler_buf = io.BytesIO()
+        joblib.dump(model, model_buf)
+        joblib.dump(scaler, scaler_buf)
+        set_bytes(_MODEL_KEY, model_buf.getvalue())
+        set_bytes(_SCALER_KEY, scaler_buf.getvalue())
+
+        # Keep local copies for optional debugging in local dev.
+        try:
+            joblib.dump(model, self.artifacts.model_path)
+            joblib.dump(scaler, self.artifacts.scaler_path)
+        except Exception:
+            pass
 
         df["p2r"] = preds
 
         threshold_report = self._grid_search(df)
-        (self.artifacts.thresholds_path).write_text(json.dumps(threshold_report["thresholds"], indent=2))
-        (self.artifacts.canary_path).write_text(json.dumps(threshold_report["thresholds_canary"], indent=2))
+        set_json(_THRESHOLDS_KEY, threshold_report["thresholds"])
+        set_json(_CANARY_KEY, threshold_report["thresholds_canary"])
+        try:
+            (self.artifacts.thresholds_path).write_text(json.dumps(threshold_report["thresholds"], indent=2))
+            (self.artifacts.canary_path).write_text(json.dumps(threshold_report["thresholds_canary"], indent=2))
+        except Exception:
+            pass
 
         report = {
             "date": trade_date.isoformat(),
@@ -206,7 +231,11 @@ class LearningService:
             "thresholds_canary": threshold_report["thresholds_canary"],
             "metrics": threshold_report["metrics"],
         }
-        self.artifacts.report_path.write_text(json.dumps(report, indent=2, default=str))
+        set_json(_REPORT_KEY, report)
+        try:
+            self.artifacts.report_path.write_text(json.dumps(report, indent=2, default=str))
+        except Exception:
+            pass
         return {"status": "trained", **report}
 
     def _grid_search(self, df: pd.DataFrame) -> dict[str, Any]:
@@ -268,21 +297,41 @@ class LearningService:
 
     # ----------------- Runtime scoring ---------------------------------------------
     def load_model(self) -> Tuple[Any, Any]:
-        if not (self.artifacts.model_path.exists() and self.artifacts.scaler_path.exists()):
-            raise FileNotFoundError("Model artifacts not found")
-        model = joblib.load(self.artifacts.model_path)
-        scaler = joblib.load(self.artifacts.scaler_path)
-        return model, scaler
+        model_bytes = get_bytes(_MODEL_KEY)
+        scaler_bytes = get_bytes(_SCALER_KEY)
+        if model_bytes and scaler_bytes:
+            model = joblib.load(io.BytesIO(model_bytes))
+            scaler = joblib.load(io.BytesIO(scaler_bytes))
+            return model, scaler
+        if self.artifacts.model_path.exists() and self.artifacts.scaler_path.exists():
+            model = joblib.load(self.artifacts.model_path)
+            scaler = joblib.load(self.artifacts.scaler_path)
+            return model, scaler
+        raise FileNotFoundError("Model artifacts not found")
 
     def load_thresholds(self) -> dict[str, Any]:
-        if not self.artifacts.thresholds_path.exists():
-            return {"buckets": {}}
-        return json.loads(self.artifacts.thresholds_path.read_text())
+        stored = get_json(_THRESHOLDS_KEY)
+        if stored:
+            return stored
+        if self.artifacts.thresholds_path.exists():
+            return json.loads(self.artifacts.thresholds_path.read_text())
+        return {"buckets": {}}
 
     def load_canary(self) -> dict[str, Any]:
-        if not self.artifacts.canary_path.exists():
-            return {"symbols": [], "buckets": {}}
-        return json.loads(self.artifacts.canary_path.read_text())
+        stored = get_json(_CANARY_KEY)
+        if stored:
+            return stored
+        if self.artifacts.canary_path.exists():
+            return json.loads(self.artifacts.canary_path.read_text())
+        return {"symbols": [], "buckets": {}}
+
+    def load_report(self) -> dict[str, Any] | None:
+        stored = get_json(_REPORT_KEY)
+        if stored:
+            return stored
+        if self.artifacts.report_path.exists():
+            return json.loads(self.artifacts.report_path.read_text())
+        return None
 
     def score(self, features: dict[str, float]) -> float | None:
         try:
