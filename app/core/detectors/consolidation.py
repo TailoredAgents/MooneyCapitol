@@ -88,9 +88,13 @@ def find_consolidation_box(
 
     atr14 = _calc_atr(candles_1m[-(cfg.max_bars + 14) :])
     closes = [c.c for c in candles_1m]
-    spread_cents = (latest_spread if latest_spread is not None else (candles_1m[-1].h - candles_1m[-1].l)) * 100
-    if spread_cents > 1.01:
-        return None
+    # `latest_spread` is expected to be bid/ask spread in dollars (not candle range).
+    # If unavailable, do not filter on spread here; runtime gating can enforce it when L2/BBO is present.
+    spread_cents = 0.0
+    if latest_spread is not None:
+        spread_cents = float(latest_spread) * 100.0
+        if spread_cents > 1.01:
+            return None
 
     best_box: Box | None = None
     best_score = -1.0

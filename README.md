@@ -58,8 +58,11 @@ Enabling IBKR depth later
 - When ready for live depth:
   1. Set `DEPTH_MODE=ibkr` in your environment.
   2. Configure `IBKR_HOST`, `IBKR_PORT`, and `IBKR_CLIENT_ID` to point at your IB Gateway/TWS instance.
-  3. Ensure the IBKR API is enabled with trusted IPs and the gateway is reachable from the worker container.
-  4. Restart the worker; `/health` will report `{"mode":"ibkr","status":"ok"}` once snapshots stream in. If credentials are missing, the service auto-falls back to demo and `/health` reports the disabled state.
+  3. (Recommended) Enable SMART depth aggregation (`IBKR_SMART_DEPTH=1`) and set `IBKR_DEPTH_LEVELS=5`.
+  4. Ensure the IBKR API is enabled with trusted IPs and the gateway is reachable from the worker container.
+  5. Restart the worker; `/health` will report an `ibkr` mode and the worker will mark snapshots once depth streams in.
+
+Deployment note: IBKR market depth requires an always-on IB Gateway/TWS process. Render-hosted containers typically cannot reach your local gateway unless you expose it securely. In practice, run the worker where it can reliably connect to the gateway (same machine/VPC/VPS), or use demo depth until an IBKR connectivity plan is in place.
 
 Deploy on Render
 - `render.yaml` defines:

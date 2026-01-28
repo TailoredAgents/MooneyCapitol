@@ -708,6 +708,17 @@ async def scan_consolidations(ctx: WorkerContext):
             snapshot = await ctx.depth.snapshot(symbol)
         except Exception as exc:  # pragma: no cover
             logger.error("depth.snapshot.error", symbol=symbol, err=str(exc))
+        if snapshot and snapshot.levels:
+            spread = snapshot.levels.get("spread")
+            if spread is not None:
+                try:
+                    spread_cents = float(spread) * 100.0
+                    state.box.spread_cents = spread_cents
+                    for dstate in state.contexts.values():
+                        if dstate.features is not None:
+                            dstate.features["spread_cents"] = spread_cents
+                except (TypeError, ValueError):
+                    pass
         for direction, dstate in state.contexts.items():
             dstate.no_l2 = snapshot is None
             now = now_et()

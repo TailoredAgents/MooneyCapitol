@@ -6,6 +6,7 @@ from typing import Dict, Iterable, Protocol
 
 from app.observability.logging import get_logger
 from app.services.depth import set_status
+from app.core.config_store import CONFIG
 
 
 logger = get_logger("depth")
@@ -50,7 +51,10 @@ def get_depth_provider():
         set_status(status)
         return DemoDepthProvider()
 
-    provider = IBKRDepthProvider()
+    provider = IBKRDepthProvider(
+        smart_depth=bool(getattr(CONFIG.depth_provider, "smart_aggregate", True)),
+        num_rows=int(getattr(CONFIG.detectors.l2_confirm, "levels", 5) or 5),
+    )
     if not provider.credentials_present:
         logger.warning("depth.ibkr.credentials_missing")
         status = {"mode": "ibkr", "status": "disabled", "reason": "no credentials", "fallback": "demo"}

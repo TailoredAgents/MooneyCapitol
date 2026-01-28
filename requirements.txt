@@ -21,5 +21,6 @@ psycopg2-binary==2.9.9
 alembic==1.13.3
 
 slack_sdk==3.33.4
+ib_insync==0.9.86
 
 pytest==8.3.3
