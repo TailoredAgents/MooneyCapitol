@@ -12,6 +12,7 @@ venv/
 
 # Artifacts / logs
 artifacts/
+captures/
 *.log
 
 # SQLite or local DBs

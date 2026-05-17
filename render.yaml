@@ -42,6 +42,30 @@ services:
         sync: false
       - key: TS_REFRESH_TOKEN
         sync: false
+      - key: WEBULL_MASTER_API_ENDPOINT
+        sync: false
+      - key: WEBULL_MASTER_APP_KEY
+        sync: false
+      - key: WEBULL_MASTER_APP_SECRET
+        sync: false
+      - key: WEBULL_MASTER_ACCOUNT_ID
+        sync: false
+      - key: WEBULL_MASTER_ACCOUNT_EQUITY
+        sync: false
+      - key: WEBULL_PERSONAL_API_ENDPOINT
+        sync: false
+      - key: WEBULL_PERSONAL_APP_KEY
+        sync: false
+      - key: WEBULL_PERSONAL_APP_SECRET
+        sync: false
+      - key: WEBULL_PERSONAL_ACCOUNT_ID
+        sync: false
+      - key: WEBULL_PERSONAL_ACCOUNT_EQUITY
+        sync: false
+      - key: LEARNING_XGB_MIN_ROWS
+        value: 20
+      - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES
+        value: 30
 
   - type: worker
     name: trading-agent-worker
@@ -77,3 +101,27 @@ services:
         sync: false
       - key: TS_REFRESH_TOKEN
         sync: false
+      - key: WEBULL_MASTER_API_ENDPOINT
+        sync: false
+      - key: WEBULL_MASTER_APP_KEY
+        sync: false
+      - key: WEBULL_MASTER_APP_SECRET
+        sync: false
+      - key: WEBULL_MASTER_ACCOUNT_ID
+        sync: false
+      - key: WEBULL_MASTER_ACCOUNT_EQUITY
+        sync: false
+      - key: WEBULL_PERSONAL_API_ENDPOINT
+        sync: false
+      - key: WEBULL_PERSONAL_APP_KEY
+        sync: false
+      - key: WEBULL_PERSONAL_APP_SECRET
+        sync: false
+      - key: WEBULL_PERSONAL_ACCOUNT_ID
+        sync: false
+      - key: WEBULL_PERSONAL_ACCOUNT_EQUITY
+        sync: false
+      - key: LEARNING_XGB_MIN_ROWS
+        value: 20
+      - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES
+        value: 30

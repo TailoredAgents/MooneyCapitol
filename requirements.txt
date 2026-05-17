@@ -12,6 +12,7 @@ numpy==2.1.1
 pandas==2.2.3
 scikit-learn==1.5.2
 joblib==1.4.2
+xgboost==3.2.0
 
 pydantic==2.9.2
 pydantic-settings==2.6.1
@@ -22,5 +23,6 @@ alembic==1.13.3
 
 slack_sdk==3.33.4
 ib_insync==0.9.86
+webull-openapi-python-sdk==2.0.1
 
 pytest==8.3.3

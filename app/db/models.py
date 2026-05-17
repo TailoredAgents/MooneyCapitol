@@ -13,6 +13,8 @@ from sqlalchemy import (
     ForeignKey,
     Boolean,
     UniqueConstraint,
+    Index,
+    Text,
 )
 from sqlalchemy import LargeBinary
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
@@ -148,6 +150,211 @@ class Trade(Base):
     p_and_l = Column(Float, nullable=True)
     realized_r = Column(Float, nullable=True)
     exit_reason = Column(String(32), nullable=True)
+
+
+class CopyTargetAccount(Base):
+    __tablename__ = "copy_target_accounts"
+    id = Column(BigInteger, primary_key=True)
+    name = Column(String(64), unique=True, nullable=False, index=True)
+    broker = Column(String(32), nullable=False, default="webull")
+    environment = Column(String(16), nullable=False, default="paper")
+    enabled = Column(Boolean, nullable=False, default=False)
+    account_ref = Column(String(128), nullable=True)
+    equity = Column(Float, nullable=True)
+    sizing_mode = Column(String(32), nullable=False, default="disabled")
+    sizing_value = Column(Float, nullable=False, default=0.0)
+    min_notional = Column(Float, nullable=False, default=0.0)
+    max_notional_per_trade = Column(Float, nullable=False, default=0.0)
+    max_position_pct = Column(Float, nullable=False, default=0.0)
+    max_daily_notional = Column(Float, nullable=False, default=0.0)
+    max_daily_trades = Column(Integer, nullable=False, default=0)
+    regular_hours_only = Column(Boolean, nullable=False, default=True)
+    shorting_enabled = Column(Boolean, nullable=False, default=False)
+    allowlist = Column(ARRAY(String(16)), nullable=True)
+    blocklist = Column(ARRAY(String(16)), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+
+class MasterExecution(Base):
+    __tablename__ = "master_executions"
+    id = Column(BigInteger, primary_key=True)
+    broker = Column(String(32), nullable=False, default="webull")
+    account_ref = Column(String(128), nullable=True, index=True)
+    broker_execution_id = Column(String(128), nullable=False)
+    broker_order_id = Column(String(128), nullable=True)
+    symbol = Column(String(16), nullable=False, index=True)
+    side = Column(String(8), nullable=False)
+    qty = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+    asset_class = Column(String(32), nullable=False, default="equity")
+    executed_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    received_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    raw_payload = Column(JSONB, nullable=True)
+    __table_args__ = (
+        UniqueConstraint("broker", "account_ref", "broker_execution_id", name="uq_master_exec_broker_account_exec"),
+    )
+
+
+class CopyOrder(Base):
+    __tablename__ = "copy_orders"
+    id = Column(BigInteger, primary_key=True)
+    master_execution_id = Column(BigInteger, ForeignKey("master_executions.id"), index=True, nullable=False)
+    target_account_id = Column(BigInteger, ForeignKey("copy_target_accounts.id"), index=True, nullable=False)
+    broker = Column(String(32), nullable=False, default="webull")
+    client_order_id = Column(String(128), nullable=False, unique=True, index=True)
+    broker_order_id = Column(String(128), nullable=True, index=True)
+    symbol = Column(String(16), nullable=False, index=True)
+    side = Column(String(8), nullable=False)
+    qty = Column(Float, nullable=False)
+    order_type = Column(String(16), nullable=False, default="market")
+    time_in_force = Column(String(16), nullable=False, default="day")
+    status = Column(String(32), nullable=False, default="created", index=True)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    filled_at = Column(DateTime(timezone=True), nullable=True)
+    filled_qty = Column(Float, nullable=True)
+    avg_fill_price = Column(Float, nullable=True)
+    reject_reason = Column(String(512), nullable=True)
+    latency_ms = Column(Float, nullable=True)
+    raw_submit_payload = Column(JSONB, nullable=True)
+    raw_response_payload = Column(JSONB, nullable=True)
+
+
+class CopyOrderEvent(Base):
+    __tablename__ = "copy_order_events"
+    id = Column(BigInteger, primary_key=True)
+    copy_order_id = Column(BigInteger, ForeignKey("copy_orders.id"), index=True, nullable=False)
+    event_type = Column(String(64), nullable=False)
+    status = Column(String(32), nullable=True)
+    event_at = Column(DateTime(timezone=True), nullable=True)
+    received_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    raw_payload = Column(JSONB, nullable=True)
+
+
+class CopyReconciliation(Base):
+    __tablename__ = "copy_reconciliations"
+    id = Column(BigInteger, primary_key=True)
+    target_account_id = Column(BigInteger, ForeignKey("copy_target_accounts.id"), index=True, nullable=True)
+    symbol = Column(String(16), nullable=True, index=True)
+    severity = Column(String(16), nullable=False, default="warning")
+    status = Column(String(32), nullable=False, default="open", index=True)
+    message = Column(String(1024), nullable=False)
+    detected_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    raw_context = Column(JSONB, nullable=True)
+
+
+class CopierAuditEvent(Base):
+    __tablename__ = "copier_audit_events"
+    id = Column(BigInteger, primary_key=True)
+    event_type = Column(String(64), nullable=False, index=True)
+    actor = Column(String(128), nullable=True)
+    target_account_id = Column(BigInteger, ForeignKey("copy_target_accounts.id"), index=True, nullable=True)
+    message = Column(String(1024), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    payload = Column(JSONB, nullable=True)
+
+
+class AccountSnapshot(Base):
+    __tablename__ = "account_snapshots"
+    id = Column(BigInteger, primary_key=True)
+    account_ref = Column(String(128), nullable=False, index=True)
+    account_name = Column(String(64), nullable=False, index=True)
+    account_type = Column(String(20), nullable=False)
+    broker = Column(String(32), nullable=False, default="webull")
+    snapshot_time = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    market_session = Column(String(20), nullable=False, default="unknown")
+    cash_balance = Column(Float, nullable=True)
+    equity_value = Column(Float, nullable=True)
+    total_value = Column(Float, nullable=False)
+    buying_power = Column(Float, nullable=True)
+    day_trades_used = Column(Integer, nullable=True)
+    day_trades_remaining = Column(Integer, nullable=True)
+    unrealized_pnl = Column(Float, nullable=False, default=0.0)
+    realized_pnl_today = Column(Float, nullable=False, default=0.0)
+    total_pnl_today = Column(Float, nullable=False, default=0.0)
+    max_drawdown_today = Column(Float, nullable=False, default=0.0)
+    max_profit_today = Column(Float, nullable=False, default=0.0)
+    position_count = Column(Integer, nullable=False, default=0)
+    total_exposure = Column(Float, nullable=False, default=0.0)
+    risk_level = Column(String(20), nullable=False, default="normal")
+    data_source = Column(String(50), nullable=False, default="webull_api")
+    raw_payload = Column(JSONB, nullable=True)
+    __table_args__ = (
+        Index("idx_account_snapshot_ref_time", "account_ref", "snapshot_time"),
+        Index("idx_account_snapshot_name_time", "account_name", "snapshot_time"),
+    )
+
+
+class PositionSnapshot(Base):
+    __tablename__ = "position_snapshots"
+    id = Column(BigInteger, primary_key=True)
+    account_ref = Column(String(128), nullable=False, index=True)
+    account_name = Column(String(64), nullable=False, index=True)
+    symbol = Column(String(16), nullable=False, index=True)
+    snapshot_time = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    qty = Column(Float, nullable=False)
+    avg_price = Column(Float, nullable=True)
+    current_price = Column(Float, nullable=True)
+    market_value = Column(Float, nullable=False, default=0.0)
+    cost_basis = Column(Float, nullable=False, default=0.0)
+    unrealized_pnl = Column(Float, nullable=False, default=0.0)
+    unrealized_pnl_pct = Column(Float, nullable=True)
+    side = Column(String(10), nullable=False, default="long")
+    raw_payload = Column(JSONB, nullable=True)
+    __table_args__ = (
+        Index("idx_position_snapshot_account_symbol_time", "account_ref", "symbol", "snapshot_time"),
+    )
+
+
+class PnlAlert(Base):
+    __tablename__ = "pnl_alerts"
+    id = Column(BigInteger, primary_key=True)
+    account_ref = Column(String(128), nullable=False, index=True)
+    account_name = Column(String(64), nullable=False, index=True)
+    account_type = Column(String(20), nullable=False)
+    alert_time = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    alert_type = Column(String(50), nullable=False)
+    severity = Column(String(20), nullable=False, index=True)
+    threshold_value = Column(Float, nullable=True)
+    actual_value = Column(Float, nullable=True)
+    account_value = Column(Float, nullable=True)
+    unrealized_pnl = Column(Float, nullable=False, default=0.0)
+    realized_pnl = Column(Float, nullable=False, default=0.0)
+    message = Column(Text, nullable=False)
+    triggered_by = Column(String(50), nullable=False, default="pnl_monitor")
+    action_taken = Column(String(100), nullable=True)
+    acknowledged = Column(Boolean, nullable=False, default=False)
+    acknowledged_by = Column(String(128), nullable=True)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    raw_context = Column(JSONB, nullable=True)
+    __table_args__ = (
+        Index("idx_pnl_alert_account_time", "account_ref", "alert_time"),
+    )
+
+
+class TradingSession(Base):
+    __tablename__ = "trading_sessions"
+    id = Column(BigInteger, primary_key=True)
+    account_ref = Column(String(128), nullable=False, index=True)
+    account_name = Column(String(64), nullable=False, index=True)
+    trade_date = Column(Date, nullable=False, index=True)
+    session_start = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    session_end = Column(DateTime(timezone=True), nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
+    starting_value = Column(Float, nullable=False)
+    ending_value = Column(Float, nullable=True)
+    realized_pnl = Column(Float, nullable=False, default=0.0)
+    unrealized_pnl = Column(Float, nullable=False, default=0.0)
+    total_pnl = Column(Float, nullable=False, default=0.0)
+    max_drawdown = Column(Float, nullable=False, default=0.0)
+    max_profit = Column(Float, nullable=False, default=0.0)
+    trades_count = Column(Integer, nullable=False, default=0)
+    notes = Column(Text, nullable=True)
+    __table_args__ = (
+        UniqueConstraint("account_ref", "trade_date", name="uq_trading_session_account_date"),
+    )
 
 
 class KVStore(Base):

@@ -1,0 +1,12 @@
+{
+  "account_id": "master-account",
+  "order_id": "sample-master-order-1",
+  "client_order_id": "sample-master-client-1",
+  "symbol": "AAPL",
+  "side": "BUY",
+  "status": "FILLED",
+  "filled_qty": "3",
+  "avg_fill_price": "12.50",
+  "filled_at": "2026-05-16T14:30:00+00:00",
+  "instrument_type": "EQUITY"
+}

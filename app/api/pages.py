@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+from app.api.auth import require_dashboard_auth
 
 
 router = APIRouter()
@@ -12,7 +14,11 @@ env = Environment(
 )
 
 
-@router.get("/dashboard", response_class=HTMLResponse)
+@router.get(
+    "/dashboard",
+    response_class=HTMLResponse,
+    dependencies=[Depends(require_dashboard_auth)],
+)
 def dashboard(request: Request):
     template = env.get_template("dashboard.html")
     return template.render()

@@ -15,6 +15,18 @@ from app.adapters.depth_provider import DepthSnapshot, get_depth_provider
 from app.adapters.ibkr_depth import DemoDepthProvider
 from app.adapters.polygon_client import PolygonClient
 from app.adapters.slack import SlackAdapter
+from app.copier.operator_alerts import (
+    OperatorAlertThrottle,
+    listener_error_alert_text,
+    position_sync_alert_text,
+    readiness_alert_text,
+    reconciliation_alert_text,
+    recovery_alert_text,
+)
+from app.copier.readiness import evaluate_copier_readiness
+from app.copier.reconciliation import CopierStartupRecovery, CopyOrderReconciler, CopyPositionReconciler
+from app.copier.runtime import start_webull_copier
+from app.copier.state import set_copier_status
 from app.core.config_store import CONFIG
 from app.core.config_store import ensure_config_initialized, refresh_config
 from app.core.detectors.consolidation import Box, Candle, find_consolidation_box
@@ -25,11 +37,12 @@ from app.db.models import Setup
 from app.db.session import get_session
 from app.observability.logging import get_logger
 from app.services.depth import mark_snapshot, mark_stale
-from app.services.learning import bucket_price, bucket_time, get_learning_service
+from app.services.learning import bucket_price, bucket_time, get_learning_service, classify_trading_regime, get_regime_features
 from app.services.ledger import get_ledger_service
 from app.services.levels import find_gap_edges, find_htf_levels, nearest_target
 from app.services.live_state import set_lanes
 from app.services.live_state import ensure_lanes_initialized
+from app.services.pnl_monitor import PnlMonitor
 from app.services.runtime import ensure_worker_tick_initialized, update_worker_tick
 from app.services.watchlist import (
     WatchlistItem,
@@ -110,6 +123,7 @@ class WorkerContext:
         self.depth_is_demo = isinstance(self.depth, DemoDepthProvider)
         self.ledger = get_ledger_service()
         self.learning = get_learning_service()
+        self.pnl_monitor = PnlMonitor(slack=self.slack)
         self.model_loaded = False
         self.rank_model = None
         self.rank_scaler = None
@@ -123,6 +137,11 @@ class WorkerContext:
         self.ping_budget = PingBudget(limit=CONFIG.alerts.per_minute_budget_open)
         self.last_learning_report: dict | None = None
         self._last_config_refresh: datetime | None = None
+        self.copy_reconciler = CopyOrderReconciler()
+        self.copy_position_reconciler = CopyPositionReconciler()
+        self.copy_recovery = CopierStartupRecovery(reconciler=self.copy_reconciler)
+        self.copier_recovery_done = False
+        self.copier_alerts = OperatorAlertThrottle()
 
     def load_ranker(self):
         if self.model_loaded:
@@ -134,21 +153,7 @@ class WorkerContext:
             self.model_loaded = False
 
     def score_features(self, symbol: str, features: dict[str, float]) -> float | None:
-        self.load_ranker()
-        if not self.model_loaded or not self.rank_model or not self.rank_scaler:
-            return None
-        vector = np.array([[features.get(k, 0.0) for k in [
-            "box_height",
-            "box_bars",
-            "rvol_break",
-            "l2_mean",
-            "l2_persist",
-            "dist_htf",
-            "dist_gap",
-            "spread_cents",
-        ]]])
-        transformed = self.rank_scaler.transform(vector)
-        return float(self.rank_model.predict_proba(transformed)[0, 1])
+        return self.learning.score(features)
     
     def threshold_for(self, symbol: str, features: dict[str, float]) -> dict[str, float] | None:
         key = f"{features.get('price_bucket')}|{features.get('time_bucket')}"
@@ -668,7 +673,7 @@ async def scan_consolidations(ctx: WorkerContext):
                 detected_ts = now_et()
                 dist_htf = _nearest_htf_distance(levels, direction, entry)
                 dist_gap = _gap_distance(levels, direction, entry)
-                features = {
+                base_features = {
                     "box_height": box.height,
                     "box_bars": box.bars,
                     "rvol_break": box.rvol or 0.0,
@@ -681,7 +686,13 @@ async def scan_consolidations(ctx: WorkerContext):
                     "price_bucket": bucket_price(entry),
                     "time_bucket": bucket_time(detected_ts),
                     "direction_long": 1.0 if direction == "long" else 0.0,
+                    "score": int((rr or 0) * 20 + box.quality_score * 10 + (box.rvol or 0) * 5),
+                    "rr_min": rr or 0.0,
                 }
+                
+                # Add regime-aware features
+                regime = classify_trading_regime(detected_ts)
+                features = get_regime_features(regime, base_features)
                 dstate.features = features
 
             rr_under = all((d.rr or 0) < gating_cfg.min_rr for d in state.contexts.values())
@@ -981,6 +992,70 @@ async def sync_trades(ctx: WorkerContext):
         logger.info("ledger.sync", count=inserted, date=str(trade_date))
 
 
+async def reconcile_copy_orders(ctx: WorkerContext):
+    ctx.maybe_refresh_config()
+    if not CONFIG.copier.enabled:
+        return
+    result = await asyncio.to_thread(ctx.copy_reconciler.reconcile_open_orders, 100)
+    if result.checked or result.errors or result.mismatches:
+        logger.info(
+            "copier.reconcile",
+            checked=result.checked,
+            updated=result.updated,
+            mismatches=result.mismatches,
+            errors=result.errors,
+        )
+    text = reconciliation_alert_text(result)
+    if text and ctx.copier_alerts.allow("reconciliation"):
+        ctx.slack.post(text)
+
+
+async def sync_copy_positions(ctx: WorkerContext):
+    ctx.maybe_refresh_config()
+    if not CONFIG.copier.enabled:
+        return
+    result = await asyncio.to_thread(ctx.copy_position_reconciler.sync_positions)
+    if result.targets_checked or result.errors or result.mismatches:
+        logger.info(
+            "copier.position_sync",
+            targets_checked=result.targets_checked,
+            symbols_checked=result.symbols_checked,
+            mismatches=result.mismatches,
+            errors=result.errors,
+        )
+    text = position_sync_alert_text(result)
+    if text and ctx.copier_alerts.allow("position_sync"):
+        ctx.slack.post(text)
+
+
+async def refresh_pnl_snapshots(ctx: WorkerContext):
+    ctx.maybe_refresh_config()
+    statuses = await asyncio.to_thread(ctx.pnl_monitor.collect_once)
+    if statuses:
+        logger.info(
+            "pnl.refresh",
+            accounts=len(statuses),
+            emergency=sum(1 for status in statuses if status.risk_level == "emergency"),
+            critical=sum(1 for status in statuses if status.risk_level == "critical"),
+        )
+
+
+async def copier_readiness_alert_job(ctx: WorkerContext):
+    ctx.maybe_refresh_config()
+    if not CONFIG.copier.enabled:
+        return
+    try:
+        with get_session() as session:
+            readiness = evaluate_copier_readiness(session)
+    except Exception as exc:
+        if ctx.copier_alerts.allow("readiness_error"):
+            ctx.slack.post(f"Copier readiness check failed: {exc}")
+        return
+    text = readiness_alert_text(readiness)
+    if text and ctx.copier_alerts.allow("readiness"):
+        ctx.slack.post(text)
+
+
 async def eod_summary(ctx: WorkerContext):
     trade_date = now_et().date()
     await sync_trades(ctx)
@@ -1007,7 +1082,8 @@ async def eod_summary(ctx: WorkerContext):
 async def nightly_learning_job(ctx: WorkerContext):
     trade_date = now_et().date()
     try:
-        result = await asyncio.to_thread(ctx.learning.train, trade_date)
+        # Enhanced learning with sandbox simulation
+        result = await ctx.learning.train_with_sandbox(trade_date)
     except Exception as exc:  # pragma: no cover - safety net
         logger.error("learning.nightly.error", err=str(exc))
         ctx.slack.post(f"Nightly Learning failed: {exc}")
@@ -1017,10 +1093,47 @@ async def nightly_learning_job(ctx: WorkerContext):
         ctx.threshold_canary = ctx.learning.load_canary()
         ctx.model_loaded = False
         ctx.last_learning_report = result
+        feature_importance = result.get("feature_importance") or []
+        top_features = feature_importance[:5]
+        feature_lines = ""
+        if top_features:
+            feature_lines = "\nTop features: " + ", ".join(
+                f"{item.get('feature')}={item.get('importance')}" for item in top_features
+            )
+        label_breakdown = result.get("label_breakdown") or {}
+        labels_text = ""
+        if label_breakdown:
+            labels_text = "\nLabels: " + ", ".join(f"{key}={value}" for key, value in label_breakdown.items())
+        regime_text = ""
+        if result.get("regime_specialists"):
+            regimes_trained = result["regime_specialists"].get("regimes_trained", [])
+            total_regime_samples = result["regime_specialists"].get("total_samples", 0)
+            regime_text = f"\nRegime Specialists: {len(regimes_trained)} trained ({', '.join(regimes_trained)}) · {total_regime_samples} samples"
+        
+        sandbox_text = ""
+        if result.get("sandbox_enhanced", {}).get("enabled"):
+            real_samples = result["sandbox_enhanced"].get("real_samples", 0)
+            synthetic_samples = result["sandbox_enhanced"].get("synthetic_samples", 0)
+            enhancement_ratio = result["sandbox_enhanced"].get("enhancement_ratio", 0.0)
+            sandbox_text = f"\nSandbox Enhanced: {synthetic_samples} synthetic + {real_samples} real ({enhancement_ratio:.1f}x data multiplier)"
+
+        ranking_text = ""
+        ranking = result.get("ranking_metrics") or {}
+        if ranking.get("taken_rows"):
+            top5 = float(ranking.get("top_5_taken_hit_rate", 0.0)) * 100.0
+            top10 = float(ranking.get("top_10_taken_hit_rate", 0.0)) * 100.0
+            median_rank = ranking.get("median_taken_rank")
+            ranking_text = f"\nMaster ranking: top5 {top5:.1f}% · top10 {top10:.1f}% · median rank {median_rank}"
+        
         message = (
             f"Nightly Learning Summary · {trade_date}\n"
-            f"Rows {result.get('rows')} · Positives {result.get('positives')}\n"
+            f"Model {result.get('model_type', 'unknown')} · Rows {result.get('rows')} · Positives {result.get('positives')}\n"
             f"Thresholds buckets {len(result.get('thresholds', {}).get('buckets', {}))}"
+            f"{regime_text}"
+            f"{sandbox_text}"
+            f"{ranking_text}"
+            f"{labels_text}"
+            f"{feature_lines}"
         )
         ctx.slack.post(message)
     else:
@@ -1033,6 +1146,11 @@ async def scheduler():
     asyncio.create_task(every(120.0, build_longlist, CTX))
     asyncio.create_task(every(10.0, scan_consolidations, CTX))
     asyncio.create_task(every(300.0, sync_trades, CTX))
+    asyncio.create_task(every(60.0, reconcile_copy_orders, CTX))
+    asyncio.create_task(every(30.0, sync_copy_positions, CTX))
+    asyncio.create_task(every(60.0, refresh_pnl_snapshots, CTX))
+    asyncio.create_task(every(300.0, copier_readiness_alert_job, CTX))
+    asyncio.create_task(copier_listener_job())
 
     async def freeze_job():
         while True:
@@ -1068,6 +1186,50 @@ async def scheduler():
 
     while True:
         await asyncio.sleep(3600)
+
+
+async def copier_listener_job():
+    while True:
+        refresh_config()
+        if not CONFIG.copier.enabled:
+            set_copier_status(state="disabled", master_connected=False)
+            CTX.copier_recovery_done = False
+            await asyncio.sleep(30)
+            continue
+        try:
+            if not CTX.copier_recovery_done:
+                set_copier_status(state="recovering", master_connected=False, last_error=None)
+                recovery = await asyncio.to_thread(CTX.copy_recovery.recover, 250)
+                CTX.copier_recovery_done = True
+                set_copier_status(
+                    state="recovered",
+                    master_connected=False,
+                    recovery={
+                        "checked": recovery.checked,
+                        "updated": recovery.updated,
+                        "mismatches": recovery.mismatches,
+                        "errors": recovery.errors,
+                        "stale_open_orders": recovery.stale_open_orders,
+                    },
+                )
+                logger.info(
+                    "copier.recovery",
+                    checked=recovery.checked,
+                    updated=recovery.updated,
+                    mismatches=recovery.mismatches,
+                    errors=recovery.errors,
+                    stale_open_orders=recovery.stale_open_orders,
+                )
+                text = recovery_alert_text(recovery)
+                if text and CTX.copier_alerts.allow("recovery"):
+                    CTX.slack.post(text)
+            await asyncio.to_thread(start_webull_copier)
+        except Exception as exc:
+            logger.error("copier.listener.error", err=str(exc))
+            set_copier_status(state="error", master_connected=False, last_error=str(exc))
+            if CTX.copier_alerts.allow("listener_error"):
+                CTX.slack.post(listener_error_alert_text(exc))
+        await asyncio.sleep(30)
 
 
 def main():

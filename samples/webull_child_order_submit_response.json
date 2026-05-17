@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "data": {
+    "orderId": "sample-child-order-1",
+    "clientOrderId": "mc6a7c30755c50dca9fa1cc0b4feb7ef",
+    "orderStatus": "SUBMITTED",
+    "createdAt": "2026-05-16T14:30:01+00:00"
+  }
+}

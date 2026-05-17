@@ -54,4 +54,5 @@ def refresh_config() -> bool:
     CONFIG.retention_days = cfg.retention_days
     CONFIG.reports = cfg.reports
     CONFIG.depth_provider = cfg.depth_provider
+    CONFIG.copier = cfg.copier
     return True

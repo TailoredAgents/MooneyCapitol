@@ -3,79 +3,1020 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Trading Agent Dashboard</title>
+    <title>MooneyCapitol Dashboard</title>
     <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif; margin: 24px; }
-      .layout { display: flex; gap: 16px; }
-      .lane { flex: 1; }
-      .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-      .title { font-weight: 600; }
-      .muted { color: #666; font-size: 12px; }
-      .pills { margin-top: 4px; }
-      .pill { display: inline-block; padding: 2px 6px; border-radius: 12px; background: #eee; font-size: 11px; margin-right: 4px; }
-      .right-panel { width: 260px; }
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --panel-hover: #f9fafb;
+        --line: #e2e8f0;
+        --line-light: #f1f5f9;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --text-light: #94a3b8;
+        --accent: #2563eb;
+        --accent-light: #dbeafe;
+        --accent-dark: #1d4ed8;
+        --success: #059669;
+        --success-light: #d1fae5;
+        --warning: #d97706;
+        --warning-light: #fed7aa;
+        --danger: #dc2626;
+        --danger-light: #fee2e2;
+        --info: #0891b2;
+        --info-light: #cffafe;
+        --armed: #7c3aed;
+        --armed-light: #ede9fe;
+        --primed: #ea580c;
+        --primed-light: #fed7aa;
+        --active: #dc2626;
+        --active-light: #fee2e2;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .status-indicators {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-light);
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+      .status-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
+      .status-dot.disconnected { background: var(--danger); }
+      .status-dot.warning { background: var(--warning); }
+      .header-right {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+      }
+      .emergency-kill {
+        background: var(--danger);
+        border: 2px solid var(--danger);
+        color: white;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+      }
+      .emergency-kill:hover {
+        background: #b91c1c;
+        border-color: #b91c1c;
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+      }
+      .emergency-kill:active {
+        transform: scale(0.98);
+      }
+      h1 { 
+        margin: 0; 
+        font-size: 20px; 
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      h2 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+      h3 { margin: 0 0 10px; font-size: 14px; font-weight: 500; }
+      .tabs { display: flex; gap: 8px; }
+      .tab-button, button {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 10px 16px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        position: relative;
+      }
+      .tab-button:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent-light);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+      .tab-button.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+      }
+      button.primary { 
+        background: var(--accent); 
+        border-color: var(--accent); 
+        color: #fff; 
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+      }
+      button.primary:hover {
+        background: var(--accent-dark);
+        border-color: var(--accent-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+      }
+      button.danger { 
+        background: var(--danger); 
+        border-color: var(--danger); 
+        color: #fff; 
+        font-weight: 600;
+      }
+      button.danger:hover {
+        background: #b91c1c;
+        border-color: #b91c1c;
+        transform: translateY(-1px);
+      }
+      main { padding: 20px 24px 32px; }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+      .layout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 280px; gap: 20px; }
+      .lane, .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        min-width: 0;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        transition: box-shadow 0.2s ease;
+      }
+      .lane:hover, .panel:hover {
+        box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
+      }
+      .lane h2 {
+        margin: 0 0 16px;
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .lane[data-lane="armed"] h2::before {
+        content: "🛡️";
+        font-size: 18px;
+      }
+      .lane[data-lane="primed"] h2::before {
+        content: "🎯";
+        font-size: 18px;
+      }
+      .lane[data-lane="active"] h2::before {
+        content: "🚀";
+        font-size: 18px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 12px;
+        background: var(--panel);
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
+        border-color: var(--accent-light);
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      .title { 
+        font-weight: 700; 
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .direction.long { color: var(--success); font-weight: 600; }
+      .direction.short { color: var(--danger); font-weight: 600; }
+      .rr-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 6px;
+        line-height: 1;
+      }
+      .rr-badge.good { background: var(--success-light); color: var(--success); }
+      .rr-badge.warning { background: var(--warning-light); color: var(--warning); }
+      .card-metrics {
+        display: flex;
+        gap: 8px;
+        margin: 6px 0;
+        font-size: 12px;
+        color: var(--text-muted);
+        flex-wrap: wrap;
+      }
+      .metric {
+        font-family: 'SF Mono', Monaco, 'Roboto Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .card-secondary {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin: 4px 0 8px;
+        line-height: 1.3;
+      }
+      .muted { color: var(--text-muted); font-size: 12px; }
+      .pills { margin-top: 6px; }
+      .pill {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        background: var(--line-light);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 500;
+        margin: 0 6px 6px 0;
+        transition: all 0.2s ease;
+      }
+      .pill.ack { background: var(--success-light); color: var(--success); }
+      .pill.pass { background: var(--info-light); color: var(--info); }
+      .pill.disc { background: var(--warning-light); color: var(--warning); }
+      .pill.demo { background: var(--warning-light); color: var(--warning); }
+      .pill.spread { background: var(--danger-light); color: var(--danger); }
+      .pill.rr-low { background: var(--warning-light); color: var(--warning); }
+      .pill.risk-normal { background: var(--success-light); color: var(--success); }
+      .pill.risk-warning { background: var(--warning-light); color: var(--warning); }
+      .pill.risk-critical, .pill.risk-emergency { background: var(--danger-light); color: var(--danger); }
+      .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+      .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 12px;
+        min-height: 72px;
+      }
+      .stat .value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+      .section { margin-top: 16px; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th, td {
+        border-bottom: 1px solid var(--line);
+        padding: 8px;
+        text-align: left;
+        vertical-align: middle;
+      }
+      th { font-size: 12px; color: var(--muted); background: #f2f4f7; }
+      tr:last-child td { border-bottom: 0; }
+      input, select {
+        width: 100%;
+        min-width: 84px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 7px 8px;
+        font: inherit;
+        background: #fff;
+      }
+      input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; }
+      .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+      .status-line { min-height: 20px; margin-top: 8px; color: var(--muted); }
+      .status-line.error { color: var(--danger); }
+      .status-line.ok { color: var(--ok); }
+      .scroll { overflow-x: auto; }
+      .check-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .check {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 10px;
+        background: #fff;
+      }
+      .check.ok { border-color: #a6d8bd; }
+      .check.bad { border-color: #f3b5ae; }
+      .check .mark { font-weight: 800; margin-right: 6px; }
+      @media (max-width: 1000px) {
+        .layout, .grid, .grid.two, .check-list { grid-template-columns: 1fr; }
+        header { align-items: flex-start; flex-direction: column; }
+      }
     </style>
   </head>
   <body>
-    <h2>Trading Agent — Armed / PRIMED / Active</h2>
-    <div class="layout">
-      <div class="lane">
-        <h3>Armed</h3>
-        <div id="armed-list" class="lane-body"></div>
+    <header>
+      <div class="header-left">
+        <h1>MooneyCapitol</h1>
+        <div class="status-indicators">
+          <div class="status-dot" id="ws-status" title="WebSocket Connection"></div>
+          <div class="status-dot" id="api-status" title="API Status"></div>
+          <div class="status-dot" id="worker-status" title="Worker Status"></div>
+        </div>
       </div>
-      <div class="lane">
-        <h3>PRIMED</h3>
-        <div id="primed-list" class="lane-body"></div>
+      <div class="header-center">
+        <nav class="tabs" aria-label="Dashboard sections">
+          <button class="tab-button active" data-tab="scout">Scout</button>
+          <button class="tab-button" data-tab="copier">Copier</button>
+          <button class="tab-button" data-tab="trades">Trades</button>
+          <button class="tab-button" data-tab="pnl">P&L</button>
+        </nav>
       </div>
-      <div class="lane">
-        <h3>Active</h3>
-        <div id="active-list" class="lane-body"></div>
+      <div class="header-right">
+        <button class="emergency-kill" id="emergency-kill" title="Emergency Kill Switch">🛑</button>
       </div>
-      <div class="right-panel">
-        <h3>Depth Snapshot</h3>
-        <div id="depth-panel" class="card"><div class="muted">Waiting for symbols…</div></div>
-      </div>
-    </div>
+    </header>
+
+    <main>
+      <section id="tab-scout" class="tab-panel active">
+        <div class="layout">
+          <div class="lane" data-lane="armed">
+            <h2>Armed</h2>
+            <div id="armed-list"></div>
+          </div>
+          <div class="lane" data-lane="primed">
+            <h2>PRIMED</h2>
+            <div id="primed-list"></div>
+          </div>
+          <div class="lane" data-lane="active">
+            <h2>Active</h2>
+            <div id="active-list"></div>
+          </div>
+          <aside class="panel">
+            <h2>Depth</h2>
+            <div id="depth-panel" class="muted">Waiting for symbols...</div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="tab-copier" class="tab-panel">
+        <div class="grid">
+          <div class="stat">
+            <div class="muted">Copier</div>
+            <div id="copier-enabled" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Mode</div>
+            <div id="copier-mode" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Kill Switch</div>
+            <div id="copier-kill" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Runtime</div>
+            <div id="copier-runtime" class="value">-</div>
+          </div>
+        </div>
+
+        <div class="section panel">
+          <h2>Readiness</h2>
+          <div id="readiness-summary" class="status-line">Loading...</div>
+          <div id="readiness-list" class="check-list section"></div>
+        </div>
+
+        <div class="section panel">
+          <h2>Global Controls</h2>
+          <div class="grid two">
+            <label>
+              <span class="muted">Enabled</span>
+              <select id="global-enabled">
+                <option value="false">Disabled</option>
+                <option value="true">Enabled</option>
+              </select>
+            </label>
+            <label>
+              <span class="muted">Mode</span>
+              <select id="global-mode">
+                <option value="read_only">read_only</option>
+                <option value="test">test</option>
+                <option value="live">live</option>
+              </select>
+            </label>
+            <label>
+              <span class="muted">Master Equity</span>
+              <input id="global-master-equity" type="number" min="0" step="0.01" />
+            </label>
+          </div>
+          <div class="actions section">
+            <button class="primary" id="save-global">Save Settings</button>
+            <button class="danger" id="enable-kill">Enable Kill Switch</button>
+            <button id="disable-kill">Disable Kill Switch</button>
+          </div>
+          <div id="global-status" class="status-line"></div>
+        </div>
+
+        <div class="section">
+          <h2>Target Accounts</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Target</th>
+                  <th>Enabled</th>
+                  <th>Equity</th>
+                  <th>Mode</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="targets-body"></tbody>
+            </table>
+          </div>
+          <div id="targets-status" class="status-line"></div>
+        </div>
+
+        <div class="section grid two">
+          <div class="panel">
+            <h2>Recent Orders</h2>
+            <div id="copy-orders-list" class="muted">Loading...</div>
+          </div>
+          <div class="panel">
+            <h2>Reconciliations</h2>
+            <div id="reconciliations-list" class="muted">Loading...</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-trades" class="tab-panel">
+        <div class="section">
+          <h2>Trade Results</h2>
+          <div id="trades-status" class="status-line">Loading...</div>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Symbol</th>
+                  <th>Side</th>
+                  <th>Master</th>
+                  <th>Target</th>
+                  <th>Copied</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                  <th>Fill</th>
+                  <th>Slippage</th>
+                </tr>
+              </thead>
+              <tbody id="trades-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-pnl" class="tab-panel">
+        <div class="grid">
+          <div class="stat">
+            <div class="muted">Accounts</div>
+            <div id="pnl-account-count" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Total Value</div>
+            <div id="pnl-total-value" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Today P&L</div>
+            <div id="pnl-total-today" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Active Alerts</div>
+            <div id="pnl-active-alerts" class="value">-</div>
+          </div>
+        </div>
+
+        <div class="section panel">
+          <div class="actions">
+            <button class="primary" id="refresh-pnl">Refresh From Webull</button>
+            <div id="pnl-status" class="status-line">Loading...</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Accounts</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Account</th>
+                  <th>Risk</th>
+                  <th>Total Value</th>
+                  <th>Cash</th>
+                  <th>Buying Power</th>
+                  <th>Today P&L</th>
+                  <th>Drawdown</th>
+                  <th>Exposure</th>
+                  <th>Positions</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody id="pnl-accounts-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section grid two">
+          <div class="panel">
+            <h2>Positions</h2>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Qty</th>
+                    <th>Avg</th>
+                    <th>Value</th>
+                    <th>Unrealized</th>
+                  </tr>
+                </thead>
+                <tbody id="pnl-positions-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Risk Alerts</h2>
+            <div id="pnl-alerts-list" class="muted">Loading...</div>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <script>
       const armedList = document.getElementById('armed-list');
       const primedList = document.getElementById('primed-list');
       const activeList = document.getElementById('active-list');
       const depthPanel = document.getElementById('depth-panel');
-      const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live`);
+      const targetsBody = document.getElementById('targets-body');
+      const tradesBody = document.getElementById('trades-body');
+      const pnlAccountsBody = document.getElementById('pnl-accounts-body');
+      const pnlPositionsBody = document.getElementById('pnl-positions-body');
+      const pnlAlertsList = document.getElementById('pnl-alerts-list');
+
+      document.querySelectorAll('.tab-button').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.tab-button').forEach((item) => item.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          document.getElementById(`tab-${button.dataset.tab}`).classList.add('active');
+          if (button.dataset.tab === 'copier') loadCopier();
+          if (button.dataset.tab === 'trades') loadTrades();
+          if (button.dataset.tab === 'pnl') loadPnl();
+        });
+      });
 
       function renderLane(container, items, emptyText) {
         if (!items || items.length === 0) {
-          container.innerHTML = `<div class="card"><div class="title">${emptyText}</div><div class="muted">Scanning…</div></div>`;
+          container.innerHTML = `<div class="card"><div class="title">${emptyText}</div><div class="muted">Scanning...</div></div>`;
           return;
         }
-        container.innerHTML = items
-          .map((item) => {
-            const spread = typeof item.spread === 'number' ? item.spread.toFixed(1) : (item.spread || 'n/a');
-            const rvol = typeof item.rvol === 'number' ? item.rvol.toFixed(2) : (item.rvol || '0.00');
-            const rr = typeof item.rr === 'number' ? item.rr.toFixed(2) : (item.rr || 'n/a');
-            const target = typeof item.target === 'number' ? item.target.toFixed(2) : (item.target || 'n/a');
-            const pills = (item.pills || []).map((p) => `<span class="pill">${p}</span>`).join('');
-            const entryValue = parseFloat(item.entry);
-            const stopValue = parseFloat(item.stop);
-            const entryText = Number.isFinite(entryValue) ? entryValue.toFixed(2) : (item.entry || 'n/a');
-            const stopText = Number.isFinite(stopValue) ? stopValue.toFixed(2) : (item.stop || 'n/a');
-            const statusText = item.status && item.status !== 'open' ? `<div class="muted">Status ${item.status}</div>` : '';
-            return `
+        container.innerHTML = items.map((item) => {
+          const spread = typeof item.spread === 'number' ? item.spread.toFixed(1) : (item.spread || 'n/a');
+          const rvol = typeof item.rvol === 'number' ? item.rvol.toFixed(2) : (item.rvol || '0.00');
+          const rr = typeof item.rr === 'number' ? item.rr.toFixed(2) : (item.rr || 'n/a');
+          const target = typeof item.target === 'number' ? item.target.toFixed(2) : (item.target || 'n/a');
+          
+          // Enhanced pill rendering with classes for styling
+          const pills = (item.pills || []).map((p) => {
+            const pillText = escapeHtml(p);
+            let pillClass = 'pill';
+            if (pillText.includes('ACK')) pillClass += ' ack';
+            else if (pillText.includes('PASS')) pillClass += ' pass';
+            else if (pillText.includes('DISC')) pillClass += ' disc';
+            else if (pillText.includes('demo') || pillText.includes('Demo')) pillClass += ' demo';
+            else if (pillText.includes('Spread>')) pillClass += ' spread';
+            else if (pillText.includes('RR<')) pillClass += ' rr-low';
+            return `<span class="${pillClass}">${pillText}</span>`;
+          }).join('');
+          
+          const entryValue = parseFloat(item.entry);
+          const stopValue = parseFloat(item.stop);
+          const entryText = Number.isFinite(entryValue) ? entryValue.toFixed(2) : (item.entry || 'n/a');
+          const stopText = Number.isFinite(stopValue) ? stopValue.toFixed(2) : (item.stop || 'n/a');
+          const statusText = item.status && item.status !== 'open' ? `<div class="muted">Status ${escapeHtml(item.status)}</div>` : '';
+          
+          // Add p2R score if available
+          const p2rText = item.pills && item.pills.find(p => p.includes('p2R')) ? '' : '';
+          
+          return `
             <div class="card">
-              <div class="title">${item.symbol} · ${item.direction?.toUpperCase() || ''}</div>
-              <div class="muted">Entry ${entryText} · Stop ${stopText} · Target ${target}</div>
-              <div>R:R ${rr} · Spread ${spread}¢ · RVOL ${rvol}</div>
-              ${item.l2 ? `<div>L2 ${item.l2}</div>` : ''}
+              <div class="card-header">
+                <div class="title">${escapeHtml(item.symbol || '')} <span class="direction ${item.direction}">${escapeHtml((item.direction || '').toUpperCase())}</span></div>
+                ${rr !== 'n/a' ? `<div class="rr-badge ${parseFloat(rr) >= 2.0 ? 'good' : 'warning'}">${rr}R</div>` : ''}
+              </div>
+              <div class="card-metrics">
+                <span class="metric">Entry ${entryText}</span>
+                <span class="metric">Stop ${stopText}</span>
+                <span class="metric">Target ${target}</span>
+              </div>
+              <div class="card-secondary">
+                <span>Spread ${spread}¢</span> • <span>RVOL ${rvol}</span>
+                ${item.l2 ? ` • <span>${escapeHtml(item.l2)}</span>` : ''}
+              </div>
               ${statusText}
-              <div class="pills">${pills}</div>
-            </div>
-          `;
-          })
-          .join('');
+              ${pills ? `<div class="pills">${pills}</div>` : ''}
+            </div>`;
+        }).join('');
       }
 
+      async function api(path, options = {}) {
+        const { headers = {}, ...rest } = options;
+        const response = await fetch(path, {
+          ...rest,
+          headers: { 'Content-Type': 'application/json', ...headers },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `Request failed: ${response.status}`);
+        return data;
+      }
+
+      async function loadCopier() {
+        try {
+          const [status, targets, orders, reconciliations, readiness] = await Promise.all([
+            api('/copier/status'),
+            api('/copier/targets'),
+            api('/copier/copy-orders?limit=8'),
+            api('/copier/reconciliations?limit=8'),
+            api('/copier/readiness'),
+          ]);
+          renderCopierStatus(status);
+          renderTargets(targets.items || []);
+          renderOrders(orders.items || []);
+          renderReconciliations(reconciliations.items || []);
+          renderReadiness(readiness);
+        } catch (err) {
+          setStatus('global-status', err.message, true);
+        }
+      }
+
+      async function loadTrades() {
+        try {
+          const trades = await api('/copier/trades?limit=100');
+          renderTrades(trades.items || []);
+          setStatus('trades-status', `${trades.count || 0} trade result${trades.count === 1 ? '' : 's'} loaded.`, false);
+        } catch (err) {
+          setStatus('trades-status', err.message, true);
+        }
+      }
+
+      async function loadPnl() {
+        try {
+          const summary = await api('/pnl/summary');
+          renderPnlSummary(summary);
+          const accounts = summary.accounts || [];
+          const [positionResponses, alertResponses] = await Promise.all([
+            Promise.all(accounts.map((account) => api(`/pnl/accounts/${encodeURIComponent(account.account_ref)}/positions`))),
+            Promise.all(accounts.map((account) => api(`/pnl/accounts/${encodeURIComponent(account.account_ref)}/alerts?limit=10`))),
+          ]);
+          renderPnlPositions(positionResponses.flatMap((response) => response.items || []));
+          renderPnlAlerts(alertResponses.flatMap((response) => response.items || []));
+          setStatus('pnl-status', accounts.length ? `Loaded ${accounts.length} account${accounts.length === 1 ? '' : 's'}.` : 'No account snapshots yet.', false);
+        } catch (err) {
+          setStatus('pnl-status', err.message, true);
+        }
+      }
+
+      async function refreshPnl() {
+        try {
+          setStatus('pnl-status', 'Refreshing Webull balances and positions...', false);
+          await api('/pnl/refresh', { method: 'POST' });
+          await loadPnl();
+        } catch (err) {
+          setStatus('pnl-status', err.message, true);
+        }
+      }
+
+      function renderCopierStatus(status) {
+        document.getElementById('copier-enabled').textContent = status.enabled ? 'Enabled' : 'Disabled';
+        document.getElementById('copier-mode').textContent = status.mode || '-';
+        document.getElementById('copier-kill').textContent = status.global_kill_switch ? 'On' : 'Off';
+        document.getElementById('copier-runtime').textContent = status.runtime?.state || '-';
+        document.getElementById('global-enabled').value = String(!!status.enabled);
+        document.getElementById('global-mode').value = status.mode || 'test';
+        document.getElementById('global-master-equity').value = status.master?.equity || '';
+      }
+
+      function renderTargets(items) {
+        targetsBody.innerHTML = items.map((target) => `
+          <tr data-target="${escapeHtml(target.name)}">
+            <td><strong>${escapeHtml(target.name)}</strong><div class="muted">${escapeHtml(target.environment || '')}</div></td>
+            <td><input data-field="enabled" type="checkbox" ${target.enabled ? 'checked' : ''} /></td>
+            <td><input data-field="equity" type="number" min="0" step="0.01" value="${target.equity || ''}" /></td>
+            <td><span class="pill">percent_equity</span></td>
+            <td><button class="primary" data-save-target="${escapeHtml(target.name)}">Save</button></td>
+          </tr>
+        `).join('');
+        targetsBody.querySelectorAll('[data-save-target]').forEach((button) => {
+          button.addEventListener('click', () => saveTarget(button.dataset.saveTarget));
+        });
+      }
+
+      function renderOrders(items) {
+        document.getElementById('copy-orders-list').innerHTML = items.length ? items.map((item) => `
+          <div class="card">
+            <div class="title">${escapeHtml(item.symbol)} ${escapeHtml(item.side)} ${item.qty}</div>
+            <div class="muted">${escapeHtml(item.target || '')} | ${escapeHtml(item.status || '')} | ${escapeHtml(item.client_order_id || '')}</div>
+          </div>
+        `).join('') : '<div class="muted">No copy orders yet.</div>';
+      }
+
+      function renderReconciliations(items) {
+        document.getElementById('reconciliations-list').innerHTML = items.length ? items.map((item) => `
+          <div class="card">
+            <div class="title">${escapeHtml(item.severity)} ${escapeHtml(item.symbol || '')}</div>
+            <div>${escapeHtml(item.message || '')}</div>
+            <div class="muted">${escapeHtml(item.status || '')}</div>
+          </div>
+        `).join('') : '<div class="muted">No open reconciliation issues.</div>';
+      }
+
+      function renderTrades(items) {
+        tradesBody.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td>${formatTime(item.master_executed_at)}</td>
+            <td><strong>${escapeHtml(item.symbol)}</strong></td>
+            <td>${escapeHtml(item.side)}</td>
+            <td>${formatQty(item.master_qty)} @ ${formatMoney(item.master_price)}</td>
+            <td>${escapeHtml(item.target || '')}</td>
+            <td>${formatQty(item.copy_qty)} / ${formatMoney(item.copy_notional)}</td>
+            <td>${escapeHtml(item.copy_status || '')}${item.copy_reject_reason ? `<div class="muted">${escapeHtml(item.copy_reject_reason)}</div>` : ''}</td>
+            <td>${formatMs(item.copy_latency_ms)}</td>
+            <td>${item.copy_avg_fill_price ? `${formatQty(item.copy_filled_qty)} @ ${formatMoney(item.copy_avg_fill_price)}` : '-'}</td>
+            <td>${formatBps(item.copy_slippage_bps)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="10" class="muted">No copied trade results yet.</td></tr>';
+      }
+
+      function renderReadiness(payload) {
+        const summary = document.getElementById('readiness-summary');
+        summary.textContent = payload.ready
+          ? 'No blockers detected.'
+          : `${payload.blockers.length} blocker${payload.blockers.length === 1 ? '' : 's'} detected.`;
+        summary.className = `status-line ${payload.ready ? 'ok' : 'error'}`;
+        const priority = { blocker: 0, warning: 1, info: 2 };
+        const checks = [...(payload.checks || [])].sort((a, b) => {
+          if (a.ok !== b.ok) return a.ok ? 1 : -1;
+          return (priority[a.severity] ?? 3) - (priority[b.severity] ?? 3);
+        });
+        document.getElementById('readiness-list').innerHTML = checks.map((check) => `
+          <div class="check ${check.ok ? 'ok' : 'bad'}">
+            <span class="mark">${check.ok ? 'OK' : '!'}</span>
+            <span>${escapeHtml(check.label)}</span>
+            <div class="muted">${escapeHtml(check.severity)}</div>
+          </div>
+        `).join('');
+      }
+
+      function renderPnlSummary(summary) {
+        const accounts = summary.accounts || [];
+        document.getElementById('pnl-account-count').textContent = summary.account_count ?? accounts.length;
+        document.getElementById('pnl-total-value').textContent = formatMoney(summary.total_value);
+        document.getElementById('pnl-total-today').textContent = formatMoneySigned(summary.total_pnl_today);
+        document.getElementById('pnl-active-alerts').textContent = summary.active_alerts ?? 0;
+        pnlAccountsBody.innerHTML = accounts.length ? accounts.map((account) => `
+          <tr>
+            <td><strong>${escapeHtml(account.account_name || account.account_ref)}</strong><div class="muted">${escapeHtml(account.account_type || '')} ${escapeHtml(account.account_ref || '')}</div></td>
+            <td><span class="pill risk-${escapeHtml(account.risk_level || 'normal')}">${escapeHtml(account.risk_level || 'normal')}</span></td>
+            <td>${formatMoney(account.total_value)}</td>
+            <td>${formatMoney(account.cash_balance)}</td>
+            <td>${formatMoney(account.buying_power)}</td>
+            <td>${formatMoneySigned(account.total_pnl_today)}</td>
+            <td>${formatMoneySigned(account.max_drawdown_today)}</td>
+            <td>${formatMoney(account.total_exposure)}</td>
+            <td>${account.position_count ?? 0}</td>
+            <td>${formatTime(account.timestamp)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="10" class="muted">No P&L account snapshots yet. Use Refresh From Webull after credentials are configured.</td></tr>';
+      }
+
+      function renderPnlPositions(items) {
+        pnlPositionsBody.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td>${escapeHtml(item.account_name || item.account_ref || '')}</td>
+            <td><strong>${escapeHtml(item.symbol || '')}</strong></td>
+            <td>${escapeHtml(item.side || '')}</td>
+            <td>${formatQty(item.qty)}</td>
+            <td>${formatMoney(item.avg_price)}</td>
+            <td>${formatMoney(item.market_value)}</td>
+            <td>${formatMoneySigned(item.unrealized_pnl)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="7" class="muted">No open positions in the latest snapshots.</td></tr>';
+      }
+
+      function renderPnlAlerts(items) {
+        pnlAlertsList.innerHTML = items.length ? items.map((item) => `
+          <div class="card">
+            <div class="title">${escapeHtml(item.account_name || item.account_ref || '')} <span class="pill risk-${escapeHtml(item.severity || 'warning')}">${escapeHtml(item.severity || '')}</span></div>
+            <div>${escapeHtml(item.message || '')}</div>
+            <div class="muted">${formatTime(item.alert_time)}</div>
+          </div>
+        `).join('') : '<div class="muted">No active P&L risk alerts.</div>';
+      }
+
+      async function saveGlobal() {
+        const payload = {
+          enabled: document.getElementById('global-enabled').value === 'true',
+          mode: document.getElementById('global-mode').value,
+          master_equity: numberOrNull('global-master-equity'),
+        };
+        const confirmHeader = globalConfirmation(payload);
+        if (confirmHeader === false) return;
+        try {
+          await api('/copier/settings', {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+            headers: { 'X-Actor': 'dashboard', ...(confirmHeader ? { 'X-Confirm': confirmHeader } : {}) }
+          });
+          setStatus('global-status', 'Saved.', false);
+          loadCopier();
+        } catch (err) {
+          setStatus('global-status', err.message, true);
+        }
+      }
+
+      async function saveTarget(name) {
+        const row = targetsBody.querySelector(`tr[data-target="${CSS.escape(name)}"]`);
+        const field = (key) => row.querySelector(`[data-field="${key}"]`);
+        const payload = {
+          enabled: field('enabled').checked,
+          sizing_mode: 'percent_equity',
+          equity: numberFromInput(field('equity')),
+        };
+        const confirmHeader = targetConfirmation(name, payload);
+        if (confirmHeader === false) return;
+        try {
+          await api(`/copier/targets/${encodeURIComponent(name)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+            headers: { 'X-Actor': 'dashboard', ...(confirmHeader ? { 'X-Confirm': confirmHeader } : {}) }
+          });
+          setStatus('targets-status', `Saved ${name}.`, false);
+          loadCopier();
+        } catch (err) {
+          setStatus('targets-status', err.message, true);
+        }
+      }
+
+      async function setKillSwitch(enabled) {
+        const headers = { 'X-Actor': 'dashboard' };
+        if (!enabled) {
+          if (!window.confirm('Disable the global kill switch? New eligible copied trades may be submitted.')) return;
+          headers['X-Confirm'] = 'DISABLE_KILL_SWITCH';
+        }
+        try {
+          await api(`/copier/kill-switch/${enabled ? 'enable' : 'disable'}`, { method: 'POST', headers });
+          setStatus('global-status', enabled ? 'Kill switch enabled.' : 'Kill switch disabled.', false);
+          loadCopier();
+        } catch (err) {
+          setStatus('global-status', err.message, true);
+        }
+      }
+
+      function numberOrNull(id) { return numberFromInput(document.getElementById(id)); }
+      function globalConfirmation(payload) {
+        const confirmations = [];
+        if (payload.mode === 'live') {
+          if (!window.confirm('Set copier mode to live? This is blocked unless live trading is explicitly enabled in server config.')) return false;
+          confirmations.push('SET_LIVE_MODE');
+        }
+        if (payload.enabled) {
+          if (!window.confirm('Enable the global copier? The kill switch and target settings still control actual submissions.')) return false;
+          confirmations.push('ENABLE_COPIER');
+        }
+        return confirmations.length ? confirmations.join(',') : null;
+      }
+      function targetConfirmation(name, payload) {
+        if (!payload.enabled) return null;
+        return window.confirm(`Enable copying for target ${name}? This target will mirror the master account percentage using the configured equity.`) ? `ENABLE_TARGET:${name}` : false;
+      }
+      function numberFromInput(input) {
+        const value = parseFloat(input.value);
+        return Number.isFinite(value) ? value : null;
+      }
+      function formatMoney(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? `$${number.toFixed(2)}` : '-';
+      }
+      function formatMoneySigned(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return '-';
+        const sign = number > 0 ? '+' : (number < 0 ? '-' : '');
+        return `${sign}$${Math.abs(number).toFixed(2)}`;
+      }
+      function formatQty(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return '-';
+        return Number.isInteger(number) ? String(number) : number.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+      }
+      function formatMs(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? `${number.toFixed(1)} ms` : '-';
+      }
+      function formatBps(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? `${number.toFixed(1)} bps` : '-';
+      }
+      function formatTime(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+      }
+      function setStatus(id, text, isError) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.className = `status-line ${isError ? 'error' : 'ok'}`;
+      }
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        }[char]));
+      }
+
+      document.getElementById('save-global').addEventListener('click', saveGlobal);
+      document.getElementById('enable-kill').addEventListener('click', () => setKillSwitch(true));
+      document.getElementById('disable-kill').addEventListener('click', () => setKillSwitch(false));
+      document.getElementById('refresh-pnl').addEventListener('click', refreshPnl);
+      
+      // Emergency kill switch in header
+      document.getElementById('emergency-kill').addEventListener('click', async () => {
+        if (!window.confirm('🚨 EMERGENCY KILL SWITCH 🚨\n\nThis will IMMEDIATELY disable all copier trading.\n\nAre you absolutely sure?')) return;
+        try {
+          await setKillSwitch(true);
+          // Show visual feedback
+          const btn = document.getElementById('emergency-kill');
+          btn.style.background = 'var(--success)';
+          btn.textContent = '✓';
+          setTimeout(() => {
+            btn.style.background = 'var(--danger)';
+            btn.textContent = '🛑';
+          }, 2000);
+        } catch (err) {
+          alert('Emergency kill switch failed: ' + err.message);
+        }
+      });
+
+      // Status monitoring
+      function updateStatusIndicator(id, status) {
+        const dot = document.getElementById(id);
+        dot.className = 'status-dot';
+        if (status === 'connected') dot.classList.add('connected');
+        else if (status === 'warning') dot.classList.add('warning');
+        else dot.classList.add('disconnected');
+      }
+
+      // Initialize status
+      updateStatusIndicator('api-status', 'connected');
+      updateStatusIndicator('worker-status', 'warning');
+      updateStatusIndicator('ws-status', 'disconnected');
+
+      // WebSocket connection
+      const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/live`);
+      
+      socket.onopen = () => {
+        updateStatusIndicator('ws-status', 'connected');
+        console.log('WebSocket connected');
+      };
+      
+      socket.onclose = () => {
+        updateStatusIndicator('ws-status', 'disconnected');
+        console.log('WebSocket disconnected');
+      };
+      
       socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -85,16 +1026,38 @@
             renderLane(primedList, lanes.primed, 'No primed setups');
             renderLane(activeList, lanes.active, 'No active triggers');
             const meta = lanes.meta || {};
-            depthPanel.innerHTML = `<div class="muted">Subscribed symbols: ${(meta.symbols || []).join(', ') || 'None'}</div>`;
+            depthPanel.innerHTML = `
+              <div style="font-weight: 600; margin-bottom: 4px;">Market Depth</div>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                Symbols: ${(meta.symbols || []).length || 0} active
+              </div>
+              <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">
+                ${(meta.symbols || []).join(', ') || 'None'}
+              </div>
+            `;
+            // Update worker status based on data freshness
+            updateStatusIndicator('worker-status', 'connected');
           }
         } catch (err) {
           console.error('ws message parse error', err);
+          updateStatusIndicator('ws-status', 'warning');
         }
       };
-
+      
       socket.onerror = (err) => {
         console.error('ws error', err);
+        updateStatusIndicator('ws-status', 'warning');
       };
+
+      // Periodic health checks
+      setInterval(async () => {
+        try {
+          const response = await fetch('/health', { method: 'HEAD' });
+          updateStatusIndicator('api-status', response.ok ? 'connected' : 'warning');
+        } catch {
+          updateStatusIndicator('api-status', 'disconnected');
+        }
+      }, 10000);
     </script>
   </body>
-  </html>
+</html>

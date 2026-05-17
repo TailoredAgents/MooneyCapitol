@@ -101,6 +101,60 @@ class DepthProviderConfig(BaseModel):
     smart_aggregate: bool = True
 
 
+class CopyTargetAccountConfig(BaseModel):
+    name: str
+    broker: str = "webull"
+    environment: str = "test"
+    enabled: bool = False
+    account_ref: str | None = None
+    endpoint_env: str
+    api_key_env: str
+    api_secret_env: str
+    account_id_env: str
+    equity: float | None = None
+    equity_env: str | None = None
+    sizing_mode: str = "disabled"
+    sizing_value: float = 0.0
+    min_notional: float = 0.0
+    max_notional_per_trade: float = 0.0
+    max_position_pct: float = 0.0
+    max_daily_notional: float = 0.0
+    max_daily_trades: int = 0
+    regular_hours_only: bool = True
+    shorting_enabled: bool = False
+    allowlist: list[str] = []
+    blocklist: list[str] = []
+
+
+class CopierConfig(BaseModel):
+    enabled: bool = False
+    mode: str = "test"  # test | live | read_only
+    live_trading_enabled: bool = False
+    global_kill_switch: bool = True
+    master_broker: str = "webull"
+    master_account: str | None = None
+    master_account_env: str = "WEBULL_MASTER_ACCOUNT_ID"
+    master_equity: float | None = None
+    master_equity_env: str = "WEBULL_MASTER_ACCOUNT_EQUITY"
+    master_app_key_env: str = "WEBULL_MASTER_APP_KEY"
+    master_app_secret_env: str = "WEBULL_MASTER_APP_SECRET"
+    master_endpoint_env: str = "WEBULL_MASTER_API_ENDPOINT"
+    equities_only: bool = True
+    regular_hours_only: bool = True
+    copy_shorts: bool = False
+    max_orders_per_minute: int = 30
+    targets: list[CopyTargetAccountConfig] = [
+        CopyTargetAccountConfig(
+            name="personal",
+            endpoint_env="WEBULL_PERSONAL_API_ENDPOINT",
+            api_key_env="WEBULL_PERSONAL_APP_KEY",
+            api_secret_env="WEBULL_PERSONAL_APP_SECRET",
+            account_id_env="WEBULL_PERSONAL_ACCOUNT_ID",
+            equity_env="WEBULL_PERSONAL_ACCOUNT_EQUITY",
+        ),
+    ]
+
+
 class AppConfig(BaseModel):
     session: SessionConfig = SessionConfig()
     universe: UniverseConfig = UniverseConfig()
@@ -111,6 +165,7 @@ class AppConfig(BaseModel):
     retention_days: RetentionConfig = RetentionConfig()
     reports: ReportsConfig = ReportsConfig()
     depth_provider: DepthProviderConfig = DepthProviderConfig()
+    copier: CopierConfig = CopierConfig()
 
 
 class Settings(BaseSettings):

@@ -19,10 +19,13 @@ from app.api.routes.watchlist import router as watchlist_router
 from app.api.routes.setups import router as setups_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.learning import router as learning_router
+from app.api.routes.copier import router as copier_router
+from app.api.routes.pnl import router as pnl_router
 from app.api.routes.slash import router as slash_router
 from app.api.routes.slack import router as slack_router
 from app.api.ws import router as ws_router
 from app.api.pages import router as pages_router
+from app.copier.state import ensure_copier_status_initialized
 
 
 logger = get_logger("api")
@@ -40,6 +43,7 @@ async def lifespan(app: FastAPI):
     ensure_config_initialized()
     ensure_lanes_initialized()
     ensure_worker_tick_initialized()
+    ensure_copier_status_initialized()
     refresh_config()
     yield
 
@@ -60,6 +64,8 @@ app.include_router(watchlist_router)
 app.include_router(setups_router)
 app.include_router(reports_router)
 app.include_router(learning_router)
+app.include_router(copier_router)
+app.include_router(pnl_router)
 app.include_router(slash_router)
 app.include_router(slack_router)
 app.include_router(ws_router)

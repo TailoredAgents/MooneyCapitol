@@ -11,6 +11,7 @@ from app.services.depth import compute_status as get_depth_status
 from app.services.live_state import get_lanes
 from app.services.runtime import get_worker_tick
 from app.services.kv_store import StateStoreError, get_store_mode, get_updated_at
+from app.copier.state import get_copier_status
 
 
 router = APIRouter(prefix="", tags=["health"])
@@ -33,6 +34,11 @@ def health():
     state_store = {"mode": get_store_mode(), "strict": strict}
     try:
         worker_tick = get_worker_tick() or {}
+    except StateStoreError as exc:
+        state_store["error"] = str(exc)
+    copier = {}
+    try:
+        copier = get_copier_status()
     except StateStoreError as exc:
         state_store["error"] = str(exc)
     try:
@@ -62,5 +68,6 @@ def health():
         "polygon": {"mode": polygon_mode, "status": "ok"},
         "state_store": state_store,
         "worker": worker_tick,
+        "copier": copier,
         "backlog": backlog,
     }
