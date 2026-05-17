@@ -137,6 +137,11 @@ Learning guardrails added after the sandbox upgrade:
 - ✅ Render deployment configuration
 - ✅ Comprehensive testing tools
 
+**Render Deployment Notes:**
+- `render.yaml` uses a paid `basic-256mb` Postgres instance, not expiring free Postgres.
+- API and worker services both run `python -m app.tools.run_migrations` before startup.
+- `app/tools/run_migrations.py` uses a Postgres advisory lock before Alembic upgrade so concurrent API/worker deploys serialize migrations.
+
 ### ⏳ VALIDATION PHASE (Account-Dependent)
 
 **Ready for real account validation when available:**
@@ -186,6 +191,6 @@ This is a **sophisticated, enterprise-grade trading platform** with:
 
 Latest full local verification:
 
-- `pytest -q` -> `127 passed, 1 skipped`
+- `pytest -q` -> `129 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`

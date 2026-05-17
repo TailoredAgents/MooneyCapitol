@@ -185,6 +185,8 @@ Scope:
 - Review encoding issues in visible text and Slack messages.
 - Add tests around watchlist, config persistence, consolidation detection, trigger detection, and Slack action status updates.
 - Confirm Render deployment works with `STATE_STORE=db`.
+- Render deploys must run `python -m app.tools.run_migrations` before API/worker startup so a fresh Postgres has all Alembic tables before the KV-store startup probe.
+- Use a paid Render Postgres plan for launch; free Postgres is not appropriate for real-money operation.
 
 Acceptance criteria:
 

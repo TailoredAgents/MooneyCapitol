@@ -289,6 +289,9 @@ When ready:
 ## Deployment
 
 - `render.yaml` defines the API service, worker service, and managed Postgres database.
+- Render runs `python -m app.tools.run_migrations` as a pre-deploy command for both API and worker services.
+- The migration runner uses a Postgres advisory lock so concurrent API/worker deploys do not run Alembic at the same time.
+- The managed Postgres plan is set to `basic-256mb`; do not use expiring free Postgres for a real-money launch.
 - `STATE_STORE=db` is required in deployed environments so API and worker share config, dashboard state, worker tick, and learning artifacts.
 - Keep broker credentials in environment variables or a secret manager, not database rows or git.
 
@@ -296,6 +299,6 @@ When ready:
 
 Latest full local verification:
 
-- `pytest -q` -> `127 passed, 1 skipped`
+- `pytest -q` -> `129 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`
