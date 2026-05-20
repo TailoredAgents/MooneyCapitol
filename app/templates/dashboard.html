@@ -352,6 +352,7 @@
       <div class="header-center">
         <nav class="tabs" aria-label="Dashboard sections">
           <button class="tab-button active" data-tab="scout">Scout</button>
+          <button class="tab-button" data-tab="launch">Launch</button>
           <button class="tab-button" data-tab="copier">Copier</button>
           <button class="tab-button" data-tab="trades">Trades</button>
           <button class="tab-button" data-tab="pnl">P&L</button>
@@ -381,6 +382,45 @@
             <h2>Depth</h2>
             <div id="depth-panel" class="muted">Waiting for symbols...</div>
           </aside>
+        </div>
+      </section>
+
+      <section id="tab-launch" class="tab-panel">
+        <div class="grid">
+          <div class="stat">
+            <div class="muted">Launch Status</div>
+            <div id="launch-ready" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Blockers</div>
+            <div id="launch-blockers" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Warnings</div>
+            <div id="launch-warnings" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Generated</div>
+            <div id="launch-generated" class="value">-</div>
+          </div>
+        </div>
+
+        <div class="section panel">
+          <div class="actions">
+            <button class="primary" id="refresh-launch">Refresh Readiness</button>
+            <div id="launch-status" class="status-line">Loading...</div>
+          </div>
+        </div>
+
+        <div class="section grid two">
+          <div class="panel">
+            <h2>Checks</h2>
+            <div id="launch-checks-list" class="check-list">Loading...</div>
+          </div>
+          <div class="panel">
+            <h2>Summary</h2>
+            <div id="launch-summary-list" class="muted">Loading...</div>
+          </div>
         </div>
       </section>
 
@@ -581,6 +621,8 @@
       const primedList = document.getElementById('primed-list');
       const activeList = document.getElementById('active-list');
       const depthPanel = document.getElementById('depth-panel');
+      const launchChecksList = document.getElementById('launch-checks-list');
+      const launchSummaryList = document.getElementById('launch-summary-list');
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -593,6 +635,7 @@
           document.querySelectorAll('.tab-panel').forEach((item) => item.classList.remove('active'));
           button.classList.add('active');
           document.getElementById(`tab-${button.dataset.tab}`).classList.add('active');
+          if (button.dataset.tab === 'launch') loadLaunchReadiness();
           if (button.dataset.tab === 'copier') loadCopier();
           if (button.dataset.tab === 'trades') loadTrades();
           if (button.dataset.tab === 'pnl') loadPnl();
@@ -680,6 +723,16 @@
           renderReadiness(readiness);
         } catch (err) {
           setStatus('global-status', err.message, true);
+        }
+      }
+
+      async function loadLaunchReadiness() {
+        try {
+          const payload = await api('/launch/readiness');
+          renderLaunchReadiness(payload);
+          setStatus('launch-status', payload.ready ? 'No launch blockers detected.' : `${payload.blocker_count} blocker${payload.blocker_count === 1 ? '' : 's'} detected.`, !payload.ready);
+        } catch (err) {
+          setStatus('launch-status', err.message, true);
         }
       }
 
@@ -799,6 +852,54 @@
             <div class="muted">${escapeHtml(check.severity)}</div>
           </div>
         `).join('');
+      }
+
+      function renderLaunchReadiness(payload) {
+        document.getElementById('launch-ready').textContent = payload.ready ? 'Ready' : 'Blocked';
+        document.getElementById('launch-blockers').textContent = payload.blocker_count ?? 0;
+        document.getElementById('launch-warnings').textContent = payload.warning_count ?? 0;
+        document.getElementById('launch-generated').textContent = formatTime(payload.generated_at);
+        const sections = payload.sections || {};
+        launchChecksList.innerHTML = Object.entries(sections).map(([section, checks]) => `
+          <div class="check">
+            <strong>${escapeHtml(section)}</strong>
+            <div class="section">
+              ${(checks || []).map((check) => `
+                <div class="check ${check.ok ? 'ok' : 'bad'}">
+                  <span class="mark">${check.ok ? 'OK' : '!'}</span>
+                  <span>${escapeHtml(check.label || check.key)}</span>
+                  <div class="muted">${escapeHtml(check.severity || '')}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+        const summary = payload.summary || {};
+        const latency = summary.latency || {};
+        const validation = summary.read_only_validation || {};
+        const learning = summary.learning_report || {};
+        launchSummaryList.innerHTML = `
+          <div class="card">
+            <div class="title">Database</div>
+            <div class="muted">Version ${escapeHtml(summary.database_version || '-')} / ${escapeHtml(summary.expected_migration_head || '-')}</div>
+          </div>
+          <div class="card">
+            <div class="title">Worker</div>
+            <div class="muted">${escapeHtml(summary.worker_tick?.ts || 'No heartbeat')}</div>
+          </div>
+          <div class="card">
+            <div class="title">Read-Only Validation</div>
+            <div class="muted">would_copy ${validation.would_copy || 0} · blocked ${validation.blocked || 0}</div>
+          </div>
+          <div class="card">
+            <div class="title">Latency</div>
+            <div class="muted">samples ${latency.count || 0} · mean ${formatMs(latency.mean_ms)} · max ${formatMs(latency.max_ms)} · under 300ms ${formatPct(latency.under_300ms_rate)}</div>
+          </div>
+          <div class="card">
+            <div class="title">Learning</div>
+            <div class="muted">${escapeHtml(learning.model_type || 'No report')} ${learning.date ? `· ${escapeHtml(learning.date)}` : ''}</div>
+          </div>
+        `;
       }
 
       function renderPnlSummary(summary) {
@@ -950,6 +1051,10 @@
         const number = Number(value);
         return Number.isFinite(number) ? `${number.toFixed(1)} bps` : '-';
       }
+      function formatPct(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? `${(number * 100).toFixed(1)}%` : '-';
+      }
       function formatTime(value) {
         if (!value) return '-';
         const date = new Date(value);
@@ -967,6 +1072,7 @@
       }
 
       document.getElementById('save-global').addEventListener('click', saveGlobal);
+      document.getElementById('refresh-launch').addEventListener('click', loadLaunchReadiness);
       document.getElementById('enable-kill').addEventListener('click', () => setKillSwitch(true));
       document.getElementById('disable-kill').addEventListener('click', () => setKillSwitch(false));
       document.getElementById('refresh-pnl').addEventListener('click', refreshPnl);

@@ -56,6 +56,12 @@ The scout and copier share data for reporting and learning, but their runtime pa
 - Dashboard has a P&L tab for balances, buying power, daily P&L, drawdown, exposure, open positions, and active P&L risk alerts.
 - Worker runs P&L refresh in the background, separate from the low-latency copier hot path.
 
+### Launch Readiness
+
+- Protected `GET /launch/readiness` aggregates existing readiness signals instead of duplicating their logic.
+- Dashboard has a Launch tab for database migration state, worker heartbeat, operator auth, Polygon/Slack/depth status, copier readiness, P&L freshness, read-only validation counts, copied-order latency samples, and learning report availability.
+- This is display-only and does not touch the copier hot path.
+
 ### Copier
 
 - Webull-to-Webull architecture.
@@ -191,6 +197,6 @@ This is a **sophisticated, enterprise-grade trading platform** with:
 
 Latest full local verification:
 
-- `pytest -q` -> `129 passed, 1 skipped`
+- `pytest -q` -> `133 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`

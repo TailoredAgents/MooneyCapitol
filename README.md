@@ -203,6 +203,12 @@ python -m app.tools.copier_latency_benchmark samples\webull_execution_fill.json 
 - `POST /copier/kill-switch/enable`
 - `POST /copier/kill-switch/disable`
 
+## Launch API
+
+- `GET /launch/readiness`
+
+This protected endpoint combines database migration state, worker heartbeat, operator auth, Polygon/Slack/depth envs, copier readiness, P&L freshness, read-only validation history, copied-order latency samples, and learning report availability.
+
 ## P&L API
 
 - `POST /pnl/refresh`
@@ -224,6 +230,7 @@ Dangerous copier actions require confirmation through dashboard prompts or `X-Co
 ## Dashboard
 
 - `/dashboard` -> Scout tab: Armed, PRIMED, and Active lanes.
+- `/dashboard` -> Launch tab: unified production readiness checks and launch blockers.
 - `/dashboard` -> Copier tab: readiness, global controls, target enabled/equity controls, kill switch, recent orders, and reconciliations.
 - `/dashboard` -> Trades tab: copied trade results, read-only `would_copy` decisions, blocked decisions, latency, fill status, fill price, slippage, and reject reason.
 - `/dashboard` -> P&L tab: account values, cash, buying power, daily P&L, drawdown, exposure, positions, and P&L risk alerts.
@@ -299,6 +306,6 @@ When ready:
 
 Latest full local verification:
 
-- `pytest -q` -> `129 passed, 1 skipped`
+- `pytest -q` -> `133 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`

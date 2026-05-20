@@ -10,3 +10,13 @@ def test_dashboard_exposes_pnl_tab_and_existing_pnl_api_calls():
     assert "api('/pnl/summary')" in html
     assert "api('/pnl/refresh'" in html
     assert "/pnl/accounts/" in html
+
+
+def test_dashboard_exposes_launch_readiness_tab_and_api_call():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert 'data-tab="launch"' in html
+    assert 'id="tab-launch"' in html
+    assert "Refresh Readiness" in html
+    assert "api('/launch/readiness')" in html
+    assert "renderLaunchReadiness" in html
