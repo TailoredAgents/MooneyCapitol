@@ -314,6 +314,49 @@ When ready:
 - `STATE_STORE=db` is required in deployed environments so API and worker share config, dashboard state, worker tick, and learning artifacts.
 - Keep broker credentials in environment variables or a secret manager, not database rows or git.
 
+### Render Blueprint Staged Launch
+
+The blueprint is safe to deploy before paid market data and Webull credentials exist.
+
+Deploy-now defaults:
+
+- `DEPTH_MODE=demo`
+- `COPIER_ENABLED=0`
+- `COPIER_MODE=test`
+- `COPIER_GLOBAL_KILL_SWITCH=1`
+- `LEARNING_SANDBOX_ENABLED=0`
+
+Set these during the first Render Blueprint deploy:
+
+- `COWORK_OPERATOR_USERNAME`
+- `COWORK_OPERATOR_PASSWORD`
+- `COWORK_OPERATOR_API_TOKEN`
+- `SLACK_CHANNEL` if different from `all-trading`
+- `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` if Slack alerts/buttons should work now
+- `SENTRY_DSN` if error monitoring is enabled
+
+Leave these blank until accounts/subscriptions are ready:
+
+- `POLYGON_API_KEY`
+- `WEBULL_MASTER_API_ENDPOINT`
+- `WEBULL_MASTER_EVENTS_ENDPOINT`
+- `WEBULL_MASTER_APP_KEY`
+- `WEBULL_MASTER_APP_SECRET`
+- `WEBULL_MASTER_ACCOUNT_ID`
+- `WEBULL_MASTER_ACCOUNT_EQUITY`
+- `WEBULL_PERSONAL_API_ENDPOINT`
+- `WEBULL_PERSONAL_APP_KEY`
+- `WEBULL_PERSONAL_APP_SECRET`
+- `WEBULL_PERSONAL_ACCOUNT_ID`
+- `WEBULL_PERSONAL_ACCOUNT_EQUITY`
+
+Before live validation:
+
+- Add the Polygon Advanced key for real-time broad scanning.
+- Add Webull OpenAPI credentials, account IDs, equities, HTTP endpoint, and events endpoint.
+- Keep `COPIER_GLOBAL_KILL_SWITCH=1` until read-only validation passes.
+- Use the Launch tab to confirm remaining blockers are expected credential/data blockers.
+
 ## Current Verification Baseline
 
 Latest full local verification:

@@ -62,6 +62,12 @@ The scout and copier share data for reporting and learning, but their runtime pa
 - Dashboard has a Launch tab for database migration state, worker heartbeat, operator auth, Polygon/Slack/depth status, copier readiness, P&L freshness, read-only validation counts/history, copied-order latency samples, and learning report availability.
 - This is display-only and does not touch the copier hot path.
 
+### Render Blueprint
+
+- `render.yaml` is intended for staged deployment before paid market data and Webull credentials exist.
+- Safe defaults are `DEPTH_MODE=demo`, `COPIER_ENABLED=0`, `COPIER_MODE=test`, `COPIER_GLOBAL_KILL_SWITCH=1`, and `LEARNING_SANDBOX_ENABLED=0`.
+- First deploy should set operator auth env vars. Polygon/Webull paid/live credentials can stay blank until account/data subscriptions are ready.
+
 ### Copier
 
 - Webull-to-Webull architecture.

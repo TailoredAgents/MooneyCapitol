@@ -188,6 +188,7 @@ Scope:
 - Confirm Render deployment works with `STATE_STORE=db`.
 - Render deploys must run `python -m app.tools.run_migrations` before API/worker startup so a fresh Postgres has all Alembic tables before the KV-store startup probe.
 - Use a paid Render Postgres plan for launch; free Postgres is not appropriate for real-money operation.
+- The Render Blueprint is staged for safe early deployment with `DEPTH_MODE=demo`, `COPIER_ENABLED=0`, `COPIER_MODE=test`, `COPIER_GLOBAL_KILL_SWITCH=1`, and `LEARNING_SANDBOX_ENABLED=0`; add paid Polygon/Webull credentials only when validation starts.
 
 Acceptance criteria:
 

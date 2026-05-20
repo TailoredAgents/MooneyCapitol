@@ -19,6 +19,12 @@ services:
         value: db
       - key: DEPTH_MODE
         value: demo
+      - key: COPIER_ENABLED
+        value: "0"
+      - key: COPIER_MODE
+        value: test
+      - key: COPIER_GLOBAL_KILL_SWITCH
+        value: "1"
       - key: OPENAI_API_KEY
         sync: false
       - key: POLYGON_API_KEY
@@ -109,11 +115,19 @@ services:
         value: db
       - key: DEPTH_MODE
         value: demo
+      - key: COPIER_ENABLED
+        value: "0"
+      - key: COPIER_MODE
+        value: test
+      - key: COPIER_GLOBAL_KILL_SWITCH
+        value: "1"
       - key: POLYGON_API_KEY
         sync: false
       - key: SLACK_CHANNEL
         value: all-trading
       - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
         sync: false
       - key: SENTRY_DSN
         sync: false
@@ -173,3 +187,9 @@ services:
         value: "3.0"
       - key: LEARNING_SYNTHETIC_SAMPLE_WEIGHT
         value: "0.15"
+      - key: COWORK_OPERATOR_USERNAME
+        sync: false
+      - key: COWORK_OPERATOR_PASSWORD
+        sync: false
+      - key: COWORK_OPERATOR_API_TOKEN
+        sync: false
