@@ -11,6 +11,8 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count("SLACK_SIGNING_SECRET") == 2
     assert "WEBULL_MASTER_ACCOUNT_EQUITY" not in text
     assert "WEBULL_PERSONAL_ACCOUNT_EQUITY" not in text
+    assert "IBKR_" not in text
+    assert "ib_insync" not in Path("requirements.txt").read_text(encoding="utf-8")
     assert "COWORK_OPERATOR_USERNAME" in text
     assert "COWORK_OPERATOR_PASSWORD" in text
     assert "COWORK_OPERATOR_API_TOKEN" in text

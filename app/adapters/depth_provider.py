@@ -42,7 +42,7 @@ class DepthProvider(Protocol):
 
 
 def get_depth_provider():
-    from app.adapters.ibkr_depth import DemoDepthProvider, IBKRDepthProvider
+    from app.adapters.ibkr_depth import DemoDepthProvider
 
     mode = os.getenv("DEPTH_MODE", "demo").lower()
     if mode == "demo":
@@ -51,17 +51,7 @@ def get_depth_provider():
         set_status(status)
         return DemoDepthProvider()
 
-    provider = IBKRDepthProvider(
-        smart_depth=bool(getattr(CONFIG.depth_provider, "smart_aggregate", True)),
-        num_rows=int(getattr(CONFIG.detectors.l2_confirm, "levels", 5) or 5),
-    )
-    if not provider.credentials_present:
-        logger.warning("depth.ibkr.credentials_missing")
-        status = {"mode": "ibkr", "status": "disabled", "reason": "no credentials", "fallback": "demo"}
-        set_status(status)
-        return DemoDepthProvider()
-
-    logger.info("depth.mode.ibkr")
-    status = {"mode": "ibkr", "status": "initializing"}
+    logger.warning("depth.unsupported_mode", mode=mode)
+    status = {"mode": mode, "status": "disabled", "reason": "unsupported depth mode", "fallback": "demo"}
     set_status(status)
-    return provider
+    return DemoDepthProvider()

@@ -551,7 +551,7 @@ def _update_dashboard(ctx: WorkerContext) -> None:
                 pill.append("RR<2.0")
             if ctx.depth_is_demo and ctx.depth_mode == "demo":
                 pill.append("L2 demo")
-            elif ctx.depth_mode == "ibkr" and ctx.depth_is_demo:
+            elif ctx.depth_mode != "demo" and ctx.depth_is_demo:
                 pill.append("No L2 (fallback demo)")
             elif dstate.no_l2:
                 pill.append("No L2")
@@ -734,10 +734,10 @@ async def scan_consolidations(ctx: WorkerContext):
             dstate.no_l2 = snapshot is None
             now = now_et()
             if snapshot:
-                if not (ctx.depth_mode == "ibkr" and ctx.depth_is_demo):
+                if not (ctx.depth_mode != "demo" and ctx.depth_is_demo):
                     mark_snapshot(
-                        "demo" if ctx.depth_mode == "demo" else "ibkr",
-                        "demo" if ctx.depth_is_demo else "ibkr",
+                        "demo" if ctx.depth_mode == "demo" else ctx.depth_mode,
+                        "demo" if ctx.depth_is_demo else ctx.depth_mode,
                     )
                 bid_ratio = snapshot.bid_ratio
                 ask_ratio = snapshot.ask_ratio
@@ -857,8 +857,8 @@ async def scan_consolidations(ctx: WorkerContext):
                     dstate.primed_started = None
                     dstate.primed_expires = None
                 dstate.last_l2_display = None
-                if ctx.depth_mode == "ibkr" and not ctx.depth_is_demo:
-                    mark_stale("ibkr", "no snapshot")
+                if ctx.depth_mode != "demo" and not ctx.depth_is_demo:
+                    mark_stale(ctx.depth_mode, "no snapshot")
 
             if dstate.primed and dstate.primed_expires and now_et() > dstate.primed_expires:
                 dstate.primed = False

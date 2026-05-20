@@ -43,11 +43,9 @@ def compute_status() -> Dict[str, Any]:
     mode = os.getenv("DEPTH_MODE", "demo").lower()
     if mode == "demo":
         status = {"mode": "demo", "status": "ok"}
+    elif mode == "webull":
+        status = {"mode": "webull", "status": "disabled", "reason": "adapter not implemented", "fallback": "demo"}
     else:
-        creds_ok = all(os.getenv(key) for key in ["IBKR_HOST", "IBKR_PORT", "IBKR_CLIENT_ID"])
-        if creds_ok:
-            status = {"mode": "ibkr", "status": "initializing"}
-        else:
-            status = {"mode": "ibkr", "status": "disabled", "reason": "no credentials", "fallback": "demo"}
+        status = {"mode": mode, "status": "disabled", "reason": "unsupported depth mode", "fallback": "demo"}
     set_status(status)
     return status

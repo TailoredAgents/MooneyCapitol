@@ -116,7 +116,7 @@ The scout and copier share data for reporting and learning, but their runtime pa
 
 **Scout System:**
 - ✅ Complete consolidation detection with 1m/2m timeframes
-- ✅ L2 depth integration (IBKR + demo fallback)
+- ✅ L2 demo fallback; Webull Advanced Quotes is the intended live L2/tape path
 - ✅ Advanced breakout/retest triggers with volume confirmation
 - ✅ HTF level analysis and gap edge detection
 - ✅ Real-time dashboard with Armed/PRIMED/Active lanes

@@ -26,7 +26,7 @@ The scout and copier share data for reports and learning, but their runtime path
 
 ### Scout System 
 - ✅ **Market Data**: Polygon client with demo fallback, 1m/2m/5m/15m aggregates
-- ✅ **L2 Depth**: Complete IBKR integration with real-time subscriptions + demo fallback
+- ✅ **L2 Depth**: Demo mode now, Webull Advanced Quotes planned for live L2/tape
 - ✅ **Pattern Detection**: Advanced consolidation box detection with breakout/retest triggers
 - ✅ **Risk/Reward**: HTF level analysis, gap edge detection, dynamic R:R calculation
 - ✅ **Dashboard**: Live 3-lane system (Armed/PRIMED/Active) with real-time WebSocket updates
@@ -300,10 +300,10 @@ Current mode:
 
 When ready:
 
-- Configure `DEPTH_MODE=ibkr`.
-- Configure `IBKR_HOST`, `IBKR_PORT`, and `IBKR_CLIENT_ID`.
-- Enable SMART depth aggregation if appropriate.
-- Run the worker where it can reliably reach IB Gateway/TWS.
+- Subscribe to Webull OpenAPI Advanced Quotes.
+- Build/enable the Webull depth adapter.
+- Configure `DEPTH_MODE=webull` only after that adapter is implemented and tested.
+- Do not use any IBKR credentials for the normal deployment path.
 
 ## Deployment
 

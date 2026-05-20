@@ -17,7 +17,7 @@ The final system should support discovery, alerting, execution copying, reportin
 
 **Complete Scout System:**
 - ✅ Advanced pattern detection with 1m/2m consolidation boxes
-- ✅ Real-time L2 depth integration (IBKR + demo modes)
+- ✅ Demo depth mode now; Webull Advanced Quotes is the intended live L2/tape provider
 - ✅ HTF level analysis and gap edge detection  
 - ✅ Breakout/retest triggers with volume confirmation
 - ✅ Live 3-lane dashboard (Armed/PRIMED/Active)

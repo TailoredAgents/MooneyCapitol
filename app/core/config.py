@@ -97,7 +97,7 @@ class ReportsConfig(BaseModel):
 
 
 class DepthProviderConfig(BaseModel):
-    type: str = "ibkr"
+    type: str = "demo"
     smart_aggregate: bool = True
 
 
