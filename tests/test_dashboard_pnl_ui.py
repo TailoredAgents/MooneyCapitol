@@ -20,3 +20,6 @@ def test_dashboard_exposes_launch_readiness_tab_and_api_call():
     assert "Refresh Readiness" in html
     assert "api('/launch/readiness')" in html
     assert "renderLaunchReadiness" in html
+    assert "Read-Only Validation History" in html
+    assert 'id="launch-readonly-body"' in html
+    assert "read_only_history" in html

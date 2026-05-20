@@ -15,7 +15,7 @@ from app.api.auth import require_operator
 from app.copier.readiness import evaluate_copier_readiness
 from app.copier.state import get_copier_status
 from app.core.config_store import CONFIG, refresh_config
-from app.db.models import AccountSnapshot, CopierAuditEvent, CopyOrder, CopyReconciliation
+from app.db.models import AccountSnapshot, CopierAuditEvent, CopyOrder, CopyReconciliation, CopyTargetAccount, MasterExecution
 from app.db.session import engine, get_session
 from app.services.kv_store import get_store_mode, get_updated_at
 from app.services.learning import get_learning_service
@@ -108,6 +108,7 @@ def launch_readiness(session: Session = Depends(db_session)):
     add("P&L", "no_active_pnl_alerts", int(active_pnl_alerts) == 0, "blocker", "No active P&L risk alerts", {"active_alerts": int(active_pnl_alerts)})
 
     readonly_counts = _read_only_counts(session)
+    readonly_history = _read_only_history(session)
     add(
         "Validation",
         "read_only_session_seen",
@@ -165,6 +166,7 @@ def launch_readiness(session: Session = Depends(db_session)):
             "pnl_accounts": len(latest_snapshots),
             "open_reconciliations": int(open_reconciliations),
             "read_only_validation": readonly_counts,
+            "read_only_history": readonly_history,
             "latency": latency,
             "learning_report": learning_report,
             "kv_updated_at": {
@@ -228,6 +230,45 @@ def _read_only_counts(session: Session) -> dict[str, int]:
     return {"would_copy": int(would_copy), "blocked": int(blocked), "total": int(would_copy) + int(blocked)}
 
 
+def _read_only_history(session: Session, limit: int = 25) -> list[dict[str, Any]]:
+    rows = (
+        session.execute(
+            select(MasterExecution, CopyOrder, CopyTargetAccount.name)
+            .join(CopyOrder, CopyOrder.master_execution_id == MasterExecution.id)
+            .join(CopyTargetAccount, CopyTargetAccount.id == CopyOrder.target_account_id)
+            .where(CopyOrder.status.in_(["would_copy", "blocked"]))
+            .order_by(desc(MasterExecution.executed_at), desc(CopyOrder.id))
+            .limit(limit)
+        )
+        .all()
+    )
+    return [_serialize_read_only_row(master, order, target_name) for master, order, target_name in rows]
+
+
+def _serialize_read_only_row(master: MasterExecution, order: CopyOrder, target_name: str | None) -> dict[str, Any]:
+    copy_notional = None
+    if order.qty is not None and master.price is not None:
+        copy_notional = float(order.qty) * float(master.price)
+    return {
+        "master_execution_id": master.id,
+        "copy_order_id": order.id,
+        "master_executed_at": _iso(master.executed_at),
+        "master_received_at": _iso(master.received_at),
+        "symbol": master.symbol,
+        "side": master.side,
+        "master_qty": master.qty,
+        "master_price": master.price,
+        "master_notional": float(master.qty) * float(master.price),
+        "target": target_name,
+        "client_order_id": order.client_order_id,
+        "copy_qty": order.qty,
+        "copy_notional": copy_notional,
+        "copy_status": order.status,
+        "copy_reject_reason": order.reject_reason,
+        "copy_latency_ms": order.latency_ms,
+    }
+
+
 def _latency_stats(session: Session) -> dict[str, Any]:
     values = [
         float(row)
@@ -278,3 +319,7 @@ def _age_seconds(value: datetime | None) -> float | None:
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     return (datetime.now(tz=timezone.utc) - value.astimezone(timezone.utc)).total_seconds()
+
+
+def _iso(value: datetime | None) -> str | None:
+    return value.isoformat() if value else None

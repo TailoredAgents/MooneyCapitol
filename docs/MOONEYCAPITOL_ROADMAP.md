@@ -441,7 +441,7 @@ Implemented dashboard/API controls:
 - `/dashboard` includes a Copier tab that exposes the simple live operator flow: global enabled/mode/master equity, target enabled/equity, kill switch, readiness checks, recent orders, and reconciliation warnings.
 - `/dashboard` includes a Trades tab that shows copied trade results, including copy latency and fill/slippage fields.
 - `/pnl/*` API routes expose account snapshots, positions, alerts, sessions, summary, and manual refresh for account balance/P&L monitoring.
-- `/launch/readiness` and the dashboard Launch tab aggregate database, worker, auth, market-data, copier, P&L, read-only validation, latency, and learning readiness into one launch-blocker view.
+- `/launch/readiness` and the dashboard Launch tab aggregate database, worker, auth, market-data, copier, P&L, read-only validation counts/history, latency, and learning readiness into one launch-blocker view.
 - Operator changes are written to `copier_audit_events`.
 - Worker Slack alerts are sent for readiness blockers, reconciliation mismatches/errors, startup recovery warnings, and Webull listener errors, with throttling to avoid repeated alerts.
 - Worker Slack alerts are sent for Webull position sync mismatches/errors, with throttling to avoid repeated alerts.

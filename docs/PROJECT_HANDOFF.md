@@ -59,7 +59,7 @@ The scout and copier share data for reporting and learning, but their runtime pa
 ### Launch Readiness
 
 - Protected `GET /launch/readiness` aggregates existing readiness signals instead of duplicating their logic.
-- Dashboard has a Launch tab for database migration state, worker heartbeat, operator auth, Polygon/Slack/depth status, copier readiness, P&L freshness, read-only validation counts, copied-order latency samples, and learning report availability.
+- Dashboard has a Launch tab for database migration state, worker heartbeat, operator auth, Polygon/Slack/depth status, copier readiness, P&L freshness, read-only validation counts/history, copied-order latency samples, and learning report availability.
 - This is display-only and does not touch the copier hot path.
 
 ### Copier
@@ -197,6 +197,6 @@ This is a **sophisticated, enterprise-grade trading platform** with:
 
 Latest full local verification:
 
-- `pytest -q` -> `133 passed, 1 skipped`
+- `pytest -q` -> `134 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`

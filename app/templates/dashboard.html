@@ -422,6 +422,27 @@
             <div id="launch-summary-list" class="muted">Loading...</div>
           </div>
         </div>
+
+        <div class="section">
+          <h2>Read-Only Validation History</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Symbol</th>
+                  <th>Side</th>
+                  <th>Master</th>
+                  <th>Target</th>
+                  <th>Would Copy</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                </tr>
+              </thead>
+              <tbody id="launch-readonly-body"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section id="tab-copier" class="tab-panel">
@@ -623,6 +644,7 @@
       const depthPanel = document.getElementById('depth-panel');
       const launchChecksList = document.getElementById('launch-checks-list');
       const launchSummaryList = document.getElementById('launch-summary-list');
+      const launchReadonlyBody = document.getElementById('launch-readonly-body');
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -877,6 +899,7 @@
         const summary = payload.summary || {};
         const latency = summary.latency || {};
         const validation = summary.read_only_validation || {};
+        const readOnlyHistory = summary.read_only_history || [];
         const learning = summary.learning_report || {};
         launchSummaryList.innerHTML = `
           <div class="card">
@@ -900,6 +923,18 @@
             <div class="muted">${escapeHtml(learning.model_type || 'No report')} ${learning.date ? `· ${escapeHtml(learning.date)}` : ''}</div>
           </div>
         `;
+        launchReadonlyBody.innerHTML = readOnlyHistory.length ? readOnlyHistory.map((item) => `
+          <tr>
+            <td>${formatTime(item.master_executed_at)}</td>
+            <td><strong>${escapeHtml(item.symbol)}</strong></td>
+            <td>${escapeHtml(item.side)}</td>
+            <td>${formatQty(item.master_qty)} @ ${formatMoney(item.master_price)}</td>
+            <td>${escapeHtml(item.target || '')}</td>
+            <td>${formatQty(item.copy_qty)} / ${formatMoney(item.copy_notional)}</td>
+            <td>${escapeHtml(item.copy_status || '')}${item.copy_reject_reason ? `<div class="muted">${escapeHtml(item.copy_reject_reason)}</div>` : ''}</td>
+            <td>${formatMs(item.copy_latency_ms)}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="8" class="muted">No read-only validation decisions yet. Run a Webull read-only session after credentials exist.</td></tr>';
       }
 
       function renderPnlSummary(summary) {
