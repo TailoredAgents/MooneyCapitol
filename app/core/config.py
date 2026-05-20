@@ -139,6 +139,7 @@ class CopierConfig(BaseModel):
     master_app_key_env: str = "WEBULL_MASTER_APP_KEY"
     master_app_secret_env: str = "WEBULL_MASTER_APP_SECRET"
     master_endpoint_env: str = "WEBULL_MASTER_API_ENDPOINT"
+    master_events_endpoint_env: str = "WEBULL_MASTER_EVENTS_ENDPOINT"
     equities_only: bool = True
     regular_hours_only: bool = True
     copy_shorts: bool = False

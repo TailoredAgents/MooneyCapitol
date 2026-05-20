@@ -8,7 +8,7 @@ from typing import Literal
 OrderSide = Literal["BUY", "SELL"]
 OrderType = Literal["MARKET", "LIMIT"]
 TimeInForce = Literal["DAY", "GTC"]
-TradingSession = Literal["CORE", "EXTENDED"]
+TradingSession = Literal["CORE", "EXTENDED", "ALL", "N"]
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,7 @@ class WebullCredentials:
     app_key: str
     app_secret: str
     endpoint: str
+    events_endpoint: str | None = None
     account_id: str | None = None
     region_id: str = "us"
     environment: str = "test"
@@ -29,7 +30,7 @@ class WebullEquityOrder:
     client_order_id: str
     order_type: OrderType = "MARKET"
     time_in_force: TimeInForce = "DAY"
-    trading_session: TradingSession = "CORE"
+    trading_session: TradingSession = "ALL"
     limit_price: float | None = None
     market: str = "US"
 
@@ -75,7 +76,7 @@ class MasterExecutionEvent:
         side = str(_first_value(payload, ["side", "order_side"]) or "").upper()
         quantity = _first_value(payload, ["filled_qty", "filled_quantity", "last_filled_qty", "quantity", "qty"])
         price = _first_value(payload, ["avg_fill_price", "filled_price", "last_filled_price", "price"])
-        executed_at = _parse_ts(_first_value(payload, ["executed_at", "filled_at", "updated_at", "timestamp", "ts"]))
+        executed_at = _parse_ts(_first_value(payload, ["executed_at", "filled_at", "filled_time", "updated_at", "timestamp", "ts"]))
         if not execution_id:
             raise ValueError("Webull event payload is missing execution/order identifier")
         if not symbol:
@@ -115,6 +116,8 @@ def _first_value(payload: dict, keys: list[str]):
 
 
 def _optional_str(value) -> str | None:
+    if isinstance(value, list):
+        value = next((item for item in value if item not in (None, "")), None)
     return str(value) if value not in (None, "") else None
 
 

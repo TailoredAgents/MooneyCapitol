@@ -51,12 +51,13 @@ def _readiness_checks(session: Session) -> list[dict]:
         _env_values_configured(
             [
                 CONFIG.copier.master_endpoint_env,
+                CONFIG.copier.master_events_endpoint_env,
                 CONFIG.copier.master_app_key_env,
                 CONFIG.copier.master_app_secret_env,
             ]
         ),
         "blocker",
-        "Webull master API endpoint, app key, and secret are configured",
+        "Webull master API endpoint, events endpoint, app key, and secret are configured",
     )
     _add_check(
         checks,

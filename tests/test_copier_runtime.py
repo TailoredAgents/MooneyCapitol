@@ -74,6 +74,30 @@ def _payload(status="FILLED"):
     }
 
 
+def _official_trade_event(scene_type="FINAL_FILLED"):
+    return {
+        "id": "trade-event-1",
+        "event_type": "TRADE",
+        "position": "cursor-1",
+        "timestamp": "2026-05-16T14:30:00+00:00",
+        "payload": {
+            "account_id": "master",
+            "order_id": "order-1",
+            "client_order_id": ["master-client-1"],
+            "order_status": "FILLED",
+            "symbol": "AAPL",
+            "qty": "3",
+            "filled_qty": "3",
+            "filled_price": "12.50",
+            "filled_time": "1778941800000",
+            "side": "BUY",
+            "category": "US_STOCK",
+            "scene_type": scene_type,
+            "biz_type": "TRADE",
+        },
+    }
+
+
 def test_runtime_copies_filled_webull_payload(monkeypatch):
     monkeypatch.setattr("app.copier.runtime.refresh_config", lambda: True)
     monkeypatch.setattr("app.copier.runtime.set_copier_status", lambda **updates: updates)
@@ -90,6 +114,42 @@ def test_runtime_copies_filled_webull_payload(monkeypatch):
     assert result.submitted == 1
     assert orchestrator.copied[0][0].execution_id == "order-1"
     assert orchestrator.copied[0][1][0].name == "personal"
+
+
+def test_runtime_copies_official_webull_trade_event_envelope(monkeypatch):
+    monkeypatch.setattr("app.copier.runtime.refresh_config", lambda: True)
+    monkeypatch.setattr("app.copier.runtime.set_copier_status", lambda **updates: updates)
+    orchestrator = FakeOrchestrator()
+    runtime = WebullCopierRuntime(
+        orchestrator=orchestrator,
+        target_builder=lambda config: [_target()],
+        config_provider=lambda: CopierConfig(enabled=True, global_kill_switch=False),
+    )
+
+    result = runtime.handle_webull_event(_official_trade_event())
+
+    assert result.processed == 1
+    assert result.submitted == 1
+    master = orchestrator.copied[0][0]
+    assert master.execution_id == "order-1"
+    assert master.client_order_id == "master-client-1"
+    assert master.symbol == "AAPL"
+
+
+def test_runtime_ignores_official_webull_non_fill_event(monkeypatch):
+    monkeypatch.setattr("app.copier.runtime.refresh_config", lambda: True)
+    orchestrator = FakeOrchestrator()
+    runtime = WebullCopierRuntime(
+        orchestrator=orchestrator,
+        target_builder=lambda config: [_target()],
+        config_provider=lambda: CopierConfig(enabled=True, global_kill_switch=False),
+    )
+
+    result = runtime.handle_webull_event(_official_trade_event(scene_type="CANCEL_SUCCESS"))
+
+    assert result.processed == 0
+    assert result.ignored == 1
+    assert orchestrator.copied == []
 
 
 def test_runtime_reuses_target_cache_for_same_config(monkeypatch):

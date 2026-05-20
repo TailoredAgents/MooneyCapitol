@@ -48,6 +48,7 @@ class WebullMasterEventListener:
             self.credentials.app_key,
             self.credentials.app_secret,
             self.credentials.region_id,
+            host=self.credentials.events_endpoint,
         )
         client.on_events_message = self.on_event
         return client

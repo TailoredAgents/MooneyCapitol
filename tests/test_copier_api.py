@@ -409,6 +409,7 @@ def test_copier_readiness_passes_with_configured_test_target(monkeypatch):
     monkeypatch.setattr("app.api.routes.copier.refresh_config", lambda: True)
     monkeypatch.setenv("WEBULL_MASTER_ACCOUNT_ID", "master")
     monkeypatch.setenv("WEBULL_MASTER_API_ENDPOINT", "endpoint")
+    monkeypatch.setenv("WEBULL_MASTER_EVENTS_ENDPOINT", "events-endpoint")
     monkeypatch.setenv("WEBULL_MASTER_APP_KEY", "key")
     monkeypatch.setenv("WEBULL_MASTER_APP_SECRET", "secret")
     monkeypatch.setenv("WEBULL_PERSONAL_ACCOUNT_ID", "copy")

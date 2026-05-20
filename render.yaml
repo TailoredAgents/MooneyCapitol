@@ -49,6 +49,8 @@ services:
         sync: false
       - key: WEBULL_MASTER_API_ENDPOINT
         sync: false
+      - key: WEBULL_MASTER_EVENTS_ENDPOINT
+        sync: false
       - key: WEBULL_MASTER_APP_KEY
         sync: false
       - key: WEBULL_MASTER_APP_SECRET
@@ -132,6 +134,8 @@ services:
       - key: TS_REFRESH_TOKEN
         sync: false
       - key: WEBULL_MASTER_API_ENDPOINT
+        sync: false
+      - key: WEBULL_MASTER_EVENTS_ENDPOINT
         sync: false
       - key: WEBULL_MASTER_APP_KEY
         sync: false

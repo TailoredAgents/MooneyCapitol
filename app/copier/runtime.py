@@ -20,6 +20,7 @@ logger = get_logger("copier.runtime")
 
 FILLED_STATUSES = {
     "FILLED",
+    "FINAL_FILLED",
     "PARTIALLY_FILLED",
     "PARTIAL_FILLED",
     "PARTIAL_EXECUTED",
@@ -179,6 +180,7 @@ def _master_credentials(config: CopierConfig) -> WebullCredentials:
     app_key = os.getenv(config.master_app_key_env)
     app_secret = os.getenv(config.master_app_secret_env)
     endpoint = os.getenv(config.master_endpoint_env)
+    events_endpoint = os.getenv(config.master_events_endpoint_env)
     missing = [
         name
         for name, value in [
@@ -194,6 +196,7 @@ def _master_credentials(config: CopierConfig) -> WebullCredentials:
         app_key=app_key or "",
         app_secret=app_secret or "",
         endpoint=endpoint or "",
+        events_endpoint=events_endpoint or None,
         account_id=config.master_account or os.getenv(config.master_account_env),
         environment=config.mode,
     )
@@ -219,6 +222,14 @@ def _expand_payload(payload: dict) -> Iterable[dict]:
     if isinstance(data, dict):
         yield data
         return
+    event_payload = payload.get("payload")
+    if isinstance(event_payload, dict):
+        child = dict(event_payload)
+        for key in ("id", "event_type", "position", "timestamp"):
+            if key in payload and key not in child:
+                child[key] = payload[key]
+        yield child
+        return
     yield payload
 
 
@@ -228,11 +239,11 @@ def _is_fill_payload(payload: dict, config: CopierConfig) -> bool:
         if instrument_type not in {"EQUITY", "STOCK"}:
             return False
     status = str(
-        payload.get("status")
+        payload.get("scene_type")
+        or payload.get("sceneType")
+        or payload.get("status")
         or payload.get("order_status")
         or payload.get("orderStatus")
-        or payload.get("event_type")
-        or payload.get("eventType")
         or ""
     ).upper()
     if status and status not in FILLED_STATUSES:

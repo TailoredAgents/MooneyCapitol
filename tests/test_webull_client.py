@@ -77,7 +77,7 @@ def test_equity_market_order_payload_matches_webull_shape():
         "market": "US",
         "order_type": "MARKET",
         "quantity": "1",
-        "support_trading_session": "CORE",
+        "support_trading_session": "ALL",
         "side": "BUY",
         "time_in_force": "DAY",
         "entrust_type": "QTY",
@@ -201,3 +201,33 @@ def test_webull_master_event_listener_subscribes_with_injected_client(monkeypatc
 
     assert fake.subscribed == ["acct-master"]
     assert fake.on_events_message is not None
+
+
+def test_webull_master_event_listener_passes_events_endpoint(monkeypatch):
+    calls = []
+
+    class FakeEventsClient:
+        def __init__(self, app_key, app_secret, region_id, host=None):
+            calls.append((app_key, app_secret, region_id, host))
+            self.on_events_message = None
+            self.subscribed = None
+
+        def do_subscribe(self, account_ids):
+            self.subscribed = account_ids
+
+    monkeypatch.setattr("app.copier.webull_master.set_copier_status", lambda **updates: updates)
+    listener = WebullMasterEventListener(
+        WebullCredentials(
+            app_key="key",
+            app_secret="secret",
+            endpoint="us-openapi-alb.uat.webullbroker.com",
+            events_endpoint="us-openapi-events.uat.webullbroker.com",
+        ),
+        account_ids=["acct-master"],
+        on_event=lambda *args: None,
+        events_client_factory=FakeEventsClient,
+    )
+
+    listener.subscribe()
+
+    assert calls == [("key", "secret", "us", "us-openapi-events.uat.webullbroker.com")]

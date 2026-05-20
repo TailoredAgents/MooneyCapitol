@@ -9,11 +9,11 @@ MooneyCapitol is intended to become a two-part trading operations platform:
 
 The final system should support discovery, alerting, execution copying, reporting, and learning feedback in one platform. The scout and copier should feed each other through shared data, but they should remain separate runtime paths so a slow scan, report, or dashboard update cannot delay copied orders.
 
-## 2. 🎉 PRODUCTION READY SYSTEM
+## 2. Pre-Launch Validation System
 
-**MAJOR UPDATE:** The system is now 95% complete with all core features fully implemented and production-ready.
+**Current status:** The system is feature-complete enough for validation testing, but it is not cleared for live money until Webull credentials, live read-only sessions, latency, reconciliation, and tiny-funds tests pass.
 
-### ✅ FULLY IMPLEMENTED & PRODUCTION READY:
+### Implemented Product Areas:
 
 **Complete Scout System:**
 - ✅ Advanced pattern detection with 1m/2m consolidation boxes
@@ -31,7 +31,8 @@ The final system should support discovery, alerting, execution copying, reportin
 - ✅ Manual trade detection and comprehensive labeling
 
 **Complete Trade Copier:**
-- ✅ Full Webull SDK integration with event listening
+- ✅ Webull SDK wrapper with event listening, pending real-account validation
+- ✅ Separate Webull HTTP and trading-events endpoint configuration
 - ✅ Sub-300ms low-latency execution hot path
 - ✅ Production-grade percent-equity sizing
 - ✅ Kill switch, risk controls, startup recovery
@@ -47,9 +48,9 @@ The final system should support discovery, alerting, execution copying, reportin
 - ✅ Render deployment configuration
 - ✅ Real-time WebSocket updates
 
-### ⏳ VALIDATION PHASE ONLY:
+### Validation Phase Required:
 
-**Ready for live validation (not missing features):**
+**Ready for live validation after credentials/accounts exist:**
 - Real Webull OpenAPI credentials and account setup
 - End-to-end testing with approved accounts  
 - Live-read-only validation sessions
@@ -695,6 +696,7 @@ Environment variables for v1 may include:
 - `COPIER_MODE=test|live|read_only`
 - `COPIER_GLOBAL_KILL_SWITCH`
 - `WEBULL_MASTER_API_ENDPOINT`
+- `WEBULL_MASTER_EVENTS_ENDPOINT`
 - `WEBULL_MASTER_APP_KEY`
 - `WEBULL_MASTER_APP_SECRET`
 - `WEBULL_MASTER_ACCOUNT_ID`

@@ -13,9 +13,9 @@ The scout and copier share data for reports and learning, but their runtime path
 - Full roadmap: `docs/MOONEYCAPITOL_ROADMAP.md`
 - Hybrid learning plan: `docs/HYBRID_XGBOOST_LEARNING_PLAN.md`
 
-## Current State ✅ PRODUCTION READY
+## Current State: Feature-Complete for Pre-Launch Validation
 
-**✅ FULLY IMPLEMENTED FEATURES:**
+**Implemented features:**
 
 ### Core Infrastructure
 - ✅ **FastAPI API**: Complete REST API with health/config/watchlist/reports/learning/copier endpoints
@@ -53,7 +53,7 @@ Additional learning guardrails now in place:
 - Worker background refresh keeps P&L snapshots current without touching the copier hot path
 
 ### Trade Copier
-- ✅ **Webull Integration**: Complete SDK wrapper with master event listening
+- ✅ **Webull Integration**: SDK wrapper with master event listening, pending real-account validation
 - ✅ **Low-Latency Engine**: <300ms hot path with cached config, warmed clients
 - ✅ **Percent-Equity Sizing**: Production-ready mirroring algorithm
 - ✅ **Risk Controls**: Kill switch, position tracking, order reconciliation
@@ -63,7 +63,7 @@ Additional learning guardrails now in place:
 - ✅ **Background Jobs**: Order reconciliation, position sync, readiness monitoring
 
 ### Professional Dashboard
-- ✅ **3-Tab Interface**: Scout (lanes), Copier (controls), Trades (results)
+- ✅ **5-Tab Interface**: Scout, Launch, Copier, Trades, and P&L
 - ✅ **Real-time Updates**: WebSocket integration for live data
 - ✅ **Mobile Responsive**: Works on all device sizes
 - ✅ **Operator Controls**: Target account management, kill switch, readiness monitoring
@@ -83,6 +83,18 @@ Additional learning guardrails now in place:
 - If the master uses 5% of its account, each target attempts to use 5% of its account.
 - If the master uses leveraged exposure, targets attempt to mirror that leveraged percentage as long as Webull accepts the order and the target account has the required buying-power/margin permissions.
 - Do not enable live copy trading until Webull OpenAPI access, account IDs, credentials, live-read-only testing, kill switch, and reconciliation are confirmed.
+
+## Webull OpenAPI Notes
+
+- Python dependency is pinned to `webull-openapi-python-sdk==2.0.7`.
+- Webull HTTP trading/account host and gRPC trading-events host are separate.
+- Test HTTP host: `us-openapi-alb.uat.webullbroker.com`
+- Test events host: `us-openapi-events.uat.webullbroker.com`
+- Production HTTP host: `api.webull.com`
+- Production events host: `events-api.webull.com`
+- Set `WEBULL_MASTER_API_ENDPOINT` for HTTP account/trading calls and `WEBULL_MASTER_EVENTS_ENDPOINT` for master fill event streaming.
+- Target copy accounts use their own `WEBULL_*_API_ENDPOINT` for HTTP order placement.
+- Copied Webull equity orders use `support_trading_session="ALL"` by default so they are not intentionally limited to core regular-hours trading.
 
 ## Low-Latency Copier Rules
 
@@ -306,6 +318,6 @@ When ready:
 
 Latest full local verification:
 
-- `pytest -q` -> `134 passed, 1 skipped`
+- `pytest -q` -> `138 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`

@@ -128,11 +128,12 @@ def _check_master_account(
             ),
             _check(
                 "master.credentials",
-                _has_credentials(credentials),
+                _has_credentials(credentials, require_events=True),
                 "blocker",
-                "Master Webull API endpoint, app key, and secret are configured",
+                "Master Webull API endpoint, events endpoint, app key, and secret are configured",
                 {
                     "endpoint_env": config.master_endpoint_env,
+                    "events_endpoint_env": config.master_events_endpoint_env,
                     "app_key_env": config.master_app_key_env,
                     "app_secret_env": config.master_app_secret_env,
                 },
@@ -349,6 +350,7 @@ def _master_credentials(config: CopierConfig) -> WebullCredentials:
         app_key=os.getenv(config.master_app_key_env) or "",
         app_secret=os.getenv(config.master_app_secret_env) or "",
         endpoint=os.getenv(config.master_endpoint_env) or "",
+        events_endpoint=os.getenv(config.master_events_endpoint_env) or None,
         account_id=config.master_account or os.getenv(config.master_account_env),
         environment=config.mode,
     )
@@ -364,8 +366,10 @@ def _target_credentials(target: CopyTargetAccountConfig) -> WebullCredentials:
     )
 
 
-def _has_credentials(credentials: WebullCredentials) -> bool:
-    return bool(credentials.app_key and credentials.app_secret and credentials.endpoint)
+def _has_credentials(credentials: WebullCredentials, *, require_events: bool = False) -> bool:
+    if not (credentials.app_key and credentials.app_secret and credentials.endpoint):
+        return False
+    return bool(credentials.events_endpoint) if require_events else True
 
 
 def _check(key: str, ok: bool, severity: str, label: str, context: dict[str, Any] | None = None) -> dict[str, Any]:

@@ -55,6 +55,29 @@ def test_master_execution_event_normalizes_webull_payload():
     assert event.execution_id == "order-1"
 
 
+def test_master_execution_event_accepts_official_webull_fields():
+    event = MasterExecutionEvent.from_webull_payload(
+        {
+            "account_id": "acct-master",
+            "order_id": "order-1",
+            "client_order_id": ["client-1"],
+            "symbol": "aapl",
+            "side": "buy",
+            "filled_qty": "3",
+            "filled_price": "12.50",
+            "filled_time": "1778941800000",
+            "scene_type": "FINAL_FILLED",
+            "category": "US_STOCK",
+        }
+    )
+
+    assert event.execution_id == "order-1"
+    assert event.client_order_id == "client-1"
+    assert event.quantity == 3.0
+    assert event.price == 12.5
+    assert event.executed_at.tzinfo is not None
+
+
 def test_sizing_fixed_multiplier_and_percent_equity():
     master = _master()
 

@@ -45,6 +45,7 @@ def _config():
 
 def test_webull_preflight_passes_with_valid_config_and_network(monkeypatch):
     monkeypatch.setenv("WEBULL_MASTER_API_ENDPOINT", "https://api.example")
+    monkeypatch.setenv("WEBULL_MASTER_EVENTS_ENDPOINT", "events.example")
     monkeypatch.setenv("WEBULL_MASTER_APP_KEY", "master-key")
     monkeypatch.setenv("WEBULL_MASTER_APP_SECRET", "master-secret")
     monkeypatch.setenv("WEBULL_PERSONAL_API_ENDPOINT", "https://api.example")
@@ -62,6 +63,7 @@ def test_webull_preflight_passes_with_valid_config_and_network(monkeypatch):
 
 def test_webull_preflight_reports_missing_credentials_without_network(monkeypatch):
     monkeypatch.delenv("WEBULL_MASTER_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("WEBULL_MASTER_EVENTS_ENDPOINT", raising=False)
     monkeypatch.delenv("WEBULL_MASTER_APP_KEY", raising=False)
     monkeypatch.delenv("WEBULL_MASTER_APP_SECRET", raising=False)
 
@@ -79,6 +81,7 @@ def test_webull_preflight_blocks_account_mismatch(monkeypatch):
             return [{"account_id": "different-acct"}]
 
     monkeypatch.setenv("WEBULL_MASTER_API_ENDPOINT", "https://api.example")
+    monkeypatch.setenv("WEBULL_MASTER_EVENTS_ENDPOINT", "events.example")
     monkeypatch.setenv("WEBULL_MASTER_APP_KEY", "master-key")
     monkeypatch.setenv("WEBULL_MASTER_APP_SECRET", "master-secret")
     monkeypatch.setenv("WEBULL_PERSONAL_API_ENDPOINT", "https://api.example")

@@ -67,6 +67,8 @@ The scout and copier share data for reporting and learning, but their runtime pa
 - Webull-to-Webull architecture.
 - Webull SDK trading adapter.
 - Webull master event listener wrapper.
+- Webull SDK pinned to `webull-openapi-python-sdk==2.0.7`.
+- Master HTTP endpoint and master gRPC events endpoint are configured separately with `WEBULL_MASTER_API_ENDPOINT` and `WEBULL_MASTER_EVENTS_ENDPOINT`.
 - Runtime for Webull fill events.
 - Replay tool for recorded Webull fill payloads.
 - Webull preflight tool for env/config, SDK, account-list, positions, balance/detail, and database readiness checks without placing orders.
@@ -99,11 +101,11 @@ The scout and copier share data for reporting and learning, but their runtime pa
   - compares actual Webull target positions against local copied-position estimate
   - writes reconciliation warnings on mismatch
 
-## 🎉 PRODUCTION READY STATUS
+## Pre-Launch Validation Status
 
-**The system is 95% complete and ready for validation testing. All core features are fully implemented:**
+**The system is feature-complete enough for validation testing, but not cleared for live money until Webull credentials, live read-only sessions, latency, reconciliation, and tiny-funds tests pass.**
 
-### ✅ COMPLETED PRODUCTION FEATURES
+### Completed Product Features
 
 **Scout System:**
 - ✅ Complete consolidation detection with 1m/2m timeframes
@@ -197,6 +199,6 @@ This is a **sophisticated, enterprise-grade trading platform** with:
 
 Latest full local verification:
 
-- `pytest -q` -> `134 passed, 1 skipped`
+- `pytest -q` -> `138 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`
