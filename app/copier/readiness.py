@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from sqlalchemy import or_, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config_store import CONFIG
-from app.db.models import CopyOrder, CopyReconciliation
+from app.db.models import AccountSnapshot, CopyOrder, CopyReconciliation
 
 
 SIZING_MODES = {"disabled", "fixed_quantity", "fixed_multiplier", "percent_equity", "equity_ratio"}
@@ -62,10 +62,10 @@ def _readiness_checks(session: Session) -> list[dict]:
     _add_check(
         checks,
         "master_equity",
-        _configured_float(CONFIG.copier.master_equity, CONFIG.copier.master_equity_env) is not None,
+        _equity_available(session, CONFIG.copier.master_account or os.getenv(CONFIG.copier.master_account_env), CONFIG.copier.master_equity, CONFIG.copier.master_equity_env),
         "blocker",
-        "Master account equity is configured for percent-equity sizing",
-        {"env": CONFIG.copier.master_equity_env},
+        "Master account equity is available from latest Webull snapshot or fallback config",
+        {"env": CONFIG.copier.master_equity_env, "source": _equity_source(session, CONFIG.copier.master_account or os.getenv(CONFIG.copier.master_account_env), CONFIG.copier.master_equity, CONFIG.copier.master_equity_env)},
     )
     _add_check(checks, "kill_switch_on", CONFIG.copier.global_kill_switch, "warning", "Global kill switch is currently on")
 
@@ -103,10 +103,10 @@ def _readiness_checks(session: Session) -> list[dict]:
             _add_check(
                 checks,
                 f"{target_prefix}:equity",
-                _configured_float(target.equity, target.equity_env) is not None,
+                _equity_available(session, target.account_ref or os.getenv(target.account_id_env), target.equity, target.equity_env),
                 "blocker",
-                f"Target {target.name} equity is configured",
-                {"env": target.equity_env},
+                f"Target {target.name} equity is available from latest Webull snapshot or fallback config",
+                {"env": target.equity_env, "source": _equity_source(session, target.account_ref or os.getenv(target.account_id_env), target.equity, target.equity_env)},
             )
         _add_check(
             checks,
@@ -145,6 +145,40 @@ def _configured_float(value: float | None, env_name: str | None) -> float | None
     except ValueError:
         return None
     return parsed if parsed > 0 else None
+
+
+def _equity_available(session: Session, account_ref: str | None, value: float | None, env_name: str | None) -> bool:
+    return _latest_snapshot_equity(session, account_ref) is not None or _configured_float(value, env_name) is not None
+
+
+def _equity_source(session: Session, account_ref: str | None, value: float | None, env_name: str | None) -> str | None:
+    if _latest_snapshot_equity(session, account_ref) is not None:
+        return "webull_snapshot"
+    if _configured_float(value, env_name) is not None:
+        return "fallback_config"
+    return None
+
+
+def _latest_snapshot_equity(session: Session, account_ref: str | None) -> float | None:
+    if not account_ref:
+        return None
+    try:
+        row = (
+            session.execute(
+                select(AccountSnapshot)
+                .where(AccountSnapshot.account_ref == account_ref)
+                .order_by(desc(AccountSnapshot.snapshot_time))
+                .limit(1)
+            )
+            .scalars()
+            .first()
+        )
+    except Exception:
+        return None
+    if row is None:
+        return None
+    value = row.equity_value if row.equity_value is not None else row.total_value
+    return float(value) if value is not None and value > 0 else None
 
 
 def _env_values_configured(env_names: list[str | None]) -> bool:

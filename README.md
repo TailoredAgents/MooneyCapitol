@@ -343,17 +343,16 @@ Leave these blank until accounts/subscriptions are ready:
 - `WEBULL_MASTER_APP_KEY`
 - `WEBULL_MASTER_APP_SECRET`
 - `WEBULL_MASTER_ACCOUNT_ID`
-- `WEBULL_MASTER_ACCOUNT_EQUITY`
 - `WEBULL_PERSONAL_API_ENDPOINT`
 - `WEBULL_PERSONAL_APP_KEY`
 - `WEBULL_PERSONAL_APP_SECRET`
 - `WEBULL_PERSONAL_ACCOUNT_ID`
-- `WEBULL_PERSONAL_ACCOUNT_EQUITY`
 
 Before live validation:
 
 - Add the Polygon Advanced key for real-time broad scanning.
-- Add Webull OpenAPI credentials, account IDs, equities, HTTP endpoint, and events endpoint.
+- Add Webull OpenAPI credentials, account IDs, HTTP endpoint, and events endpoint.
+- Let the P&L monitor pull live Webull account equity before enabling copy trading. `WEBULL_MASTER_ACCOUNT_EQUITY` and `WEBULL_PERSONAL_ACCOUNT_EQUITY` remain optional emergency fallback env vars, but they are not required for the normal launch path.
 - Keep `COPIER_GLOBAL_KILL_SWITCH=1` until read-only validation passes.
 - Use the Launch tab to confirm remaining blockers are expected credential/data blockers.
 
@@ -361,6 +360,6 @@ Before live validation:
 
 Latest full local verification:
 
-- `pytest -q` -> `138 passed, 1 skipped`
+- `pytest -q` -> `139 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 
+from sqlalchemy import desc, select
+
+from app.db.models import AccountSnapshot
+from app.db.session import get_session
 from app.copier.engine import CopyTarget, TradingClient
 from app.copier.risk import RiskPolicy
 from app.copier.sizing import SizingPolicy
@@ -12,17 +17,30 @@ from app.core.config_store import CONFIG
 
 
 ClientFactory = Callable[[CopyTargetAccountConfig], TradingClient]
+EquityProvider = Callable[[str], float | None]
+SessionScope = Callable[[], AbstractContextManager]
 
 
 def build_copy_targets(
     config: CopierConfig | None = None,
     client_factory: ClientFactory | None = None,
     allow_missing_accounts: bool = False,
+    equity_provider: EquityProvider | None = None,
+    session_scope: SessionScope = get_session,
+    use_latest_snapshot_equity: bool = False,
 ) -> list[CopyTarget]:
     config = config or CONFIG.copier
     client_factory = client_factory or _webull_client_from_target_config
     return [
-        _build_target(config, target_cfg, client_factory, allow_missing_accounts=allow_missing_accounts)
+        _build_target(
+            config,
+            target_cfg,
+            client_factory,
+            allow_missing_accounts=allow_missing_accounts,
+            equity_provider=equity_provider,
+            session_scope=session_scope,
+            use_latest_snapshot_equity=use_latest_snapshot_equity,
+        )
         for target_cfg in config.targets
     ]
 
@@ -32,14 +50,32 @@ def _build_target(
     target_cfg: CopyTargetAccountConfig,
     client_factory: ClientFactory,
     allow_missing_accounts: bool = False,
+    equity_provider: EquityProvider | None = None,
+    session_scope: SessionScope = get_session,
+    use_latest_snapshot_equity: bool = False,
 ) -> CopyTarget:
     account_id = target_cfg.account_ref or os.getenv(target_cfg.account_id_env)
     if not account_id:
         if not allow_missing_accounts:
             raise ValueError(f"Missing account id for copier target {target_cfg.name}: {target_cfg.account_id_env}")
         account_id = f"dry-run:{target_cfg.name}"
-    master_equity = _float_from_config_or_env(config.master_equity, config.master_equity_env)
-    target_equity = _float_from_config_or_env(target_cfg.equity, target_cfg.equity_env)
+    master_account_id = config.master_account or os.getenv(config.master_account_env)
+    master_equity = _equity_for_account(
+        master_account_id,
+        config.master_equity,
+        config.master_equity_env,
+        equity_provider=equity_provider,
+        session_scope=session_scope,
+        use_latest_snapshot_equity=use_latest_snapshot_equity,
+    )
+    target_equity = _equity_for_account(
+        account_id,
+        target_cfg.equity,
+        target_cfg.equity_env,
+        equity_provider=equity_provider,
+        session_scope=session_scope,
+        use_latest_snapshot_equity=use_latest_snapshot_equity,
+    )
 
     return CopyTarget(
         name=target_cfg.name,
@@ -90,3 +126,45 @@ def _float_from_config_or_env(config_value: float | None, env_name: str | None) 
     except ValueError:
         return None
     return value if value > 0 else None
+
+
+def _equity_for_account(
+    account_ref: str | None,
+    config_value: float | None,
+    env_name: str | None,
+    *,
+    equity_provider: EquityProvider | None,
+    session_scope: SessionScope,
+    use_latest_snapshot_equity: bool,
+) -> float | None:
+    if account_ref:
+        if equity_provider is not None:
+            value = equity_provider(account_ref)
+            if value and value > 0:
+                return float(value)
+        if use_latest_snapshot_equity:
+            value = _latest_snapshot_equity(account_ref, session_scope)
+            if value and value > 0:
+                return float(value)
+    return _float_from_config_or_env(config_value, env_name)
+
+
+def _latest_snapshot_equity(account_ref: str, session_scope: SessionScope) -> float | None:
+    try:
+        with session_scope() as session:
+            row = (
+                session.execute(
+                    select(AccountSnapshot)
+                    .where(AccountSnapshot.account_ref == account_ref)
+                    .order_by(desc(AccountSnapshot.snapshot_time))
+                    .limit(1)
+                )
+                .scalars()
+                .first()
+            )
+    except Exception:
+        return None
+    if row is None:
+        return None
+    value = row.equity_value if row.equity_value is not None else row.total_value
+    return float(value) if value is not None and value > 0 else None

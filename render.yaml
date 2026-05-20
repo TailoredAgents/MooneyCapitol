@@ -63,8 +63,6 @@ services:
         sync: false
       - key: WEBULL_MASTER_ACCOUNT_ID
         sync: false
-      - key: WEBULL_MASTER_ACCOUNT_EQUITY
-        sync: false
       - key: WEBULL_PERSONAL_API_ENDPOINT
         sync: false
       - key: WEBULL_PERSONAL_APP_KEY
@@ -72,8 +70,6 @@ services:
       - key: WEBULL_PERSONAL_APP_SECRET
         sync: false
       - key: WEBULL_PERSONAL_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_PERSONAL_ACCOUNT_EQUITY
         sync: false
       - key: LEARNING_XGB_MIN_ROWS
         value: "20"
@@ -157,8 +153,6 @@ services:
         sync: false
       - key: WEBULL_MASTER_ACCOUNT_ID
         sync: false
-      - key: WEBULL_MASTER_ACCOUNT_EQUITY
-        sync: false
       - key: WEBULL_PERSONAL_API_ENDPOINT
         sync: false
       - key: WEBULL_PERSONAL_APP_KEY
@@ -166,8 +160,6 @@ services:
       - key: WEBULL_PERSONAL_APP_SECRET
         sync: false
       - key: WEBULL_PERSONAL_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_PERSONAL_ACCOUNT_EQUITY
         sync: false
       - key: LEARNING_XGB_MIN_ROWS
         value: "20"

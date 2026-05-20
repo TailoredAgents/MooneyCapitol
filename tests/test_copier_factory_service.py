@@ -84,6 +84,37 @@ def test_build_copy_targets_uses_configured_webull_accounts():
     assert target.target_equity == 10_000
 
 
+def test_build_copy_targets_prefers_latest_webull_snapshot_equity():
+    config = CopierConfig(
+        enabled=True,
+        global_kill_switch=False,
+        master_account="master-acct",
+        master_equity=30_000,
+        targets=[
+            CopyTargetAccountConfig(
+                name="personal",
+                account_ref="copy-acct",
+                endpoint_env="WEBULL_PERSONAL_API_ENDPOINT",
+                api_key_env="WEBULL_PERSONAL_APP_KEY",
+                api_secret_env="WEBULL_PERSONAL_APP_SECRET",
+                account_id_env="WEBULL_PERSONAL_ACCOUNT_ID",
+                enabled=True,
+                equity=10_000,
+                sizing_mode="percent_equity",
+            )
+        ],
+    )
+
+    targets = build_copy_targets(
+        config,
+        client_factory=lambda target_cfg: FakeClient(),
+        equity_provider=lambda account_ref: {"master-acct": 31_500.0, "copy-acct": 2_100.0}.get(account_ref),
+    )
+
+    assert targets[0].master_equity == 31_500.0
+    assert targets[0].target_equity == 2_100.0
+
+
 def test_copy_orchestrator_persists_engine_results(monkeypatch):
     persisted = {}
 

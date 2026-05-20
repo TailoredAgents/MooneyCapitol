@@ -26,6 +26,9 @@ class FakeScalarResult:
     def all(self):
         return self.rows
 
+    def first(self):
+        return self.rows[0] if self.rows else None
+
 
 class FakeResult:
     def __init__(self, rows):
@@ -392,7 +395,7 @@ def test_copier_readiness_reports_blockers_when_missing_config(monkeypatch):
     try:
         CONFIG.copier = CopierConfig(enabled=False, mode="test", master_equity=None, targets=[])
 
-        payload = copier_readiness(session=FakeSession([], []))
+        payload = copier_readiness(session=FakeSession([], [], []))
 
         assert payload["ready"] is False
         keys = {item["key"] for item in payload["blockers"]}
@@ -436,7 +439,7 @@ def test_copier_readiness_passes_with_configured_test_target(monkeypatch):
             ],
         )
 
-        payload = copier_readiness(session=FakeSession([], []))
+        payload = copier_readiness(session=FakeSession([], [], [], [], [], []))
 
         assert payload["ready"] is True
         assert payload["ready_to_disable_kill_switch"] is True

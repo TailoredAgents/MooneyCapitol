@@ -55,6 +55,7 @@ The scout and copier share data for reporting and learning, but their runtime pa
 - P&L tables are included in Alembic migration `0004_pnl_monitoring`.
 - Dashboard has a P&L tab for balances, buying power, daily P&L, drawdown, exposure, open positions, and active P&L risk alerts.
 - Worker runs P&L refresh in the background, separate from the low-latency copier hot path.
+- Copier sizing prefers the latest cached Webull account snapshot equity. Manual equity env vars are fallback-only and are not part of the normal Render Blueprint prompt.
 
 ### Launch Readiness
 
@@ -205,6 +206,6 @@ This is a **sophisticated, enterprise-grade trading platform** with:
 
 Latest full local verification:
 
-- `pytest -q` -> `138 passed, 1 skipped`
+- `pytest -q` -> `139 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0004_pnl_monitoring (head)`

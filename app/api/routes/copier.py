@@ -703,11 +703,6 @@ def _validate_target(target) -> None:
             raise HTTPException(status_code=400, detail="Cannot enable live target unless live_trading_enabled=true")
         if target.sizing_mode not in {"percent_equity", "equity_ratio"}:
             raise HTTPException(status_code=400, detail=f"{target.name} must use percent_equity sizing")
-        if target.sizing_mode in {"percent_equity", "equity_ratio"}:
-            if _configured_float(CONFIG.copier.master_equity, CONFIG.copier.master_equity_env) is None:
-                raise HTTPException(status_code=400, detail="percent_equity requires master account equity")
-            if _configured_float(target.equity, target.equity_env) is None:
-                raise HTTPException(status_code=400, detail=f"percent_equity requires target equity for {target.name}")
 
 
 def _configured_float(value: float | None, env_name: str | None) -> float | None:

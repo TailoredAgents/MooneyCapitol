@@ -5,12 +5,14 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.copier.models import WebullCredentials
 from app.copier.readiness import evaluate_copier_readiness
 from app.copier.webull_client import WebullTradingClient
 from app.core.config import CopierConfig, CopyTargetAccountConfig
+from app.db.models import AccountSnapshot
 
 
 ClientFactory = Callable[[WebullCredentials], WebullTradingClient]
@@ -41,9 +43,9 @@ def run_webull_preflight(
     client_factory = client_factory or (lambda credentials: WebullTradingClient(credentials))
     checks: list[PreflightCheck] = []
 
-    checks.extend(_local_config_checks(config))
+    checks.extend(_local_config_checks(config, session=session))
     accounts: list[dict[str, Any]] = [
-        _check_master_account(config, client_factory=client_factory, include_network=include_network)
+        _check_master_account(config, client_factory=client_factory, include_network=include_network, session=session)
     ]
     for target in config.targets:
         if target.enabled or include_disabled_targets:
@@ -53,6 +55,7 @@ def run_webull_preflight(
                     target,
                     client_factory=client_factory,
                     include_network=include_network and target.enabled,
+                    session=session,
                 )
             )
 
@@ -73,8 +76,9 @@ def run_webull_preflight(
     }
 
 
-def _local_config_checks(config: CopierConfig) -> list[PreflightCheck]:
+def _local_config_checks(config: CopierConfig, *, session: Session | None = None) -> list[PreflightCheck]:
     enabled_targets = [target for target in config.targets if target.enabled]
+    master_account = config.master_account or os.getenv(config.master_account_env)
     return [
         PreflightCheck("copier.enabled", config.enabled, "blocker", "Copier is enabled"),
         PreflightCheck(
@@ -94,10 +98,10 @@ def _local_config_checks(config: CopierConfig) -> list[PreflightCheck]:
         PreflightCheck("copier.kill_switch", config.global_kill_switch, "warning", "Global kill switch is on"),
         PreflightCheck(
             "copier.master_equity",
-            _configured_float(config.master_equity, config.master_equity_env) is not None,
+            _equity_available(session, master_account, config.master_equity, config.master_equity_env),
             "blocker",
-            "Master account equity is configured",
-            {"env": config.master_equity_env},
+            "Master account equity is available from latest Webull snapshot or fallback config",
+            {"env": config.master_equity_env, "source": _equity_source(session, master_account, config.master_equity, config.master_equity_env)},
         ),
         PreflightCheck(
             "copier.enabled_targets",
@@ -114,6 +118,7 @@ def _check_master_account(
     *,
     client_factory: ClientFactory,
     include_network: bool,
+    session: Session | None,
 ) -> dict[str, Any]:
     credentials = _master_credentials(config)
     report = _base_account_report("master", "master", credentials, include_network=include_network)
@@ -150,6 +155,7 @@ def _check_target_account(
     *,
     client_factory: ClientFactory,
     include_network: bool,
+    session: Session | None,
 ) -> dict[str, Any]:
     credentials = _target_credentials(target)
     report = _base_account_report("target", target.name, credentials, include_network=include_network)
@@ -183,10 +189,10 @@ def _check_target_account(
             ),
             _check(
                 f"target:{target.name}.equity",
-                _configured_float(target.equity, target.equity_env) is not None,
+                _equity_available(session, credentials.account_id, target.equity, target.equity_env),
                 "blocker",
-                f"Target {target.name} account equity is configured",
-                {"env": target.equity_env},
+                f"Target {target.name} account equity is available from latest Webull snapshot or fallback config",
+                {"env": target.equity_env, "source": _equity_source(session, credentials.account_id, target.equity, target.equity_env)},
             ),
             _check(
                 f"target:{target.name}.shorts",
@@ -389,6 +395,40 @@ def _configured_float(value: float | None, env_name: str | None) -> float | None
     except ValueError:
         return None
     return parsed if parsed > 0 else None
+
+
+def _equity_available(session: Session | None, account_ref: str | None, value: float | None, env_name: str | None) -> bool:
+    return _latest_snapshot_equity(session, account_ref) is not None or _configured_float(value, env_name) is not None
+
+
+def _equity_source(session: Session | None, account_ref: str | None, value: float | None, env_name: str | None) -> str | None:
+    if _latest_snapshot_equity(session, account_ref) is not None:
+        return "webull_snapshot"
+    if _configured_float(value, env_name) is not None:
+        return "fallback_config"
+    return None
+
+
+def _latest_snapshot_equity(session: Session | None, account_ref: str | None) -> float | None:
+    if session is None or not account_ref:
+        return None
+    try:
+        row = (
+            session.execute(
+                select(AccountSnapshot)
+                .where(AccountSnapshot.account_ref == account_ref)
+                .order_by(desc(AccountSnapshot.snapshot_time))
+                .limit(1)
+            )
+            .scalars()
+            .first()
+        )
+    except Exception:
+        return None
+    if row is None:
+        return None
+    value = row.equity_value if row.equity_value is not None else row.total_value
+    return float(value) if value is not None and value > 0 else None
 
 
 def _normalize_account_list(payload: Any) -> list[dict[str, Any]]:

@@ -410,6 +410,7 @@ Acceptance criteria:
 - Real Webull account balance and position snapshots are stored for P&L, drawdown, exposure, and risk alert monitoring.
 - Operator can see P&L account snapshots, positions, buying power, daily P&L, drawdown, exposure, and active risk alerts in the dashboard P&L tab.
 - Worker refreshes P&L snapshots in the background without adding work to the copied-order hot path.
+- Percent-equity copier sizing uses the latest cached Webull account snapshot equity first, with manual equity env vars only as fallback.
 - Copier can run for a full Webull test or live-read-only session without manual database cleanup.
 - Reconciliation records are visible through `GET /copier/reconciliations`.
 

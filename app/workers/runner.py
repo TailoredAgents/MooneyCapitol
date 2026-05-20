@@ -1223,6 +1223,7 @@ async def copier_listener_job():
                 text = recovery_alert_text(recovery)
                 if text and CTX.copier_alerts.allow("recovery"):
                     CTX.slack.post(text)
+            await asyncio.to_thread(CTX.pnl_monitor.collect_once)
             await asyncio.to_thread(start_webull_copier)
         except Exception as exc:
             logger.error("copier.listener.error", err=str(exc))

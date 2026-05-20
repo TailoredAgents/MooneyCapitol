@@ -46,7 +46,7 @@ class WebullCopierRuntime:
         refresh_interval_seconds: float = 1.0,
     ) -> None:
         self.orchestrator = orchestrator or CopyOrchestrator()
-        self.target_builder = target_builder or build_copy_targets
+        self.target_builder = target_builder or (lambda config: build_copy_targets(config, use_latest_snapshot_equity=True))
         self.config_provider = config_provider or (lambda: CONFIG.copier)
         self.refresh_interval = timedelta(seconds=refresh_interval_seconds)
         self._last_config_refresh = datetime.now(tz=timezone.utc)
