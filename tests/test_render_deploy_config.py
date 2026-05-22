@@ -3,7 +3,9 @@ from pathlib import Path
 
 def test_render_runs_migrations_before_api_and_worker_start():
     text = Path("render.yaml").read_text(encoding="utf-8")
+    runtime = Path("runtime.txt").read_text(encoding="utf-8").strip()
 
+    assert runtime.startswith("python-3.11.")
     assert text.count("preDeployCommand: python -m app.tools.run_migrations") == 2
     assert text.count("COPIER_ENABLED") == 2
     assert text.count("COPIER_MODE") == 2
