@@ -29,6 +29,13 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert "COWORK_OPERATOR_API_TOKEN" in text
 
 
+def test_api_mounts_static_assets_for_favicon():
+    text = Path("app/api/main.py").read_text(encoding="utf-8")
+
+    assert "StaticFiles" in text
+    assert 'app.mount("/static", StaticFiles(directory="app/static"), name="static")' in text
+
+
 def test_migration_runner_uses_postgres_advisory_lock():
     text = Path("app/tools/run_migrations.py").read_text(encoding="utf-8")
 

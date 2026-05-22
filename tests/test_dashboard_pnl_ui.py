@@ -39,6 +39,14 @@ def test_dashboard_exposes_launch_readiness_tab_and_api_call():
     assert "read_only_history" in html
 
 
+def test_pages_include_png_favicon_link():
+    dashboard = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+    login = Path("app/templates/login.html").read_text(encoding="utf-8")
+
+    assert 'href="/static/favicon.png"' in dashboard
+    assert 'href="/static/favicon.png"' in login
+
+
 def test_dashboard_v3_separates_trader_and_owner_navigation():
     html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
 

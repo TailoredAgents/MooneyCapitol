@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import Settings
 from app.core.config_store import CONFIG, ensure_config_initialized, refresh_config
@@ -58,6 +59,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(health_router)
 app.include_router(config_router)
