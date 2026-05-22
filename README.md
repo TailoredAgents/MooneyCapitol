@@ -21,7 +21,7 @@ The scout and copier share data for reports and learning, but their runtime path
 - ✅ **FastAPI API**: Complete REST API with health/config/watchlist/reports/learning/copier endpoints
 - ✅ **Worker System**: Multi-job scheduler with premarket watchlist, real-time scanning, dashboard updates, Slack alerts
 - ✅ **Database**: Complete SQLAlchemy models with Alembic migrations for all data entities
-- ✅ **Authentication**: HTTP Basic Auth + API token system for operator controls
+- ✅ **Authentication**: App login page, signed session cookie, and API token system for operator controls
 - ✅ **Deployment**: Full Render configuration for API, worker, and PostgreSQL
 
 ### Scout System 
@@ -253,13 +253,13 @@ The dashboard and copier control endpoints are gated by a single shared operator
 
 Env vars:
 
-- `COWORK_OPERATOR_USERNAME` and `COWORK_OPERATOR_PASSWORD` lock the `/dashboard` page behind HTTP Basic Auth. Set both.
-- `COWORK_OPERATOR_API_TOKEN` locks the `/copier/*` APIs and `/config` PUT behind an `X-Operator-Token` request header. A logged-in dashboard browser session is also accepted on those APIs (the browser replays Basic credentials automatically), so the dashboard works without a separate token.
+- `COWORK_OPERATOR_USERNAME` and `COWORK_OPERATOR_PASSWORD` lock `/dashboard` behind the app login page. Set both.
+- `COWORK_OPERATOR_API_TOKEN` locks the `/copier/*` APIs and `/config` PUT behind an `X-Operator-Token` request header for external callers. A logged-in dashboard browser session is also accepted on those APIs, so the dashboard works without a separate token.
 
 Gated routes:
 
-- `/dashboard` (Basic Auth required when `COWORK_OPERATOR_USERNAME` / `COWORK_OPERATOR_PASSWORD` are set).
-- All `/copier/*` routes (Basic Auth OR `X-Operator-Token` required when either credential is set).
+- `/login`, `/logout`, and `/dashboard` (login required when `COWORK_OPERATOR_USERNAME` / `COWORK_OPERATOR_PASSWORD` are set).
+- All `/copier/*` routes (dashboard session cookie, Basic Auth, OR `X-Operator-Token` required when any operator credential is set).
 - `PUT /config` (same as `/copier/*`; it can mutate copier config, so it shares the gate).
 
 Open routes (intentional):

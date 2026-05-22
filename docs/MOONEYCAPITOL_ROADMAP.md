@@ -44,7 +44,7 @@ The final system should support discovery, alerting, execution copying, reportin
 - ✅ FastAPI REST API with full endpoint coverage
 - ✅ Multi-job worker scheduler with error handling
 - ✅ Complete SQLAlchemy models with Alembic migrations
-- ✅ Operator authentication (HTTP Basic + API tokens)
+- ✅ Operator authentication (login page, session cookies, and API tokens)
 - ✅ Render deployment configuration
 - ✅ Real-time WebSocket updates
 
@@ -69,7 +69,7 @@ This system represents a **complete, enterprise-grade trading platform** featuri
 
 **The roadmap phases below are now complete - this serves as historical reference.**
 
-Operator authentication for `/dashboard`, `/copier/*`, and `PUT /config` is implemented via the `COWORK_OPERATOR_USERNAME`/`COWORK_OPERATOR_PASSWORD` (HTTP Basic) and `COWORK_OPERATOR_API_TOKEN` (X-Operator-Token header) env vars. Gates pass through when no auth env vars are set so local dev and tests are unchanged.
+Operator authentication for `/dashboard`, `/copier/*`, and `PUT /config` is implemented via the `COWORK_OPERATOR_USERNAME`/`COWORK_OPERATOR_PASSWORD` app login page, signed HTTP-only dashboard session cookies, and `COWORK_OPERATOR_API_TOKEN` (X-Operator-Token header) env var. Gates pass through when no auth env vars are set so local dev and tests are unchanged.
 
 ## 2.1 Webull Direction Change
 

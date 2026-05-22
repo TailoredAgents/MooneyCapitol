@@ -82,6 +82,7 @@
         display: flex;
         justify-content: flex-end;
         align-items: center;
+        gap: 8px;
       }
       .emergency-kill {
         background: var(--danger);
@@ -103,6 +104,21 @@
       }
       .emergency-kill:active {
         transform: scale(0.98);
+      }
+      .logout-form { margin: 0; }
+      .logout-button {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text-muted);
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+      }
+      .logout-button:hover {
+        background: var(--panel-hover);
+        color: var(--text);
       }
       h1 { 
         margin: 0; 
@@ -359,6 +375,9 @@
         </nav>
       </div>
       <div class="header-right">
+        <form class="logout-form" action="/logout" method="post">
+          <button class="logout-button" type="submit">Log out</button>
+        </form>
         <button class="emergency-kill" id="emergency-kill" title="Emergency Kill Switch">🛑</button>
       </div>
     </header>

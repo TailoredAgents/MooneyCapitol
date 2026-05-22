@@ -42,8 +42,8 @@ The scout and copier share data for reporting and learning, but their runtime pa
 
 ### Operator Authentication
 
-- `/dashboard` is gated by HTTP Basic Auth using `COWORK_OPERATOR_USERNAME` / `COWORK_OPERATOR_PASSWORD`.
-- All `/copier/*` API routes and `PUT /config` are gated by an `X-Operator-Token` header using `COWORK_OPERATOR_API_TOKEN`. A logged-in dashboard browser session (replaying Basic credentials) is also accepted on those APIs.
+- `/dashboard` is gated by the app `/login` page using `COWORK_OPERATOR_USERNAME` / `COWORK_OPERATOR_PASSWORD`, then a signed HTTP-only session cookie.
+- All `/copier/*` API routes and `PUT /config` are gated by an `X-Operator-Token` header using `COWORK_OPERATOR_API_TOKEN`. A logged-in dashboard browser session is also accepted on those APIs.
 - `/health`, Slack webhook routes, `GET /config`, and the scout read endpoints (`/setups`, `/learning/report`, `/watchlist/today`, `/reports/eod`) intentionally stay open.
 - When no auth env vars are set, all gates pass through so local dev and tests still work.
 

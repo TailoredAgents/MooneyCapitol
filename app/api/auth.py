@@ -4,7 +4,8 @@ This module gates access to the MooneyCapitol dashboard and the /copier
 control APIs. It is the v1 "simplest workable" auth layer:
 
 - A single shared operator username + password for the browser-facing
-  dashboard, prompted via HTTP Basic Auth.
+  dashboard, submitted through the app login page.
+- A signed, HTTP-only browser session cookie for dashboard users.
 - A single shared API token for non-browser callers (scripts, curl, future
   CLI tools) sent as the ``X-Operator-Token`` request header.
 
@@ -22,30 +23,36 @@ Env vars
 
 Dependencies
 ------------
-- ``require_dashboard_auth``: HTTP Basic Auth only. Use on browser-facing
-  HTML routes so the browser shows a native login prompt.
-- ``require_operator``: Accepts EITHER Basic Auth credentials matching the
-  configured operator OR the X-Operator-Token header. Use on /copier API
-  endpoints so that a logged-in dashboard browser session is accepted
-  automatically (same-origin Basic credentials are replayed by the browser)
-  while external scripts can still authenticate with the token.
+- ``require_dashboard_auth``: Signed session cookie only. Use on browser-facing
+  HTML routes when a dependency is needed.
+- ``require_operator``: Accepts a signed session cookie, Basic credentials, OR
+  the X-Operator-Token header. Use on /copier API endpoints so logged-in
+  dashboard browser requests work while external scripts can still authenticate
+  with the token.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import json
 import os
 import secrets
+import time
 from typing import Optional
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, Response, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 
 OPERATOR_USERNAME_ENV = "COWORK_OPERATOR_USERNAME"
 OPERATOR_PASSWORD_ENV = "COWORK_OPERATOR_PASSWORD"
 OPERATOR_API_TOKEN_ENV = "COWORK_OPERATOR_API_TOKEN"
+SESSION_COOKIE_NAME = "mooney_operator_session"
+SESSION_MAX_AGE_SECONDS = 12 * 60 * 60
 
 # auto_error=False so missing credentials hand control back to us; we want to
-# produce a single, consistent 401 (with WWW-Authenticate on dashboard paths).
+# produce a single, consistent 401 instead of FastAPI's default Basic prompt.
 _basic_scheme = HTTPBasic(auto_error=False)
 
 
@@ -69,6 +76,10 @@ def _operator_password() -> Optional[str]:
 
 def _operator_token() -> Optional[str]:
     return _strip(os.getenv(OPERATOR_API_TOKEN_ENV))
+
+
+def _session_secret() -> Optional[str]:
+    return _operator_token() or _operator_password()
 
 
 def _basic_configured() -> bool:
@@ -95,6 +106,94 @@ def _basic_matches(credentials: Optional[HTTPBasicCredentials]) -> bool:
     return user_ok and pwd_ok
 
 
+def _urlsafe_b64encode(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _urlsafe_b64decode(value: str) -> bytes:
+    padding = "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(value + padding)
+
+
+def _session_signature(payload: str) -> Optional[str]:
+    secret = _session_secret()
+    if secret is None:
+        return None
+    digest = hmac.new(secret.encode("utf-8"), payload.encode("ascii"), hashlib.sha256).digest()
+    return _urlsafe_b64encode(digest)
+
+
+def create_dashboard_session_token(username: str, now: Optional[int] = None) -> str:
+    issued_at = int(now if now is not None else time.time())
+    payload = _urlsafe_b64encode(
+        json.dumps(
+            {"u": username, "exp": issued_at + SESSION_MAX_AGE_SECONDS},
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    signature = _session_signature(payload)
+    if signature is None:
+        raise RuntimeError("Operator credentials are not configured")
+    return f"{payload}.{signature}"
+
+
+def _session_matches(token: Optional[str]) -> bool:
+    if not token or "." not in token:
+        return False
+    payload, signature = token.rsplit(".", 1)
+    expected = _session_signature(payload)
+    if expected is None or not secrets.compare_digest(signature, expected):
+        return False
+    try:
+        data = json.loads(_urlsafe_b64decode(payload).decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    username = data.get("u")
+    expires_at = data.get("exp")
+    configured_user = _operator_username()
+    if not isinstance(username, str) or not isinstance(expires_at, int):
+        return False
+    if configured_user is None or not secrets.compare_digest(username, configured_user):
+        return False
+    return expires_at >= int(time.time())
+
+
+def _request_is_secure(request: Request) -> bool:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+    return request.url.scheme == "https" or forwarded_proto == "https"
+
+
+def set_dashboard_session_cookie(response: Response, request: Request) -> None:
+    username = _operator_username()
+    if username is None:
+        return
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        create_dashboard_session_token(username),
+        max_age=SESSION_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=_request_is_secure(request),
+        samesite="lax",
+    )
+
+
+def clear_dashboard_session_cookie(response: Response, request: Request) -> None:
+    response.delete_cookie(
+        SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=_request_is_secure(request),
+        samesite="lax",
+    )
+
+
+def is_dashboard_authenticated(request: Request) -> bool:
+    if not _basic_configured():
+        return True
+    return _session_matches(request.cookies.get(SESSION_COOKIE_NAME))
+
+
 def _token_matches(token: Optional[str]) -> bool:
     configured = _operator_token()
     if configured is None or token is None:
@@ -102,34 +201,34 @@ def _token_matches(token: Optional[str]) -> bool:
     return secrets.compare_digest(token, configured)
 
 
-def require_dashboard_auth(
-    credentials: Optional[HTTPBasicCredentials] = Depends(_basic_scheme),
-) -> None:
-    """Require HTTP Basic Auth for browser-facing pages.
+def login_credentials_match(username: str, password: str) -> bool:
+    return _basic_matches(HTTPBasicCredentials(username=username, password=password))
+
+
+def require_dashboard_auth(request: Request) -> None:
+    """Require a valid dashboard session cookie for browser-facing pages.
 
     No-op when COWORK_OPERATOR_USERNAME / COWORK_OPERATOR_PASSWORD are not
-    configured so local dev and the existing test suite keep working.
+    configured so local dev keeps working.
     """
-    if not _basic_configured():
-        return
-    if _basic_matches(credentials):
+    if is_dashboard_authenticated(request):
         return
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required",
-        headers={"WWW-Authenticate": 'Basic realm="MooneyCapitol"'},
     )
 
 
 def require_operator(
+    request: Request,
     credentials: Optional[HTTPBasicCredentials] = Depends(_basic_scheme),
     x_operator_token: Optional[str] = Header(default=None),
 ) -> None:
     """Require operator credentials for protected API endpoints.
 
     Accepts EITHER:
-      - HTTP Basic credentials matching the configured operator (so a
-        dashboard browser session is accepted automatically), OR
+      - Signed dashboard session cookie from /login, OR
+      - HTTP Basic credentials matching the configured operator, OR
       - X-Operator-Token header matching COWORK_OPERATOR_API_TOKEN.
 
     No-op when no auth env vars are configured. When at least one auth
@@ -138,6 +237,8 @@ def require_operator(
     if not _any_auth_configured():
         return
     if _token_matches(x_operator_token):
+        return
+    if _session_matches(request.cookies.get(SESSION_COOKIE_NAME)):
         return
     if _basic_matches(credentials):
         return
