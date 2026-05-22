@@ -109,6 +109,7 @@ def test_trade_monitor_has_summary_cards_and_latency_chips():
     assert 'id="trade-under-300"' in html
     assert "renderTradeSummary(items)" in html
     assert "latencyChip(item.copy_latency_ms)" in html
+    assert "item.ai_journal" in html
     assert "No trade activity yet" in html
 
 

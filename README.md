@@ -369,6 +369,6 @@ Before live validation:
 
 Latest full local verification:
 
-- `pytest -q` -> `158 passed, 1 skipped`
+- `pytest -q` -> `163 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0005_ai_artifacts (head)`

@@ -14,6 +14,7 @@ from app.api.routes.copier import (
     recent_reconciliations,
     update_copier_settings,
     update_copier_target,
+    _serialize_copier_trade,
 )
 from app.core.config import CopierConfig, CopyTargetAccountConfig
 from app.core.config_store import CONFIG
@@ -153,6 +154,40 @@ def test_recent_copier_trades_joins_master_and_copy_order():
     assert item["copy_notional"] == 100.0
     assert item["copy_filled_notional"] == 100.2
     assert round(item["copy_slippage_bps"], 2) == 20.0
+    assert item["ai_journal"] is None
+
+
+def test_serialize_copier_trade_includes_ai_journal_text():
+    master = SimpleNamespace(
+        id=1,
+        broker_execution_id="exec-1",
+        broker_order_id="order-1",
+        account_ref="master",
+        symbol="AAPL",
+        side="BUY",
+        qty=10.0,
+        price=25.0,
+        executed_at=_dt(),
+        received_at=_dt(),
+    )
+    order = SimpleNamespace(
+        id=2,
+        client_order_id="mc123",
+        broker_order_id="child-1",
+        qty=4.0,
+        status="filled",
+        submitted_at=_dt(),
+        accepted_at=_dt(),
+        filled_at=_dt(),
+        filled_qty=4.0,
+        avg_fill_price=25.05,
+        latency_ms=82.4,
+        reject_reason=None,
+    )
+
+    payload = _serialize_copier_trade(master, order, "personal", "- Copied under 300 ms.")
+
+    assert payload["ai_journal"] == "- Copied under 300 ms."
 
 
 def test_recent_audit_events_serializes_payload():

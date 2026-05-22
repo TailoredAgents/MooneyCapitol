@@ -47,6 +47,7 @@ from app.services.live_state import ensure_lanes_initialized
 from app.services.pnl_monitor import PnlMonitor
 from app.services.runtime import ensure_worker_tick_initialized, update_worker_tick
 from app.services.scout_explanations import generate_scout_alert_explanation
+from app.services.trade_journals import generate_pending_trade_journals
 from app.services.watchlist import (
     WatchlistItem,
     get_or_create_symbol,
@@ -443,6 +444,21 @@ def _log_learning_translation_result(future) -> None:
         return
     if artifact_id:
         logger.info("learning_translation.stored", artifact_id=artifact_id)
+
+
+def schedule_trade_journal_generation(ctx: WorkerContext, *, limit: int = 25) -> None:
+    future = ctx.ai_executor.submit(generate_pending_trade_journals, limit=limit)
+    future.add_done_callback(_log_trade_journal_result)
+
+
+def _log_trade_journal_result(future) -> None:
+    try:
+        result = future.result()
+    except Exception as exc:  # pragma: no cover - defensive callback
+        logger.warning("trade_journal.failed", err=str(exc))
+        return
+    if result.get("created"):
+        logger.info("trade_journal.generated", **result)
 
 
 async def build_longlist(ctx: WorkerContext):
@@ -1107,6 +1123,7 @@ async def reconcile_copy_orders(ctx: WorkerContext):
     text = reconciliation_alert_text(result)
     if text and ctx.copier_alerts.allow("reconciliation"):
         ctx.slack.post(text)
+    schedule_trade_journal_generation(ctx)
 
 
 async def sync_copy_positions(ctx: WorkerContext):

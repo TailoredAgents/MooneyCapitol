@@ -14,7 +14,7 @@ from app.copier.readiness import evaluate_copier_readiness
 from app.copier.state import get_copier_status
 from app.core.config import CopierConfig, CopyTargetAccountConfig
 from app.core.config_store import CONFIG, persist_config, refresh_config
-from app.db.models import CopierAuditEvent, CopyOrder, CopyReconciliation, CopyTargetAccount, MasterExecution
+from app.db.models import AIArtifact, CopierAuditEvent, CopyOrder, CopyReconciliation, CopyTargetAccount, MasterExecution
 from app.db.session import get_session
 from app.services.kv_store import StateStoreError
 
@@ -264,10 +264,11 @@ def recent_copier_trades(
         stmt = stmt.where(CopyOrder.status == status)
     stmt = stmt.order_by(desc(MasterExecution.executed_at), desc(CopyOrder.id)).limit(limit)
     rows = session.execute(stmt).all()
+    journals = _latest_trade_journals(session, [order.id for _, order, _ in rows])
     return {
         "count": len(rows),
         "items": [
-            _serialize_copier_trade(master, order, target_name)
+            _serialize_copier_trade(master, order, target_name, journals.get(str(order.id)))
             for master, order, target_name in rows
         ],
     }
@@ -432,7 +433,12 @@ def _serialize_copy_order(row: CopyOrder, target_name: str | None = None) -> dic
     }
 
 
-def _serialize_copier_trade(master: MasterExecution, order: CopyOrder, target_name: str | None = None) -> dict:
+def _serialize_copier_trade(
+    master: MasterExecution,
+    order: CopyOrder,
+    target_name: str | None = None,
+    ai_journal: str | None = None,
+) -> dict:
     copied_notional = None
     if order.qty is not None and master.price is not None:
         copied_notional = float(order.qty) * float(master.price)
@@ -471,7 +477,29 @@ def _serialize_copier_trade(master: MasterExecution, order: CopyOrder, target_na
         "copy_latency_ms": order.latency_ms,
         "copy_reject_reason": order.reject_reason,
         "copy_slippage_bps": slippage_bps,
+        "ai_journal": ai_journal,
     }
+
+
+def _latest_trade_journals(session: Session, copy_order_ids: list[int]) -> dict[str, str]:
+    if not copy_order_ids or not isinstance(session, Session):
+        return {}
+    source_ids = [str(row_id) for row_id in copy_order_ids if row_id is not None]
+    rows = session.execute(
+        select(AIArtifact)
+        .where(
+            AIArtifact.artifact_type == "trade_journal",
+            AIArtifact.source_type == "copy_order",
+            AIArtifact.status == "completed",
+            AIArtifact.source_id.in_(source_ids),
+        )
+        .order_by(desc(AIArtifact.created_at))
+    ).scalars().all()
+    journals: dict[str, str] = {}
+    for row in rows:
+        if row.source_id and row.output_text and row.source_id not in journals:
+            journals[row.source_id] = row.output_text
+    return journals
 
 
 def _serialize_audit_event(row: CopierAuditEvent) -> dict:

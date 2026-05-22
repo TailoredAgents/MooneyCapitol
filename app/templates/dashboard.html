@@ -1225,6 +1225,7 @@
                   <th>Latency</th>
                   <th>Fill</th>
                   <th>Slippage</th>
+                  <th>Journal</th>
                 </tr>
               </thead>
               <tbody id="trades-body"></tbody>
@@ -1567,10 +1568,11 @@
             <td>${latencyChip(item.copy_latency_ms)}</td>
             <td>${item.copy_avg_fill_price ? `${formatQty(item.copy_filled_qty)} @ ${formatMoney(item.copy_avg_fill_price)}` : '-'}</td>
             <td>${formatBps(item.copy_slippage_bps)}</td>
+            <td>${item.ai_journal ? `<div class="ai-explanation">${escapeHtml(item.ai_journal)}</div>` : '<span class="muted">Pending</span>'}</td>
           </tr>
         `).join('') : `
           <tr>
-            <td colspan="10">
+            <td colspan="11">
               <div class="empty-state">
                 <div class="title">No trade activity yet</div>
                 <div class="muted">Copied trades and read-only copy decisions will appear here once the master account trades.</div>
