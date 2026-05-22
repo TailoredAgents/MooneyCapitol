@@ -37,5 +37,5 @@ def test_dashboard_v3_separates_trader_and_owner_navigation():
     assert "Copier Setup" not in html
     assert "Launch Readiness" in html
     assert 'class="tab-panel owner-panel"' in html
-    assert "Developer setup controls can affect live trading" in html
+    assert "Developer setup controls can affect live trading" not in html
     assert "Emergency Stop" in html
