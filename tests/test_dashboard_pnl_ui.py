@@ -60,3 +60,19 @@ def test_scout_page_has_trader_cockpit_status_and_lane_counts():
     assert "Selected Symbol Depth" in html
     assert "Select an alert to view market depth" in html
     assert "renderLane(armedList, lanes.armed, 'No armed boxes', 'armed')" in html
+
+
+def test_trade_monitor_has_summary_cards_and_latency_chips():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert "Trade Monitor" in html
+    assert "Trade Activity" in html
+    assert "Trade Results" not in html
+    assert 'id="trade-total-count"' in html
+    assert 'id="trade-copied-count"' in html
+    assert 'id="trade-blocked-count"' in html
+    assert 'id="trade-avg-latency"' in html
+    assert 'id="trade-under-300"' in html
+    assert "renderTradeSummary(items)" in html
+    assert "latencyChip(item.copy_latency_ms)" in html
+    assert "No trade activity yet" in html

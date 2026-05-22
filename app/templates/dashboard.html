@@ -292,6 +292,49 @@
         font-size: 12px;
         margin-top: 2px;
       }
+      .monitor-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .monitor-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px 14px;
+        min-height: 72px;
+      }
+      .monitor-card .label {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+      .monitor-card .value {
+        margin-top: 4px;
+        color: var(--text);
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .status-chip,
+      .latency-chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .status-chip.ok,
+      .latency-chip.good { background: var(--success-light); color: var(--success); }
+      .status-chip.warn,
+      .latency-chip.warn { background: var(--warning-light); color: var(--warning); }
+      .status-chip.bad,
+      .latency-chip.bad { background: var(--danger-light); color: var(--danger); }
+      .status-chip.neutral,
+      .latency-chip.neutral { background: var(--line-light); color: var(--text-muted); }
       .owner-panel .panel,
       .owner-panel .stat,
       .owner-panel table {
@@ -518,7 +561,7 @@
       .check.bad { border-color: #f3b5ae; }
       .check .mark { font-weight: 800; margin-right: 6px; }
       @media (max-width: 1000px) {
-        .layout, .grid, .grid.two, .check-list, .scout-status-grid { grid-template-columns: 1fr; }
+        .layout, .grid, .grid.two, .check-list, .scout-status-grid, .monitor-grid { grid-template-columns: 1fr; }
         header { grid-template-columns: 1fr; align-items: flex-start; }
         .header-right { justify-content: flex-start; }
         .app-shell { grid-template-columns: 1fr; }
@@ -808,13 +851,34 @@
       <section id="tab-trades" class="tab-panel">
         <div class="page-heading">
           <div>
-            <h2>Trade Results</h2>
-            <p>Operator view of copied trades, read-only decisions, fill status, slippage, and copy latency in milliseconds.</p>
+            <h2>Trade Monitor</h2>
+            <p>Copied trades, read-only copy decisions, fill quality, slippage, and copier latency in milliseconds.</p>
           </div>
-          <span class="page-badge">Trader View</span>
+        </div>
+        <div class="monitor-grid" aria-label="Trade monitor summary">
+          <div class="monitor-card">
+            <div class="label">Trades Today</div>
+            <div class="value" id="trade-total-count">0</div>
+          </div>
+          <div class="monitor-card">
+            <div class="label">Copied</div>
+            <div class="value" id="trade-copied-count">0</div>
+          </div>
+          <div class="monitor-card">
+            <div class="label">Blocked / Rejected</div>
+            <div class="value" id="trade-blocked-count">0</div>
+          </div>
+          <div class="monitor-card">
+            <div class="label">Avg Latency</div>
+            <div class="value" id="trade-avg-latency">-</div>
+          </div>
+          <div class="monitor-card">
+            <div class="label">Under 300ms</div>
+            <div class="value" id="trade-under-300">-</div>
+          </div>
         </div>
         <div class="section">
-          <h2>Trade Results</h2>
+          <h2>Trade Activity</h2>
           <div id="trades-status" class="status-line">Loading...</div>
           <div class="scroll">
             <table>
@@ -1147,6 +1211,7 @@
       }
 
       function renderTrades(items) {
+        renderTradeSummary(items);
         tradesBody.innerHTML = items.length ? items.map((item) => `
           <tr>
             <td>${formatTime(item.master_executed_at)}</td>
@@ -1155,12 +1220,55 @@
             <td>${formatQty(item.master_qty)} @ ${formatMoney(item.master_price)}</td>
             <td>${escapeHtml(item.target || '')}</td>
             <td>${formatQty(item.copy_qty)} / ${formatMoney(item.copy_notional)}</td>
-            <td>${escapeHtml(item.copy_status || '')}${item.copy_reject_reason ? `<div class="muted">${escapeHtml(item.copy_reject_reason)}</div>` : ''}</td>
-            <td>${formatMs(item.copy_latency_ms)}</td>
+            <td>${statusChip(item.copy_status)}${item.copy_reject_reason ? `<div class="muted">${escapeHtml(item.copy_reject_reason)}</div>` : ''}</td>
+            <td>${latencyChip(item.copy_latency_ms)}</td>
             <td>${item.copy_avg_fill_price ? `${formatQty(item.copy_filled_qty)} @ ${formatMoney(item.copy_avg_fill_price)}` : '-'}</td>
             <td>${formatBps(item.copy_slippage_bps)}</td>
           </tr>
-        `).join('') : '<tr><td colspan="10" class="muted">No copied trade results yet.</td></tr>';
+        `).join('') : `
+          <tr>
+            <td colspan="10">
+              <div class="empty-state">
+                <div class="title">No trade activity yet</div>
+                <div class="muted">Copied trades and read-only copy decisions will appear here once the master account trades.</div>
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      function renderTradeSummary(items) {
+        const statuses = items.map((item) => String(item.copy_status || '').toLowerCase());
+        const copied = items.filter((item) => {
+          const status = String(item.copy_status || '').toLowerCase();
+          return status.includes('copied') || status.includes('filled') || status.includes('submitted');
+        }).length;
+        const blocked = statuses.filter((status) => status.includes('blocked') || status.includes('reject') || status.includes('failed')).length;
+        const latencies = items.map((item) => Number(item.copy_latency_ms)).filter(Number.isFinite);
+        const avgLatency = latencies.length ? latencies.reduce((sum, value) => sum + value, 0) / latencies.length : null;
+        const under300 = latencies.length ? latencies.filter((value) => value < 300).length / latencies.length : null;
+        setText('trade-total-count', String(items.length));
+        setText('trade-copied-count', String(copied));
+        setText('trade-blocked-count', String(blocked));
+        setText('trade-avg-latency', formatMs(avgLatency));
+        setText('trade-under-300', formatPct(under300));
+      }
+
+      function statusChip(status) {
+        const normalized = String(status || 'pending').toLowerCase();
+        let tone = 'neutral';
+        if (normalized.includes('copied') || normalized.includes('filled') || normalized.includes('submitted') || normalized.includes('would')) tone = 'ok';
+        if (normalized.includes('pending') || normalized.includes('open')) tone = 'warn';
+        if (normalized.includes('blocked') || normalized.includes('reject') || normalized.includes('failed')) tone = 'bad';
+        return `<span class="status-chip ${tone}">${escapeHtml(status || 'pending')}</span>`;
+      }
+
+      function latencyChip(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return '<span class="latency-chip neutral">-</span>';
+        let tone = 'good';
+        if (number >= 300) tone = 'bad';
+        else if (number >= 225) tone = 'warn';
+        return `<span class="latency-chip ${tone}">${number.toFixed(1)} ms</span>`;
       }
 
       function renderReadiness(payload) {
