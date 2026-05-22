@@ -25,6 +25,13 @@ def test_dashboard_exposes_launch_readiness_tab_and_api_call():
     assert 'data-tab="launch"' in html
     assert 'id="tab-launch"' in html
     assert "Refresh Readiness" in html
+    assert "Pre-launch checklist for credentials, account data, worker health, and copier safety." in html
+    assert "Last Checked" in html
+    assert "Fix First" in html
+    assert 'id="launch-fix-first-list"' in html
+    assert "Readiness API" in html
+    assert "System Snapshot" in html
+    assert "No validation decisions yet" in html
     assert "api('/launch/readiness')" in html
     assert "renderLaunchReadiness" in html
     assert "Read-Only Validation History" in html

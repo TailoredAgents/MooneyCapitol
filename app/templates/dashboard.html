@@ -399,6 +399,28 @@
         margin-top: 14px;
         padding-top: 14px;
       }
+      .fix-first-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .fix-item {
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        background: #fff7f7;
+        padding: 10px 12px;
+      }
+      .fix-item .title {
+        font-size: 13px;
+        margin-bottom: 2px;
+      }
+      .check.bad { border-color: #fecaca; background: #fffafa; }
+      .check.ok {
+        border-color: var(--line);
+        background: #fbfefc;
+      }
+      .check.ok .mark { color: var(--success); }
+      .check.bad .mark { color: var(--danger); }
       .tab-panel { display: none; }
       .tab-panel.active { display: block; }
       .layout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 280px; gap: 20px; }
@@ -746,7 +768,7 @@
         <div class="page-heading">
           <div>
             <h2>Launch Readiness</h2>
-            <p>Developer production checklist for credentials, worker health, migrations, read-only validation, and launch blockers.</p>
+            <p>Pre-launch checklist for credentials, account data, worker health, and copier safety.</p>
           </div>
           <span class="page-badge admin">Developer Setup</span>
         </div>
@@ -764,16 +786,24 @@
             <div id="launch-warnings" class="value">-</div>
           </div>
           <div class="stat">
-            <div class="muted">Generated</div>
+            <div class="muted">Last Checked</div>
             <div id="launch-generated" class="value">-</div>
           </div>
         </div>
 
         <div class="section panel">
-          <div class="actions">
+          <div class="account-refresh-bar">
             <button class="primary" id="refresh-launch">Refresh Readiness</button>
-            <div id="launch-status" class="status-line">Loading...</div>
+            <div class="account-refresh-meta">
+              <div><span class="muted">Source</span> <strong>Readiness API</strong></div>
+              <div id="launch-status" class="status-line">Loading...</div>
+            </div>
           </div>
+        </div>
+
+        <div class="section panel">
+          <h2>Fix First</h2>
+          <div id="launch-fix-first-list" class="fix-first-list">Loading...</div>
         </div>
 
         <div class="section grid two">
@@ -782,7 +812,7 @@
             <div id="launch-checks-list" class="check-list">Loading...</div>
           </div>
           <div class="panel">
-            <h2>Summary</h2>
+            <h2>System Snapshot</h2>
             <div id="launch-summary-list" class="muted">Loading...</div>
           </div>
         </div>
@@ -1076,6 +1106,7 @@
       const primedList = document.getElementById('primed-list');
       const activeList = document.getElementById('active-list');
       const depthPanel = document.getElementById('depth-panel');
+      const launchFixFirstList = document.getElementById('launch-fix-first-list');
       const launchChecksList = document.getElementById('launch-checks-list');
       const launchSummaryList = document.getElementById('launch-summary-list');
       const launchReadonlyBody = document.getElementById('launch-readonly-body');
@@ -1387,11 +1418,27 @@
         document.getElementById('launch-warnings').textContent = payload.warning_count ?? 0;
         document.getElementById('launch-generated').textContent = formatTime(payload.generated_at);
         const sections = payload.sections || {};
+        const allChecks = Object.values(sections).flatMap((checks) => checks || []);
+        const blockers = allChecks.filter((check) => !check.ok && check.severity === 'blocker');
+        launchFixFirstList.innerHTML = blockers.length ? blockers.slice(0, 5).map((check) => `
+          <div class="fix-item">
+            <div class="title">${escapeHtml(check.label || check.key)}</div>
+            <div class="muted">${escapeHtml(check.severity || 'blocker')}</div>
+          </div>
+        `).join('') : `
+          <div class="empty-state">
+            <div class="title">No launch blockers</div>
+            <div class="muted">Warnings and passing checks are still listed below for review.</div>
+          </div>`;
+        const priority = { blocker: 0, warning: 1, info: 2 };
         launchChecksList.innerHTML = Object.entries(sections).map(([section, checks]) => `
           <div class="check">
             <strong>${escapeHtml(section)}</strong>
             <div class="section">
-              ${(checks || []).map((check) => `
+              ${(checks || []).slice().sort((a, b) => {
+                if (a.ok !== b.ok) return a.ok ? 1 : -1;
+                return (priority[a.severity] ?? 3) - (priority[b.severity] ?? 3);
+              }).map((check) => `
                 <div class="check ${check.ok ? 'ok' : 'bad'}">
                   <span class="mark">${check.ok ? 'OK' : '!'}</span>
                   <span>${escapeHtml(check.label || check.key)}</span>
@@ -1439,7 +1486,15 @@
             <td>${escapeHtml(item.copy_status || '')}${item.copy_reject_reason ? `<div class="muted">${escapeHtml(item.copy_reject_reason)}</div>` : ''}</td>
             <td>${formatMs(item.copy_latency_ms)}</td>
           </tr>
-        `).join('') : '<tr><td colspan="8" class="muted">No read-only validation decisions yet. Run a Webull read-only session after credentials exist.</td></tr>';
+        `).join('') : `
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <div class="title">No validation decisions yet</div>
+                <div class="muted">Run a Webull read-only session after credentials are configured.</div>
+              </div>
+            </td>
+          </tr>`;
       }
 
       function renderPnlSummary(summary) {
