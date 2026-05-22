@@ -37,7 +37,7 @@ The final system should support discovery, alerting, execution copying, reportin
 - ✅ Production-grade percent-equity sizing
 - ✅ Kill switch, risk controls, startup recovery
 - ✅ Order reconciliation and background position sync
-- ✅ Professional operator dashboard with confirmation dialogs
+- ✅ V3 operator dashboard with separated Trader Workspace and Owner Setup navigation
 - ✅ Comprehensive testing tooling suite
 
 **Complete Infrastructure:**

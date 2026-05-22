@@ -46,7 +46,7 @@
       }
       header {
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns: 1fr auto;
         align-items: center;
         gap: 16px;
         padding: 16px 24px;
@@ -124,14 +124,42 @@
         margin: 0; 
         font-size: 20px; 
         font-weight: 700;
-        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-        background-clip: text;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: var(--text);
       }
       h2 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
       h3 { margin: 0 0 10px; font-size: 14px; font-weight: 500; }
-      .tabs { display: flex; gap: 8px; }
+      .app-shell {
+        display: grid;
+        grid-template-columns: 272px minmax(0, 1fr);
+        min-height: calc(100vh - 66px);
+      }
+      .sidebar {
+        border-right: 1px solid var(--line);
+        background: #ffffff;
+        padding: 18px 14px;
+        position: sticky;
+        top: 65px;
+        height: calc(100vh - 65px);
+        overflow-y: auto;
+      }
+      .sidebar-kicker {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin: 0 8px 14px;
+        text-transform: uppercase;
+      }
+      .nav-group { margin-bottom: 20px; }
+      .nav-label {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 800;
+        margin: 0 8px 8px;
+        text-transform: uppercase;
+      }
+      .nav-label.admin { color: var(--danger); }
+      .tabs { display: grid; gap: 6px; }
       .tab-button, button {
         border: 1px solid var(--line);
         background: var(--panel);
@@ -144,6 +172,40 @@
         transition: all 0.2s ease;
         position: relative;
       }
+      .tab-button {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 10px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        text-align: left;
+        padding: 10px 12px;
+      }
+      .tab-button::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-light);
+      }
+      .tab-button[data-tab="scout"]::before { background: var(--armed); }
+      .tab-button[data-tab="trades"]::before { background: var(--info); }
+      .tab-button[data-tab="pnl"]::before { background: var(--success); }
+      .tab-button[data-tab="copier"]::before,
+      .tab-button[data-tab="launch"]::before { background: var(--danger); }
+      .nav-title {
+        display: block;
+        color: inherit;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      .nav-subtitle {
+        display: block;
+        color: var(--text-muted);
+        font-size: 11px;
+        line-height: 1.25;
+        margin-top: 2px;
+      }
       .tab-button:hover {
         background: var(--panel-hover);
         border-color: var(--accent-light);
@@ -151,11 +213,21 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
       }
       .tab-button.active {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: white;
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: var(--accent-dark);
         font-weight: 600;
         box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+      }
+      .tab-button.active .nav-subtitle { color: #1e40af; }
+      .operator-note {
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        background: #fff7f7;
+        color: #7f1d1d;
+        padding: 10px 12px;
+        font-size: 12px;
+        line-height: 1.4;
       }
       button.primary { 
         background: var(--accent); 
@@ -181,7 +253,47 @@
         border-color: #b91c1c;
         transform: translateY(-1px);
       }
-      main { padding: 20px 24px 32px; }
+      main.content { padding: 24px 28px 36px; min-width: 0; }
+      .page-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      .page-heading h2 {
+        margin: 0 0 4px;
+        font-size: 24px;
+        letter-spacing: 0;
+      }
+      .page-heading p {
+        margin: 0;
+        color: var(--text-muted);
+        max-width: 760px;
+      }
+      .page-badge {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text-muted);
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .page-badge.admin {
+        border-color: #fecaca;
+        background: #fff7f7;
+        color: #991b1b;
+      }
+      .owner-panel .panel,
+      .owner-panel .stat,
+      .owner-panel table {
+        border-color: #f3c7c7;
+      }
+      .owner-panel .panel {
+        box-shadow: 0 1px 0 rgba(153, 27, 27, 0.05);
+      }
       .tab-panel { display: none; }
       .tab-panel.active { display: block; }
       .layout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 280px; gap: 20px; }
@@ -205,18 +317,17 @@
         align-items: center;
         gap: 8px;
       }
-      .lane[data-lane="armed"] h2::before {
-        content: "🛡️";
-        font-size: 18px;
+      .lane[data-lane] h2::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        display: inline-block;
+        font-size: 0;
       }
-      .lane[data-lane="primed"] h2::before {
-        content: "🎯";
-        font-size: 18px;
-      }
-      .lane[data-lane="active"] h2::before {
-        content: "🚀";
-        font-size: 18px;
-      }
+      .lane[data-lane="armed"] h2::before { background: var(--armed); }
+      .lane[data-lane="primed"] h2::before { background: var(--primed); }
+      .lane[data-lane="active"] h2::before { background: var(--active); }
       .card {
         border: 1px solid var(--line);
         border-radius: 10px;
@@ -322,7 +433,7 @@
         text-align: left;
         vertical-align: middle;
       }
-      th { font-size: 12px; color: var(--muted); background: #f2f4f7; }
+      th { font-size: 12px; color: var(--text-muted); background: #f2f4f7; }
       tr:last-child td { border-bottom: 0; }
       input, select {
         width: 100%;
@@ -335,9 +446,9 @@
       }
       input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; }
       .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-      .status-line { min-height: 20px; margin-top: 8px; color: var(--muted); }
+      .status-line { min-height: 20px; margin-top: 8px; color: var(--text-muted); }
       .status-line.error { color: var(--danger); }
-      .status-line.ok { color: var(--ok); }
+      .status-line.ok { color: var(--success); }
       .scroll { overflow-x: auto; }
       .check-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .check {
@@ -351,7 +462,18 @@
       .check .mark { font-weight: 800; margin-right: 6px; }
       @media (max-width: 1000px) {
         .layout, .grid, .grid.two, .check-list { grid-template-columns: 1fr; }
-        header { align-items: flex-start; flex-direction: column; }
+        header { grid-template-columns: 1fr; align-items: flex-start; }
+        .header-right { justify-content: flex-start; }
+        .app-shell { grid-template-columns: 1fr; }
+        .sidebar {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        main.content { padding: 18px 16px 28px; }
+        .page-heading { display: block; }
+        .page-badge { display: inline-block; margin-top: 10px; }
       }
     </style>
   </head>
@@ -365,25 +487,56 @@
           <div class="status-dot" id="worker-status" title="Worker Status"></div>
         </div>
       </div>
-      <div class="header-center">
-        <nav class="tabs" aria-label="Dashboard sections">
-          <button class="tab-button active" data-tab="scout">Scout</button>
-          <button class="tab-button" data-tab="launch">Launch</button>
-          <button class="tab-button" data-tab="copier">Copier</button>
-          <button class="tab-button" data-tab="trades">Trades</button>
-          <button class="tab-button" data-tab="pnl">P&L</button>
-        </nav>
-      </div>
       <div class="header-right">
         <form class="logout-form" action="/logout" method="post">
           <button class="logout-button" type="submit">Log out</button>
         </form>
-        <button class="emergency-kill" id="emergency-kill" title="Emergency Kill Switch">🛑</button>
+        <button class="emergency-kill" id="emergency-kill" title="Emergency Kill Switch">Kill</button>
       </div>
     </header>
 
-    <main>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Dashboard navigation">
+        <div class="sidebar-kicker">V3 Operator Console</div>
+        <div class="nav-group">
+          <div class="nav-label">Trader Workspace</div>
+          <nav class="tabs" aria-label="Trader workflow">
+            <button class="tab-button active" data-tab="scout">
+              <span><span class="nav-title">Scout</span><span class="nav-subtitle">Live ideas Connor uses during trading</span></span>
+            </button>
+            <button class="tab-button" data-tab="trades">
+              <span><span class="nav-title">Trades</span><span class="nav-subtitle">Copied fills, results, and latency</span></span>
+            </button>
+            <button class="tab-button" data-tab="pnl">
+              <span><span class="nav-title">P&L</span><span class="nav-subtitle">Account values, positions, and alerts</span></span>
+            </button>
+          </nav>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label admin">Owner Setup</div>
+          <nav class="tabs" aria-label="Owner setup">
+            <button class="tab-button" data-tab="copier">
+              <span><span class="nav-title">Copier Setup</span><span class="nav-subtitle">Modes, kill switch, and copy accounts</span></span>
+            </button>
+            <button class="tab-button" data-tab="launch">
+              <span><span class="nav-title">Launch Readiness</span><span class="nav-subtitle">Production checks and validation history</span></span>
+            </button>
+          </nav>
+        </div>
+        <div class="operator-note">
+          Owner setup controls can affect live trading. Keep this section separate from the trader's daily workflow.
+        </div>
+      </aside>
+
+      <main class="content">
       <section id="tab-scout" class="tab-panel active">
+        <div class="page-heading">
+          <div>
+            <h2>Scout Workspace</h2>
+            <p>Connor's daily trading view: live setup lanes, signal quality, and depth context without setup controls in the way.</p>
+          </div>
+          <span class="page-badge">Trader View</span>
+        </div>
         <div class="layout">
           <div class="lane" data-lane="armed">
             <h2>Armed</h2>
@@ -404,7 +557,14 @@
         </div>
       </section>
 
-      <section id="tab-launch" class="tab-panel">
+      <section id="tab-launch" class="tab-panel owner-panel">
+        <div class="page-heading">
+          <div>
+            <h2>Launch Readiness</h2>
+            <p>Owner-only production checklist for credentials, worker health, migrations, read-only validation, and launch blockers.</p>
+          </div>
+          <span class="page-badge admin">Owner Setup</span>
+        </div>
         <div class="grid">
           <div class="stat">
             <div class="muted">Launch Status</div>
@@ -464,7 +624,14 @@
         </div>
       </section>
 
-      <section id="tab-copier" class="tab-panel">
+      <section id="tab-copier" class="tab-panel owner-panel">
+        <div class="page-heading">
+          <div>
+            <h2>Copier Setup</h2>
+            <p>Owner controls for copy mode, target accounts, kill switch state, and copier readiness. These settings can affect real orders.</p>
+          </div>
+          <span class="page-badge admin">Owner Setup</span>
+        </div>
         <div class="grid">
           <div class="stat">
             <div class="muted">Copier</div>
@@ -553,6 +720,13 @@
       </section>
 
       <section id="tab-trades" class="tab-panel">
+        <div class="page-heading">
+          <div>
+            <h2>Trade Results</h2>
+            <p>Operator view of copied trades, read-only decisions, fill status, slippage, and copy latency in milliseconds.</p>
+          </div>
+          <span class="page-badge">Trader View</span>
+        </div>
         <div class="section">
           <h2>Trade Results</h2>
           <div id="trades-status" class="status-line">Loading...</div>
@@ -579,6 +753,13 @@
       </section>
 
       <section id="tab-pnl" class="tab-panel">
+        <div class="page-heading">
+          <div>
+            <h2>Account P&L</h2>
+            <p>Live account snapshots, open positions, daily P&L, drawdown, buying power, and risk alerts for monitored accounts.</p>
+          </div>
+          <span class="page-badge">Trader View</span>
+        </div>
         <div class="grid">
           <div class="stat">
             <div class="muted">Accounts</div>
@@ -654,7 +835,8 @@
           </div>
         </div>
       </section>
-    </main>
+      </main>
+    </div>
 
     <script>
       const armedList = document.getElementById('armed-list');
@@ -1133,16 +1315,16 @@
       
       // Emergency kill switch in header
       document.getElementById('emergency-kill').addEventListener('click', async () => {
-        if (!window.confirm('🚨 EMERGENCY KILL SWITCH 🚨\n\nThis will IMMEDIATELY disable all copier trading.\n\nAre you absolutely sure?')) return;
+        if (!window.confirm('Emergency kill switch\n\nThis will immediately disable all copier trading.\n\nAre you absolutely sure?')) return;
         try {
           await setKillSwitch(true);
           // Show visual feedback
           const btn = document.getElementById('emergency-kill');
           btn.style.background = 'var(--success)';
-          btn.textContent = '✓';
+          btn.textContent = 'Killed';
           setTimeout(() => {
             btn.style.background = 'var(--danger)';
-            btn.textContent = '🛑';
+            btn.textContent = 'Kill';
           }, 2000);
         } catch (err) {
           alert('Emergency kill switch failed: ' + err.message);

@@ -23,3 +23,15 @@ def test_dashboard_exposes_launch_readiness_tab_and_api_call():
     assert "Read-Only Validation History" in html
     assert 'id="launch-readonly-body"' in html
     assert "read_only_history" in html
+
+
+def test_dashboard_v3_separates_trader_and_owner_navigation():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert "V3 Operator Console" in html
+    assert "Trader Workspace" in html
+    assert "Owner Setup" in html
+    assert "Copier Setup" in html
+    assert "Launch Readiness" in html
+    assert 'class="tab-panel owner-panel"' in html
+    assert "Owner setup controls can affect live trading" in html

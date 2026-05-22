@@ -59,11 +59,13 @@ Additional learning guardrails now in place:
 - ✅ **Risk Controls**: Kill switch, position tracking, order reconciliation
 - ✅ **Startup Recovery**: Handles restarts without duplicate orders
 - ✅ **Comprehensive Tooling**: Preflight, event capture, replay, benchmarking, read-only testing
-- ✅ **Dashboard Controls**: Live operator interface with confirmation dialogs
+- ✅ **Dashboard Controls**: V3 operator interface with separated trader and owner setup areas
 - ✅ **Background Jobs**: Order reconciliation, position sync, readiness monitoring
 
-### Professional Dashboard
-- ✅ **5-Tab Interface**: Scout, Launch, Copier, Trades, and P&L
+### V3 Operator Dashboard
+- ✅ **Separated Navigation**: Trader Workspace for daily use, Owner Setup for configuration and launch controls
+- ✅ **Trader Workspace**: Scout, Trades, and P&L
+- ✅ **Owner Setup**: Copier Setup and Launch Readiness
 - ✅ **Real-time Updates**: WebSocket integration for live data
 - ✅ **Mobile Responsive**: Works on all device sizes
 - ✅ **Operator Controls**: Target account management, kill switch, readiness monitoring
@@ -241,11 +243,14 @@ Dangerous copier actions require confirmation through dashboard prompts or `X-Co
 
 ## Dashboard
 
-- `/dashboard` -> Scout tab: Armed, PRIMED, and Active lanes.
-- `/dashboard` -> Launch tab: unified production readiness checks, launch blockers, and recent read-only validation decisions.
-- `/dashboard` -> Copier tab: readiness, global controls, target enabled/equity controls, kill switch, recent orders, and reconciliations.
-- `/dashboard` -> Trades tab: copied trade results, read-only `would_copy` decisions, blocked decisions, latency, fill status, fill price, slippage, and reject reason.
-- `/dashboard` -> P&L tab: account values, cash, buying power, daily P&L, drawdown, exposure, positions, and P&L risk alerts.
+- `/dashboard` uses a V3 left-side navigation layout.
+- Trader Workspace:
+  - Scout: Armed, PRIMED, and Active lanes.
+  - Trades: copied trade results, read-only `would_copy` decisions, blocked decisions, latency, fill status, fill price, slippage, and reject reason.
+  - P&L: account values, cash, buying power, daily P&L, drawdown, exposure, positions, and P&L risk alerts.
+- Owner Setup:
+  - Copier Setup: readiness, global controls, target enabled/equity controls, kill switch, recent orders, and reconciliations.
+  - Launch Readiness: unified production readiness checks, launch blockers, and recent read-only validation decisions.
 
 ## Operator Authentication
 
