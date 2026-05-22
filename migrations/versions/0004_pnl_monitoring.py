@@ -1,7 +1,7 @@
 """Add PnL monitoring tables.
 
 Revision ID: 0004_pnl_monitoring
-Revises: 0003_copy_target_daily_trade_limit
+Revises: 0003_copy_limits
 Create Date: 2026-05-17
 """
 
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision = "0004_pnl_monitoring"
-down_revision = "0003_copy_target_daily_trade_limit"
+down_revision = "0003_copy_limits"
 branch_labels = None
 depends_on = None
 

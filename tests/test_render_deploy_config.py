@@ -30,3 +30,12 @@ def test_migration_runner_uses_postgres_advisory_lock():
     assert "pg_advisory_lock" in text
     assert "command.upgrade" in text
     assert "DATABASE_URL is required" in text
+
+
+def test_alembic_revision_ids_fit_default_version_column():
+    for path in Path("migrations/versions").glob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        revision_line = next(line for line in text.splitlines() if line.startswith("revision = "))
+        revision = revision_line.split("=", 1)[1].strip().strip('"')
+
+        assert len(revision) <= 32, f"{path.name} revision is too long for alembic_version.version_num"

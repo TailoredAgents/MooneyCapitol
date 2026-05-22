@@ -1,6 +1,6 @@
 """Add copy target daily trade limit.
 
-Revision ID: 0003_copy_target_daily_trade_limit
+Revision ID: 0003_copy_limits
 Revises: 0002_copy_target_sizing_fields
 Create Date: 2026-05-17
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0003_copy_target_daily_trade_limit"
+revision = "0003_copy_limits"
 down_revision = "0002_copy_target_sizing_fields"
 branch_labels = None
 depends_on = None
