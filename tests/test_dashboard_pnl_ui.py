@@ -42,3 +42,21 @@ def test_dashboard_v3_separates_trader_and_owner_navigation():
     assert 'class="tab-panel owner-panel"' in html
     assert "Developer setup controls can affect live trading" not in html
     assert "Emergency Stop" in html
+
+
+def test_scout_page_has_trader_cockpit_status_and_lane_counts():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert "Live Scout" in html
+    assert "scout-status-grid" in html
+    assert 'id="scout-scanner-status"' in html
+    assert 'id="scout-ws-status"' in html
+    assert 'id="scout-symbol-count"' in html
+    assert 'id="scout-data-mode"' in html
+    assert 'id="scout-last-update"' in html
+    assert 'id="armed-count"' in html
+    assert 'id="primed-count"' in html
+    assert 'id="active-count"' in html
+    assert "Selected Symbol Depth" in html
+    assert "Select an alert to view market depth" in html
+    assert "renderLane(armedList, lanes.armed, 'No armed boxes', 'armed')" in html

@@ -143,7 +143,7 @@
         margin: 0 8px 8px;
         text-transform: uppercase;
       }
-      .nav-label.admin { color: var(--danger); }
+      .nav-label.admin { color: var(--text-muted); }
       .tabs { display: grid; gap: 6px; }
       .tab-button, button {
         border: 1px solid var(--line);
@@ -262,6 +262,36 @@
         background: #fff7f7;
         color: #991b1b;
       }
+      .scout-status-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .scout-status-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px 14px;
+        min-height: 70px;
+      }
+      .scout-status-card .label {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+      .scout-status-card .status-value {
+        margin-top: 4px;
+        color: var(--text);
+        font-size: 16px;
+        font-weight: 800;
+      }
+      .scout-status-card .subtext {
+        color: var(--text-muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
       .owner-panel .panel,
       .owner-panel .stat,
       .owner-panel table {
@@ -276,6 +306,7 @@
       .lane, .panel {
         background: var(--panel);
         border: 1px solid var(--line);
+        border-top: 3px solid var(--line);
         border-radius: 12px;
         padding: 16px;
         min-width: 0;
@@ -285,13 +316,34 @@
       .lane:hover, .panel:hover {
         box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
       }
+      .lane[data-lane="armed"] { border-top-color: var(--armed); }
+      .lane[data-lane="primed"] { border-top-color: var(--primed); }
+      .lane[data-lane="active"] { border-top-color: var(--active); }
+      .lane-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
       .lane h2 {
-        margin: 0 0 16px;
+        margin: 0;
         font-size: 16px;
         font-weight: 600;
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+      .lane-count {
+        min-width: 28px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--line-light);
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 2px 8px;
+        text-align: center;
       }
       .lane[data-lane] h2::before {
         content: "";
@@ -318,6 +370,35 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
         border-color: var(--accent-light);
+      }
+      .empty-state {
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        background: #fbfdff;
+        padding: 18px 14px;
+        min-height: 86px;
+      }
+      .empty-state .title {
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--line-light);
+        padding: 8px 0;
+      }
+      .detail-row:last-child { border-bottom: 0; }
+      .detail-label {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .detail-value {
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 700;
+        text-align: right;
       }
       .card-header {
         display: flex;
@@ -437,7 +518,7 @@
       .check.bad { border-color: #f3b5ae; }
       .check .mark { font-weight: 800; margin-right: 6px; }
       @media (max-width: 1000px) {
-        .layout, .grid, .grid.two, .check-list { grid-template-columns: 1fr; }
+        .layout, .grid, .grid.two, .check-list, .scout-status-grid { grid-template-columns: 1fr; }
         header { grid-template-columns: 1fr; align-items: flex-start; }
         .header-right { justify-content: flex-start; }
         .app-shell { grid-template-columns: 1fr; }
@@ -499,27 +580,64 @@
       <section id="tab-scout" class="tab-panel active">
         <div class="page-heading">
           <div>
-            <h2>Scout Workspace</h2>
-            <p>Connor's daily trading view: live setup lanes, signal quality, and depth context without setup controls in the way.</p>
+            <h2>Live Scout</h2>
+            <p>Real-time trading ideas grouped by readiness, with scanner health and market-data context kept in view.</p>
           </div>
-          <span class="page-badge">Trader View</span>
+        </div>
+        <div class="scout-status-grid" aria-label="Scout status">
+          <div class="scout-status-card">
+            <div class="label">Scanner</div>
+            <div class="status-value" id="scout-scanner-status">Waiting</div>
+            <div class="subtext">Worker heartbeat</div>
+          </div>
+          <div class="scout-status-card">
+            <div class="label">Stream</div>
+            <div class="status-value" id="scout-ws-status">Connecting</div>
+            <div class="subtext">Dashboard feed</div>
+          </div>
+          <div class="scout-status-card">
+            <div class="label">Symbols</div>
+            <div class="status-value" id="scout-symbol-count">0</div>
+            <div class="subtext">Active in scanner</div>
+          </div>
+          <div class="scout-status-card">
+            <div class="label">Data Mode</div>
+            <div class="status-value" id="scout-data-mode">Checking</div>
+            <div class="subtext" id="scout-depth-mode">Depth pending</div>
+          </div>
+          <div class="scout-status-card">
+            <div class="label">Last Update</div>
+            <div class="status-value" id="scout-last-update">-</div>
+            <div class="subtext">Local time</div>
+          </div>
         </div>
         <div class="layout">
           <div class="lane" data-lane="armed">
-            <h2>Armed</h2>
+            <div class="lane-header">
+              <h2>Armed</h2>
+              <span class="lane-count" id="armed-count">0</span>
+            </div>
             <div id="armed-list"></div>
           </div>
           <div class="lane" data-lane="primed">
-            <h2>PRIMED</h2>
+            <div class="lane-header">
+              <h2>PRIMED</h2>
+              <span class="lane-count" id="primed-count">0</span>
+            </div>
             <div id="primed-list"></div>
           </div>
           <div class="lane" data-lane="active">
-            <h2>Active</h2>
+            <div class="lane-header">
+              <h2>Active</h2>
+              <span class="lane-count" id="active-count">0</span>
+            </div>
             <div id="active-list"></div>
           </div>
           <aside class="panel">
-            <h2>Depth</h2>
-            <div id="depth-panel" class="muted">Waiting for symbols...</div>
+            <h2>Selected Symbol Depth</h2>
+            <div id="depth-panel" class="muted">
+              Select an alert to view market depth when live depth is available.
+            </div>
           </aside>
         </div>
       </section>
@@ -819,6 +937,12 @@
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
       const pnlPositionsBody = document.getElementById('pnl-positions-body');
       const pnlAlertsList = document.getElementById('pnl-alerts-list');
+      const laneCountIds = { armed: 'armed-count', primed: 'primed-count', active: 'active-count' };
+      const scoutStatusMap = {
+        'ws-status': { id: 'scout-ws-status', labels: { connected: 'Live', warning: 'Unstable', disconnected: 'Offline' } },
+        'api-status': { id: 'scout-data-mode', labels: { connected: 'Online', warning: 'Degraded', disconnected: 'Offline' } },
+        'worker-status': { id: 'scout-scanner-status', labels: { connected: 'Scanning', warning: 'Waiting', disconnected: 'Offline' } },
+      };
 
       document.querySelectorAll('.tab-button').forEach((button) => {
         button.addEventListener('click', () => {
@@ -833,9 +957,23 @@
         });
       });
 
-      function renderLane(container, items, emptyText) {
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+
+      function updateLaneCount(lane, count) {
+        setText(laneCountIds[lane], String(count || 0));
+      }
+
+      function renderLane(container, items, emptyText, lane) {
+        updateLaneCount(lane, (items || []).length);
         if (!items || items.length === 0) {
-          container.innerHTML = `<div class="card"><div class="title">${emptyText}</div><div class="muted">Scanning...</div></div>`;
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="title">${emptyText}</div>
+              <div class="muted">Scanner is running. Matching setups will appear here automatically.</div>
+            </div>`;
           return;
         }
         container.innerHTML = items.map((item) => {
@@ -1309,10 +1447,16 @@
         else dot.classList.add('disconnected');
       }
 
+      function updateScoutStatus(id, status) {
+        const config = scoutStatusMap[id];
+        if (!config) return;
+        setText(config.id, config.labels[status] || status);
+      }
+
       // Initialize status
-      updateStatusIndicator('api-status', 'connected');
-      updateStatusIndicator('worker-status', 'warning');
-      updateStatusIndicator('ws-status', 'disconnected');
+      updateScoutStatus('api-status', 'warning');
+      updateScoutStatus('worker-status', 'warning');
+      updateScoutStatus('ws-status', 'disconnected');
 
       // WebSocket connection
       const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -1320,11 +1464,13 @@
       
       socket.onopen = () => {
         updateStatusIndicator('ws-status', 'connected');
+        updateScoutStatus('ws-status', 'connected');
         console.log('WebSocket connected');
       };
       
       socket.onclose = () => {
         updateStatusIndicator('ws-status', 'disconnected');
+        updateScoutStatus('ws-status', 'disconnected');
         console.log('WebSocket disconnected');
       };
       
@@ -1333,42 +1479,59 @@
           const data = JSON.parse(event.data);
           if (data.type === 'lanes') {
             const lanes = data.lanes || {};
-            renderLane(armedList, lanes.armed, 'No armed boxes');
-            renderLane(primedList, lanes.primed, 'No primed setups');
-            renderLane(activeList, lanes.active, 'No active triggers');
+            renderLane(armedList, lanes.armed, 'No armed boxes', 'armed');
+            renderLane(primedList, lanes.primed, 'No primed setups', 'primed');
+            renderLane(activeList, lanes.active, 'No active triggers', 'active');
             const meta = lanes.meta || {};
+            const symbols = meta.symbols || [];
+            setText('scout-symbol-count', String(symbols.length || 0));
+            setText('scout-last-update', formatTime(lanes.updated_at || new Date().toISOString()));
             depthPanel.innerHTML = `
-              <div style="font-weight: 600; margin-bottom: 4px;">Market Depth</div>
-              <div style="font-size: 12px; color: var(--text-muted);">
-                Symbols: ${(meta.symbols || []).length || 0} active
+              <div class="detail-row">
+                <span class="detail-label">Active symbols</span>
+                <span class="detail-value">${symbols.length || 0}</span>
               </div>
-              <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">
-                ${(meta.symbols || []).join(', ') || 'None'}
+              <div class="detail-row">
+                <span class="detail-label">Watchlist</span>
+                <span class="detail-value">${escapeHtml(symbols.slice(0, 8).join(', ') || 'None')}</span>
+              </div>
+              <div class="muted section">
+                Select an alert to inspect symbol-specific depth once live depth is available.
               </div>
             `;
             // Update worker status based on data freshness
             updateStatusIndicator('worker-status', 'connected');
+            updateScoutStatus('worker-status', 'connected');
           }
         } catch (err) {
           console.error('ws message parse error', err);
           updateStatusIndicator('ws-status', 'warning');
+          updateScoutStatus('ws-status', 'warning');
         }
       };
       
       socket.onerror = (err) => {
         console.error('ws error', err);
         updateStatusIndicator('ws-status', 'warning');
+        updateScoutStatus('ws-status', 'warning');
       };
 
-      // Periodic health checks
-      setInterval(async () => {
+      async function refreshScoutHealth() {
         try {
-          const response = await fetch('/health', { method: 'HEAD' });
-          updateStatusIndicator('api-status', response.ok ? 'connected' : 'warning');
+          const payload = await api('/health');
+          updateStatusIndicator('api-status', payload.ok ? 'connected' : 'warning');
+          updateScoutStatus('api-status', payload.ok ? 'connected' : 'warning');
+          setText('scout-data-mode', payload.polygon?.mode === 'live' ? 'Live' : 'Demo');
+          setText('scout-depth-mode', `Depth ${payload.depth?.mode || 'unknown'}`);
         } catch {
           updateStatusIndicator('api-status', 'disconnected');
+          updateScoutStatus('api-status', 'disconnected');
         }
-      }, 10000);
+      }
+
+      // Periodic health checks
+      refreshScoutHealth();
+      setInterval(refreshScoutHealth, 10000);
     </script>
   </body>
 </html>
