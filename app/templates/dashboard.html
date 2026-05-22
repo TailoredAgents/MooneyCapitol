@@ -62,22 +62,6 @@
         align-items: center;
         gap: 16px;
       }
-      .status-indicators {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-      }
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--text-light);
-        transition: all 0.3s ease;
-        cursor: pointer;
-      }
-      .status-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
-      .status-dot.disconnected { background: var(--danger); }
-      .status-dot.warning { background: var(--warning); }
       .header-right {
         display: flex;
         justify-content: flex-end;
@@ -472,12 +456,7 @@
   <body>
     <header>
       <div class="header-left">
-        <h1>MooneyCapitol</h1>
-        <div class="status-indicators">
-          <div class="status-dot" id="ws-status" title="WebSocket Connection"></div>
-          <div class="status-dot" id="api-status" title="API Status"></div>
-          <div class="status-dot" id="worker-status" title="Worker Status"></div>
-        </div>
+        <h1>Mooney Capitol</h1>
       </div>
       <div class="header-right">
         <form class="logout-form" action="/logout" method="post">
@@ -1323,6 +1302,7 @@
       // Status monitoring
       function updateStatusIndicator(id, status) {
         const dot = document.getElementById(id);
+        if (!dot) return;
         dot.className = 'status-dot';
         if (status === 'connected') dot.classList.add('connected');
         else if (status === 'warning') dot.classList.add('warning');

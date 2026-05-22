@@ -28,6 +28,9 @@ def test_dashboard_exposes_launch_readiness_tab_and_api_call():
 def test_dashboard_v3_separates_trader_and_owner_navigation():
     html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
 
+    assert "<h1>Mooney Capitol</h1>" in html
+    assert "status-indicators" not in html
+    assert 'id="ws-status"' not in html
     assert "Operator Console" in html
     assert "V3 Operator Console" not in html
     assert "Trader Workspace" in html
