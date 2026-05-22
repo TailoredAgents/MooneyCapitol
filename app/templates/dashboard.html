@@ -242,7 +242,6 @@
       }
       main.content {
         width: 100%;
-        max-width: 1920px;
         min-width: 0;
         padding: 28px 32px 42px;
       }
@@ -252,7 +251,6 @@
         align-items: flex-start;
         gap: 16px;
         margin-bottom: 22px;
-        max-width: 1180px;
       }
       .page-heading h2 {
         margin: 0 0 4px;
@@ -444,7 +442,11 @@
       .check.bad .mark { color: var(--danger); }
       .tab-panel { display: none; }
       .tab-panel.active { display: block; }
-      .layout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 280px; gap: 20px; }
+      .layout {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(280px, 0.62fr);
+        gap: 20px;
+      }
       .lane, .panel {
         background: var(--panel);
         border: 1px solid var(--line);
