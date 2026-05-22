@@ -263,7 +263,7 @@ Potential `artifact_type` values:
 
 1. Add OpenAI config/env parsing and a no-op-safe AI client wrapper. (Phase 1 implemented)
 2. Add `ai_artifacts` table and repository. (Phase 1 implemented)
-3. Implement Scout alert explanations first.
+3. Implement Scout alert explanations first. (Phase 2 implemented)
 4. Implement learning report translation second.
 5. Implement trade journal automation third.
 6. Implement daily recap fourth.

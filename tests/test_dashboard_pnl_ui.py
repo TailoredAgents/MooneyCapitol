@@ -91,6 +91,8 @@ def test_scout_page_has_trader_cockpit_status_and_lane_counts():
     assert 'id="active-count"' in html
     assert "Selected Symbol Depth" in html
     assert "Select an alert to view market depth" in html
+    assert "AI explanation" in html
+    assert "item.ai_explanation" in html
     assert "renderLane(armedList, lanes.armed, 'No armed boxes', 'armed')" in html
 
 

@@ -588,6 +588,23 @@
         margin: 4px 0 8px;
         line-height: 1.3;
       }
+      .ai-explanation {
+        border-left: 3px solid var(--accent);
+        background: #f8fbff;
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.45;
+        margin: 9px 0 8px;
+        padding: 8px 10px;
+      }
+      .ai-explanation .label {
+        color: var(--text-muted);
+        display: block;
+        font-size: 10px;
+        font-weight: 800;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+      }
       .muted { color: var(--text-muted); font-size: 12px; }
       .pills { margin-top: 6px; }
       .pill {
@@ -1386,6 +1403,9 @@
           const entryText = Number.isFinite(entryValue) ? entryValue.toFixed(2) : (item.entry || 'n/a');
           const stopText = Number.isFinite(stopValue) ? stopValue.toFixed(2) : (item.stop || 'n/a');
           const statusText = item.status && item.status !== 'open' ? `<div class="muted">Status ${escapeHtml(item.status)}</div>` : '';
+          const aiExplanation = item.ai_explanation
+            ? `<div class="ai-explanation"><span class="label">AI explanation</span>${escapeHtml(item.ai_explanation)}</div>`
+            : '';
           
           // Add p2R score if available
           const p2rText = item.pills && item.pills.find(p => p.includes('p2R')) ? '' : '';
@@ -1405,6 +1425,7 @@
                 <span>Spread ${spread}¢</span> • <span>RVOL ${rvol}</span>
                 ${item.l2 ? ` • <span>${escapeHtml(item.l2)}</span>` : ''}
               </div>
+              ${aiExplanation}
               ${statusText}
               ${pills ? `<div class="pills">${pills}</div>` : ''}
             </div>`;
