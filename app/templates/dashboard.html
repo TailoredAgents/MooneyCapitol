@@ -1682,6 +1682,7 @@
         const validation = summary.read_only_validation || {};
         const readOnlyHistory = summary.read_only_history || [];
         const learning = summary.learning_report || {};
+        const learningTranslation = summary.learning_translation || {};
         launchSummaryList.innerHTML = `
           <div class="card">
             <div class="title">Database</div>
@@ -1703,6 +1704,7 @@
             <div class="title">Learning</div>
             <div class="muted">${escapeHtml(learning.model_type || 'No report')} ${learning.date ? `· ${escapeHtml(learning.date)}` : ''}</div>
           </div>
+          ${learningTranslation.text ? `<div class="card"><div class="title">AI Learning Summary</div><div class="ai-explanation">${escapeHtml(learningTranslation.text)}</div></div>` : ''}
         `;
         launchReadonlyBody.innerHTML = readOnlyHistory.length ? readOnlyHistory.map((item) => `
           <tr>

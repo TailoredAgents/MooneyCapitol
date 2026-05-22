@@ -17,6 +17,7 @@ from app.copier.state import get_copier_status
 from app.core.config_store import CONFIG, refresh_config
 from app.db.models import AccountSnapshot, CopierAuditEvent, CopyOrder, CopyReconciliation, CopyTargetAccount, MasterExecution
 from app.db.session import engine, get_session
+from app.services.ai_artifacts import latest_ai_artifact
 from app.services.kv_store import get_store_mode, get_updated_at
 from app.services.learning import get_learning_service
 from app.services.runtime import get_worker_tick
@@ -136,6 +137,7 @@ def launch_readiness(session: Session = Depends(db_session)):
     )
 
     learning_report = _learning_report()
+    learning_translation = _learning_translation(session)
     add(
         "Learning",
         "learning_report_exists",
@@ -169,6 +171,7 @@ def launch_readiness(session: Session = Depends(db_session)):
             "read_only_history": readonly_history,
             "latency": latency,
             "learning_report": learning_report,
+            "learning_translation": learning_translation,
             "kv_updated_at": {
                 "app_config": _updated_at_iso("app_config"),
                 "worker_tick": _updated_at_iso("worker_tick"),
@@ -291,6 +294,21 @@ def _learning_report() -> dict | None:
         return get_learning_service().load_report()
     except Exception:
         return None
+
+
+def _learning_translation(session: Session) -> dict | None:
+    try:
+        artifact = latest_ai_artifact(session, artifact_type="learning_translation", source_type="learning_report")
+    except Exception:
+        return None
+    if not artifact or artifact.status != "completed" or not artifact.output_text:
+        return None
+    return {
+        "text": artifact.output_text,
+        "model": artifact.model,
+        "source_id": artifact.source_id,
+        "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
+    }
 
 
 def _updated_at_iso(key: str) -> str | None:

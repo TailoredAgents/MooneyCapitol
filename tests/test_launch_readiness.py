@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from app.api.routes.launch import _latency_stats, _read_only_counts, _read_only_history, router
+from app.api.routes.launch import _latency_stats, _learning_translation, _read_only_counts, _read_only_history, router
 
 
 class FakeScalarResult:
@@ -97,3 +97,31 @@ def test_launch_readiness_latency_stats_include_under_300ms_rate():
     assert stats["mean_ms"] == 266.67
     assert stats["max_ms"] == 450.0
     assert stats["under_300ms_rate"] == 0.6667
+
+
+def test_learning_translation_serializes_latest_completed_artifact(monkeypatch):
+    created_at = datetime(2026, 5, 22, 20, 0, tzinfo=timezone.utc)
+    artifact = SimpleNamespace(
+        status="completed",
+        output_text="L2 persistence mattered most tonight.",
+        model="gpt-5.4-mini",
+        source_id="2026-05-22",
+        created_at=created_at,
+    )
+
+    monkeypatch.setattr("app.api.routes.launch.latest_ai_artifact", lambda *args, **kwargs: artifact)
+
+    result = _learning_translation(FakeSession())
+
+    assert result == {
+        "text": "L2 persistence mattered most tonight.",
+        "model": "gpt-5.4-mini",
+        "source_id": "2026-05-22",
+        "created_at": created_at.isoformat(),
+    }
+
+
+def test_learning_translation_ignores_missing_or_unfinished_artifact(monkeypatch):
+    monkeypatch.setattr("app.api.routes.launch.latest_ai_artifact", lambda *args, **kwargs: None)
+
+    assert _learning_translation(FakeSession()) is None

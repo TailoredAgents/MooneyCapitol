@@ -110,3 +110,10 @@ def test_trade_monitor_has_summary_cards_and_latency_chips():
     assert "renderTradeSummary(items)" in html
     assert "latencyChip(item.copy_latency_ms)" in html
     assert "No trade activity yet" in html
+
+
+def test_launch_page_displays_ai_learning_translation_when_available():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert "summary.learning_translation" in html
+    assert "AI Learning Summary" in html

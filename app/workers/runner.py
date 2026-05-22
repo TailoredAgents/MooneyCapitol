@@ -39,6 +39,7 @@ from app.db.session import get_session
 from app.observability.logging import get_logger
 from app.services.depth import mark_snapshot, mark_stale
 from app.services.learning import bucket_price, bucket_time, get_learning_service, classify_trading_regime, get_regime_features
+from app.services.learning_translations import generate_learning_report_translation
 from app.services.ledger import get_ledger_service
 from app.services.levels import find_gap_edges, find_htf_levels, nearest_target
 from app.services.live_state import set_lanes
@@ -422,6 +423,26 @@ def _log_scout_explanation_result(future) -> None:
         return
     if artifact_id:
         logger.info("scout_explanation.stored", artifact_id=artifact_id)
+
+
+def schedule_learning_translation(ctx: WorkerContext, *, trade_date: date, result: dict) -> None:
+    future = ctx.ai_executor.submit(
+        generate_learning_report_translation,
+        trade_date=trade_date,
+        result=result,
+        slack=ctx.slack,
+    )
+    future.add_done_callback(_log_learning_translation_result)
+
+
+def _log_learning_translation_result(future) -> None:
+    try:
+        artifact_id = future.result()
+    except Exception as exc:  # pragma: no cover - defensive callback
+        logger.warning("learning_translation.failed", err=str(exc))
+        return
+    if artifact_id:
+        logger.info("learning_translation.stored", artifact_id=artifact_id)
 
 
 async def build_longlist(ctx: WorkerContext):
@@ -1214,9 +1235,11 @@ async def nightly_learning_job(ctx: WorkerContext):
             f"{feature_lines}"
         )
         ctx.slack.post(message)
+        schedule_learning_translation(ctx, trade_date=trade_date, result=result)
     else:
         ctx.last_learning_report = result
         ctx.slack.post(f"Nightly Learning skipped: {result.get('reason', 'unknown')}")
+        schedule_learning_translation(ctx, trade_date=trade_date, result=result)
     logger.info("learning.nightly", result=result)
 
 
