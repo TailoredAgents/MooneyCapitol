@@ -14,6 +14,9 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count("COPIER_ENABLED") == 2
     assert text.count("COPIER_MODE") == 2
     assert text.count("COPIER_GLOBAL_KILL_SWITCH") == 2
+    assert text.count("OPENAI_API_KEY") == 2
+    assert text.count("OPENAI_AI_FEATURES_ENABLED") == 2
+    assert text.count('value: "0"') >= 6
     assert text.count("SLACK_SIGNING_SECRET") == 2
     assert "WEBULL_MASTER_ACCOUNT_EQUITY" not in text
     assert "WEBULL_PERSONAL_ACCOUNT_EQUITY" not in text

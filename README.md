@@ -331,6 +331,8 @@ Deploy-now defaults:
 - `COPIER_MODE=test`
 - `COPIER_GLOBAL_KILL_SWITCH=1`
 - `LEARNING_SANDBOX_ENABLED=0`
+- `OPENAI_AI_FEATURES_ENABLED=0`
+- `OPENAI_RESEARCH_ENABLED=0`
 
 Set these during the first Render Blueprint deploy:
 
@@ -340,6 +342,7 @@ Set these during the first Render Blueprint deploy:
 - `SLACK_CHANNEL` if different from `all-trading`
 - `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` if Slack alerts/buttons should work now
 - `SENTRY_DSN` if error monitoring is enabled
+- `OPENAI_API_KEY` can be set now, but OpenAI features stay inactive until `OPENAI_AI_FEATURES_ENABLED=1`
 
 Leave these blank until accounts/subscriptions are ready:
 
@@ -366,6 +369,6 @@ Before live validation:
 
 Latest full local verification:
 
-- `pytest -q` -> `139 passed, 1 skipped`
+- `pytest -q` -> `149 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
-- `alembic heads` -> `0004_pnl_monitoring (head)`
+- `alembic heads` -> `0005_ai_artifacts (head)`

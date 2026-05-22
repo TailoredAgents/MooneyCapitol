@@ -35,6 +35,7 @@ def update_config(cfg: AppConfig):
     CONFIG.alerts = cfg.alerts
     CONFIG.retention_days = cfg.retention_days
     CONFIG.reports = cfg.reports
+    CONFIG.openai = cfg.openai
     CONFIG.depth_provider = cfg.depth_provider
     CONFIG.copier = cfg.copier
     try:

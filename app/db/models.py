@@ -357,6 +357,28 @@ class TradingSession(Base):
     )
 
 
+class AIArtifact(Base):
+    __tablename__ = "ai_artifacts"
+    id = Column(BigInteger, primary_key=True)
+    artifact_type = Column(String(64), nullable=False, index=True)
+    source_type = Column(String(64), nullable=False, index=True)
+    source_id = Column(String(128), nullable=True, index=True)
+    symbol = Column(String(16), nullable=True, index=True)
+    model = Column(String(64), nullable=False)
+    prompt_version = Column(String(64), nullable=False)
+    input_json = Column(JSONB, nullable=True)
+    output_json = Column(JSONB, nullable=True)
+    output_text = Column(Text, nullable=True)
+    status = Column(String(32), nullable=False, default="created", index=True)
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    __table_args__ = (
+        Index("idx_ai_artifact_source", "artifact_type", "source_type", "source_id"),
+        Index("idx_ai_artifact_symbol_created", "symbol", "created_at"),
+    )
+
+
 class KVStore(Base):
     """Small key/value store for cross-service state.
 

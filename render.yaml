@@ -29,6 +29,20 @@ services:
         value: "1"
       - key: OPENAI_API_KEY
         sync: false
+      - key: OPENAI_AI_FEATURES_ENABLED
+        value: "0"
+      - key: OPENAI_RESEARCH_ENABLED
+        value: "0"
+      - key: OPENAI_SCOUT_EXPLANATION_MODEL
+        value: gpt-5.4-mini
+      - key: OPENAI_DAILY_RECAP_MODEL
+        value: gpt-5.4
+      - key: OPENAI_LEARNING_TRANSLATION_MODEL
+        value: gpt-5.4-mini
+      - key: OPENAI_TRADE_JOURNAL_MODEL
+        value: gpt-5.4-mini
+      - key: OPENAI_RESEARCH_MODEL
+        value: gpt-5.5
       - key: POLYGON_API_KEY
         sync: false
       - key: SLACK_CHANNEL
@@ -111,6 +125,22 @@ services:
         value: test
       - key: COPIER_GLOBAL_KILL_SWITCH
         value: "1"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_AI_FEATURES_ENABLED
+        value: "0"
+      - key: OPENAI_RESEARCH_ENABLED
+        value: "0"
+      - key: OPENAI_SCOUT_EXPLANATION_MODEL
+        value: gpt-5.4-mini
+      - key: OPENAI_DAILY_RECAP_MODEL
+        value: gpt-5.4
+      - key: OPENAI_LEARNING_TRANSLATION_MODEL
+        value: gpt-5.4-mini
+      - key: OPENAI_TRADE_JOURNAL_MODEL
+        value: gpt-5.4-mini
+      - key: OPENAI_RESEARCH_MODEL
+        value: gpt-5.5
       - key: POLYGON_API_KEY
         sync: false
       - key: SLACK_CHANNEL

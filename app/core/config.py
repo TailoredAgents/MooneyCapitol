@@ -96,6 +96,16 @@ class ReportsConfig(BaseModel):
     eod_slack_time_et: str = "16:10"
 
 
+class OpenAIConfig(BaseModel):
+    ai_features_enabled: bool = False
+    research_enabled: bool = False
+    scout_explanation_model: str = "gpt-5.4-mini"
+    daily_recap_model: str = "gpt-5.4"
+    learning_translation_model: str = "gpt-5.4-mini"
+    trade_journal_model: str = "gpt-5.4-mini"
+    research_model: str = "gpt-5.5"
+
+
 class DepthProviderConfig(BaseModel):
     type: str = "demo"
     smart_aggregate: bool = True
@@ -165,6 +175,7 @@ class AppConfig(BaseModel):
     alerts: AlertsConfig = AlertsConfig()
     retention_days: RetentionConfig = RetentionConfig()
     reports: ReportsConfig = ReportsConfig()
+    openai: OpenAIConfig = OpenAIConfig()
     depth_provider: DepthProviderConfig = DepthProviderConfig()
     copier: CopierConfig = CopierConfig()
 
@@ -172,6 +183,13 @@ class AppConfig(BaseModel):
 class Settings(BaseSettings):
     database_url: str
     openai_api_key: str | None = None
+    openai_ai_features_enabled: bool = False
+    openai_research_enabled: bool = False
+    openai_scout_explanation_model: str = "gpt-5.4-mini"
+    openai_daily_recap_model: str = "gpt-5.4"
+    openai_learning_translation_model: str = "gpt-5.4-mini"
+    openai_trade_journal_model: str = "gpt-5.4-mini"
+    openai_research_model: str = "gpt-5.5"
     polygon_api_key: str | None = None
     slack_bot_token: str | None = None
     slack_signing_secret: str | None = None
