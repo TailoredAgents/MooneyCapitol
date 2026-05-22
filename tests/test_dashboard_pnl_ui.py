@@ -43,8 +43,10 @@ def test_pages_include_png_favicon_link():
     dashboard = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
     login = Path("app/templates/login.html").read_text(encoding="utf-8")
 
+    assert 'href="/static/favicon-32.png"' in dashboard
+    assert 'href="/static/favicon-32.png"' in login
     assert 'href="/static/favicon.png"' in dashboard
-    assert 'href="/static/favicon.png"' in login
+    assert 'href="/static/apple-touch-icon.png"' in login
 
 
 def test_dashboard_v3_separates_trader_and_owner_navigation():
