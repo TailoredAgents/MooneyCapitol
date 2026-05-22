@@ -7,9 +7,16 @@ def test_dashboard_exposes_pnl_tab_and_existing_pnl_api_calls():
     assert 'data-tab="pnl"' in html
     assert 'id="tab-pnl"' in html
     assert "Refresh From Webull" in html
+    assert "Account Monitor" in html
+    assert "Account P&L" not in html
     assert "api('/pnl/summary')" in html
     assert "api('/pnl/refresh'" in html
     assert "/pnl/accounts/" in html
+    assert 'id="pnl-total-exposure"' in html
+    assert 'id="pnl-last-refresh"' in html
+    assert "moneySpan(summary.total_pnl_today)" in html
+    assert "No account snapshots yet" in html
+    assert "No active risk alerts" in html
 
 
 def test_dashboard_exposes_launch_readiness_tab_and_api_call():

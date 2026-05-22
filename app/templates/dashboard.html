@@ -335,6 +335,31 @@
       .latency-chip.bad { background: var(--danger-light); color: var(--danger); }
       .status-chip.neutral,
       .latency-chip.neutral { background: var(--line-light); color: var(--text-muted); }
+      .account-refresh-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .account-refresh-meta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .money-positive { color: var(--success); font-weight: 800; }
+      .money-negative { color: var(--danger); font-weight: 800; }
+      .money-neutral { color: var(--text); font-weight: 800; }
+      .risk-alert-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .risk-alert-card.warning { border-color: #fed7aa; background: #fffaf0; }
+      .risk-alert-card.critical,
+      .risk-alert-card.emergency { border-color: #fecaca; background: #fff7f7; }
       .owner-panel .panel,
       .owner-panel .stat,
       .owner-panel table {
@@ -562,6 +587,7 @@
       .check .mark { font-weight: 800; margin-right: 6px; }
       @media (max-width: 1000px) {
         .layout, .grid, .grid.two, .check-list, .scout-status-grid, .monitor-grid { grid-template-columns: 1fr; }
+        .account-refresh-bar { align-items: flex-start; flex-direction: column; }
         header { grid-template-columns: 1fr; align-items: flex-start; }
         .header-right { justify-content: flex-start; }
         .app-shell { grid-template-columns: 1fr; }
@@ -905,23 +931,26 @@
       <section id="tab-pnl" class="tab-panel">
         <div class="page-heading">
           <div>
-            <h2>Account P&L</h2>
-            <p>Live account snapshots, open positions, daily P&L, drawdown, buying power, and risk alerts for monitored accounts.</p>
+            <h2>Account Monitor</h2>
+            <p>Live equity, buying power, daily P&L, exposure, drawdown, positions, and risk alerts for monitored accounts.</p>
           </div>
-          <span class="page-badge">Trader View</span>
         </div>
-        <div class="grid">
+        <div class="monitor-grid" aria-label="Account monitor summary">
           <div class="stat">
             <div class="muted">Accounts</div>
             <div id="pnl-account-count" class="value">-</div>
           </div>
           <div class="stat">
-            <div class="muted">Total Value</div>
+            <div class="muted">Total Equity</div>
             <div id="pnl-total-value" class="value">-</div>
           </div>
           <div class="stat">
             <div class="muted">Today P&L</div>
             <div id="pnl-total-today" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Exposure</div>
+            <div id="pnl-total-exposure" class="value">-</div>
           </div>
           <div class="stat">
             <div class="muted">Active Alerts</div>
@@ -930,9 +959,13 @@
         </div>
 
         <div class="section panel">
-          <div class="actions">
+          <div class="account-refresh-bar">
             <button class="primary" id="refresh-pnl">Refresh From Webull</button>
-            <div id="pnl-status" class="status-line">Loading...</div>
+            <div class="account-refresh-meta">
+              <div><span class="muted">Source</span> <strong>Webull</strong></div>
+              <div><span class="muted">Last refreshed</span> <strong id="pnl-last-refresh">-</strong></div>
+              <div id="pnl-status" class="status-line">Loading...</div>
+            </div>
           </div>
         </div>
 
@@ -1356,8 +1389,10 @@
         const accounts = summary.accounts || [];
         document.getElementById('pnl-account-count').textContent = summary.account_count ?? accounts.length;
         document.getElementById('pnl-total-value').textContent = formatMoney(summary.total_value);
-        document.getElementById('pnl-total-today').textContent = formatMoneySigned(summary.total_pnl_today);
+        document.getElementById('pnl-total-today').innerHTML = moneySpan(summary.total_pnl_today);
+        document.getElementById('pnl-total-exposure').textContent = formatMoney(totalExposure(accounts));
         document.getElementById('pnl-active-alerts').textContent = summary.active_alerts ?? 0;
+        document.getElementById('pnl-last-refresh').textContent = latestAccountTime(accounts);
         pnlAccountsBody.innerHTML = accounts.length ? accounts.map((account) => `
           <tr>
             <td><strong>${escapeHtml(account.account_name || account.account_ref)}</strong><div class="muted">${escapeHtml(account.account_type || '')} ${escapeHtml(account.account_ref || '')}</div></td>
@@ -1365,13 +1400,21 @@
             <td>${formatMoney(account.total_value)}</td>
             <td>${formatMoney(account.cash_balance)}</td>
             <td>${formatMoney(account.buying_power)}</td>
-            <td>${formatMoneySigned(account.total_pnl_today)}</td>
-            <td>${formatMoneySigned(account.max_drawdown_today)}</td>
+            <td>${moneySpan(account.total_pnl_today)}</td>
+            <td>${moneySpan(account.max_drawdown_today)}</td>
             <td>${formatMoney(account.total_exposure)}</td>
             <td>${account.position_count ?? 0}</td>
             <td>${formatTime(account.timestamp)}</td>
           </tr>
-        `).join('') : '<tr><td colspan="10" class="muted">No P&L account snapshots yet. Use Refresh From Webull after credentials are configured.</td></tr>';
+        `).join('') : `
+          <tr>
+            <td colspan="10">
+              <div class="empty-state">
+                <div class="title">No account snapshots yet</div>
+                <div class="muted">Connect Webull credentials, then refresh balances to populate this page.</div>
+              </div>
+            </td>
+          </tr>`;
       }
 
       function renderPnlPositions(items) {
@@ -1383,19 +1426,31 @@
             <td>${formatQty(item.qty)}</td>
             <td>${formatMoney(item.avg_price)}</td>
             <td>${formatMoney(item.market_value)}</td>
-            <td>${formatMoneySigned(item.unrealized_pnl)}</td>
+            <td>${moneySpan(item.unrealized_pnl)}</td>
           </tr>
-        `).join('') : '<tr><td colspan="7" class="muted">No open positions in the latest snapshots.</td></tr>';
+        `).join('') : `
+          <tr>
+            <td colspan="7">
+              <div class="empty-state">
+                <div class="title">No open positions</div>
+                <div class="muted">Open positions from monitored accounts will appear here after the next Webull refresh.</div>
+              </div>
+            </td>
+          </tr>`;
       }
 
       function renderPnlAlerts(items) {
         pnlAlertsList.innerHTML = items.length ? items.map((item) => `
-          <div class="card">
+          <div class="risk-alert-card ${escapeHtml(item.severity || 'warning')}">
             <div class="title">${escapeHtml(item.account_name || item.account_ref || '')} <span class="pill risk-${escapeHtml(item.severity || 'warning')}">${escapeHtml(item.severity || '')}</span></div>
             <div>${escapeHtml(item.message || '')}</div>
             <div class="muted">${formatTime(item.alert_time)}</div>
           </div>
-        `).join('') : '<div class="muted">No active P&L risk alerts.</div>';
+        `).join('') : `
+          <div class="empty-state">
+            <div class="title">No active risk alerts</div>
+            <div class="muted">Risk alerts will appear here if drawdown, exposure, or account conditions breach configured thresholds.</div>
+          </div>`;
       }
 
       async function saveGlobal() {
@@ -1487,6 +1542,27 @@
         if (!Number.isFinite(number)) return '-';
         const sign = number > 0 ? '+' : (number < 0 ? '-' : '');
         return `${sign}$${Math.abs(number).toFixed(2)}`;
+      }
+      function moneyClass(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number) || number === 0) return 'money-neutral';
+        return number > 0 ? 'money-positive' : 'money-negative';
+      }
+      function moneySpan(value) {
+        return `<span class="${moneyClass(value)}">${formatMoneySigned(value)}</span>`;
+      }
+      function totalExposure(accounts) {
+        return accounts.reduce((sum, account) => {
+          const exposure = Number(account.total_exposure);
+          return Number.isFinite(exposure) ? sum + exposure : sum;
+        }, 0);
+      }
+      function latestAccountTime(accounts) {
+        const timestamps = accounts
+          .map((account) => new Date(account.timestamp || account.snapshot_time || 0))
+          .filter((date) => !Number.isNaN(date.getTime()))
+          .sort((a, b) => b.getTime() - a.getTime());
+        return timestamps.length ? timestamps[0].toLocaleString() : '-';
       }
       function formatQty(value) {
         const number = Number(value);
