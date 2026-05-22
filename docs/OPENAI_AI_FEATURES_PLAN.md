@@ -266,5 +266,5 @@ Potential `artifact_type` values:
 3. Implement Scout alert explanations first. (Phase 2 implemented)
 4. Implement learning report translation second. (Phase 3 implemented)
 5. Implement trade journal automation third. (Phase 4 implemented)
-6. Implement daily recap fourth.
+6. Implement daily recap fourth. (Phase 5 implemented)
 7. Implement ticker/catalyst research last, after source handling is designed.

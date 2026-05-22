@@ -38,6 +38,7 @@ from app.db.models import Setup
 from app.db.session import get_session
 from app.observability.logging import get_logger
 from app.services.depth import mark_snapshot, mark_stale
+from app.services.daily_recaps import generate_daily_recap
 from app.services.learning import bucket_price, bucket_time, get_learning_service, classify_trading_regime, get_regime_features
 from app.services.learning_translations import generate_learning_report_translation
 from app.services.ledger import get_ledger_service
@@ -459,6 +460,26 @@ def _log_trade_journal_result(future) -> None:
         return
     if result.get("created"):
         logger.info("trade_journal.generated", **result)
+
+
+def schedule_daily_recap(ctx: WorkerContext, *, trade_date: date, ledger_summary: dict) -> None:
+    future = ctx.ai_executor.submit(
+        generate_daily_recap,
+        trade_date=trade_date,
+        ledger_summary=ledger_summary,
+        slack=ctx.slack,
+    )
+    future.add_done_callback(_log_daily_recap_result)
+
+
+def _log_daily_recap_result(future) -> None:
+    try:
+        artifact_id = future.result()
+    except Exception as exc:  # pragma: no cover - defensive callback
+        logger.warning("daily_recap.failed", err=str(exc))
+        return
+    if artifact_id:
+        logger.info("daily_recap.stored", artifact_id=artifact_id)
 
 
 async def build_longlist(ctx: WorkerContext):
@@ -1192,6 +1213,7 @@ async def eod_summary(ctx: WorkerContext):
         lines = [f"{row.get('symbol')} #{row.get('setup_id') or '-'} · PnL ${row.get('pnl')} · R {row.get('realized_r')}" for row in top_setups]
         text += "\nTop setups:\n" + "\n".join(lines)
     ctx.slack.post(text)
+    schedule_daily_recap(ctx, trade_date=trade_date, ledger_summary=summary)
     logger.info("eod.summary", summary=summary)
 
 

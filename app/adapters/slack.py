@@ -4,8 +4,14 @@ import os
 import time
 from typing import Any, Optional
 
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
+try:
+    from slack_sdk import WebClient
+    from slack_sdk.errors import SlackApiError
+except ImportError:  # pragma: no cover - exercised only when optional Slack SDK is absent
+    WebClient = None  # type: ignore[assignment]
+
+    class SlackApiError(Exception):
+        pass
 
 from app.observability.logging import get_logger
 
@@ -15,9 +21,9 @@ logger = get_logger("slack")
 
 class SlackAdapter:
     def __init__(self, token: str | None = None, default_channel: str | None = None):
-        self.client = WebClient(token=token or os.getenv("SLACK_BOT_TOKEN"))
+        self.client = WebClient(token=token or os.getenv("SLACK_BOT_TOKEN")) if WebClient else None
         self.default_channel = default_channel or os.getenv("SLACK_CHANNEL", "all-trading")
-        self.enabled = bool(self.client.token)
+        self.enabled = bool(getattr(self.client, "token", None))
         self._threads: dict[str, str] = {}
 
     def post(self, text: str, channel: str | None = None, blocks: list[dict[str, Any]] | None = None) -> None:

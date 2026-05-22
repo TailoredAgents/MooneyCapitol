@@ -6,6 +6,8 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 
 from app.adapters.slack import SlackAdapter
+from app.db.session import get_session
+from app.services.ai_artifacts import latest_ai_artifact
 from app.services.ledger import get_ledger_service, ingest_fills
 from app.utils.time import now_et
 
@@ -17,7 +19,9 @@ router = APIRouter(prefix="", tags=["reports"])
 def get_eod_report(date: date | None = Query(default=None)):
     trade_date = date or now_et().date()
     ledger = get_ledger_service()
-    return ledger.daily_summary(trade_date)
+    summary = dict(ledger.daily_summary(trade_date))
+    summary["ai_recap"] = _latest_daily_recap(trade_date)
+    return summary
 
 
 @router.get("/reports/eod.csv")
@@ -52,6 +56,15 @@ def send_eod_report(date: date | None = Query(default=None)):
     return {"ok": True}
 
 
+@router.get("/reports/eod/ai")
+def get_eod_ai_recap(date: date | None = Query(default=None)):
+    trade_date = date or now_et().date()
+    recap = _latest_daily_recap(trade_date)
+    if recap is None:
+        return {"date": trade_date.isoformat(), "ai_recap": None}
+    return {"date": trade_date.isoformat(), "ai_recap": recap}
+
+
 @router.post("/ingest/fills")
 def ingest_manual_fills(fills: list[dict]):
     ledger = get_ledger_service()
@@ -59,3 +72,20 @@ def ingest_manual_fills(fills: list[dict]):
     if inserted:
         ledger.invalidate()
     return {"inserted": inserted}
+
+
+def _latest_daily_recap(trade_date: date) -> dict | None:
+    with get_session() as session:
+        artifact = latest_ai_artifact(
+            session,
+            artifact_type="daily_recap",
+            source_type="eod_report",
+            source_id=trade_date.isoformat(),
+        )
+        if not artifact or artifact.status != "completed" or not artifact.output_text:
+            return None
+        return {
+            "text": artifact.output_text,
+            "model": artifact.model,
+            "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
+        }

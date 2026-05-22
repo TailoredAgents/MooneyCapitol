@@ -118,3 +118,10 @@ def test_launch_page_displays_ai_learning_translation_when_available():
 
     assert "summary.learning_translation" in html
     assert "AI Learning Summary" in html
+
+
+def test_reports_api_exposes_ai_daily_recap_route():
+    source = Path("app/api/routes/reports.py").read_text(encoding="utf-8")
+
+    assert "/reports/eod/ai" in source
+    assert "ai_recap" in source
