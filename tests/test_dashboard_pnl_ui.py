@@ -28,10 +28,14 @@ def test_dashboard_exposes_launch_readiness_tab_and_api_call():
 def test_dashboard_v3_separates_trader_and_owner_navigation():
     html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
 
-    assert "V3 Operator Console" in html
+    assert "Operator Console" in html
+    assert "V3 Operator Console" not in html
     assert "Trader Workspace" in html
-    assert "Owner Setup" in html
-    assert "Copier Setup" in html
+    assert "Developer Setup" in html
+    assert "Owner Setup" not in html
+    assert "Copier Settings" in html
+    assert "Copier Setup" not in html
     assert "Launch Readiness" in html
     assert 'class="tab-panel owner-panel"' in html
-    assert "Owner setup controls can affect live trading" in html
+    assert "Developer setup controls can affect live trading" in html
+    assert "Emergency Stop" in html

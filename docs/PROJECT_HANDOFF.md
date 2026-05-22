@@ -26,9 +26,9 @@ The scout and copier share data for reporting and learning, but their runtime pa
 ### Scout
 
 - FastAPI API and worker.
-- V3 dashboard shell with a clear split between Trader Workspace and Owner Setup.
+- V3 dashboard shell with a clear split between Trader Workspace and Developer Setup.
 - Trader Workspace includes Scout, Trades, and P&L views for daily use by a non-developer trader.
-- Owner Setup includes Copier Setup and Launch Readiness views for configuration, validation, and production controls.
+- Developer Setup includes Copier Settings and Launch Readiness views for configuration, validation, and production controls.
 - Dashboard Scout view with Armed, PRIMED, and Active lanes.
 - Polygon/Massive-style market data adapter with demo fallback.
 - Consolidation, breakout/retest, RVOL, spread, scoring, and alert flow foundation.

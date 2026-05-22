@@ -105,6 +105,7 @@
       .emergency-kill:active {
         transform: scale(0.98);
       }
+      .header-kill-spacer { min-width: 0; }
       .logout-form { margin: 0; }
       .logout-button {
         border: 1px solid var(--line);
@@ -491,13 +492,12 @@
         <form class="logout-form" action="/logout" method="post">
           <button class="logout-button" type="submit">Log out</button>
         </form>
-        <button class="emergency-kill" id="emergency-kill" title="Emergency Kill Switch">Kill</button>
       </div>
     </header>
 
     <div class="app-shell">
       <aside class="sidebar" aria-label="Dashboard navigation">
-        <div class="sidebar-kicker">V3 Operator Console</div>
+        <div class="sidebar-kicker">Operator Console</div>
         <div class="nav-group">
           <div class="nav-label">Trader Workspace</div>
           <nav class="tabs" aria-label="Trader workflow">
@@ -513,10 +513,10 @@
           </nav>
         </div>
         <div class="nav-group">
-          <div class="nav-label admin">Owner Setup</div>
-          <nav class="tabs" aria-label="Owner setup">
+          <div class="nav-label admin">Developer Setup</div>
+          <nav class="tabs" aria-label="Developer setup">
             <button class="tab-button" data-tab="copier">
-              <span><span class="nav-title">Copier Setup</span><span class="nav-subtitle">Modes, kill switch, and copy accounts</span></span>
+              <span><span class="nav-title">Copier Settings</span><span class="nav-subtitle">Modes, kill switch, and copy accounts</span></span>
             </button>
             <button class="tab-button" data-tab="launch">
               <span><span class="nav-title">Launch Readiness</span><span class="nav-subtitle">Production checks and validation history</span></span>
@@ -524,7 +524,7 @@
           </nav>
         </div>
         <div class="operator-note">
-          Owner setup controls can affect live trading. Keep this section separate from the trader's daily workflow.
+          Developer setup controls can affect live trading. Keep this section separate from the trader's daily workflow.
         </div>
       </aside>
 
@@ -561,9 +561,9 @@
         <div class="page-heading">
           <div>
             <h2>Launch Readiness</h2>
-            <p>Owner-only production checklist for credentials, worker health, migrations, read-only validation, and launch blockers.</p>
+            <p>Developer production checklist for credentials, worker health, migrations, read-only validation, and launch blockers.</p>
           </div>
-          <span class="page-badge admin">Owner Setup</span>
+          <span class="page-badge admin">Developer Setup</span>
         </div>
         <div class="grid">
           <div class="stat">
@@ -627,10 +627,10 @@
       <section id="tab-copier" class="tab-panel owner-panel">
         <div class="page-heading">
           <div>
-            <h2>Copier Setup</h2>
-            <p>Owner controls for copy mode, target accounts, kill switch state, and copier readiness. These settings can affect real orders.</p>
+            <h2>Copier Settings</h2>
+            <p>Developer controls for copy mode, target accounts, kill switch state, and copier readiness. These settings can affect real orders.</p>
           </div>
-          <span class="page-badge admin">Owner Setup</span>
+          <span class="page-badge admin">Developer Setup</span>
         </div>
         <div class="grid">
           <div class="stat">
@@ -684,6 +684,7 @@
             <button class="primary" id="save-global">Save Settings</button>
             <button class="danger" id="enable-kill">Enable Kill Switch</button>
             <button id="disable-kill">Disable Kill Switch</button>
+            <button class="danger emergency-kill" id="emergency-kill" title="Emergency Kill Switch">Emergency Stop</button>
           </div>
           <div id="global-status" class="status-line"></div>
         </div>
@@ -1313,7 +1314,7 @@
       document.getElementById('disable-kill').addEventListener('click', () => setKillSwitch(false));
       document.getElementById('refresh-pnl').addEventListener('click', refreshPnl);
       
-      // Emergency kill switch in header
+      // Emergency kill switch in copier settings
       document.getElementById('emergency-kill').addEventListener('click', async () => {
         if (!window.confirm('Emergency kill switch\n\nThis will immediately disable all copier trading.\n\nAre you absolutely sure?')) return;
         try {
@@ -1324,7 +1325,7 @@
           btn.textContent = 'Killed';
           setTimeout(() => {
             btn.style.background = 'var(--danger)';
-            btn.textContent = 'Kill';
+            btn.textContent = 'Emergency Stop';
           }, 2000);
         } catch (err) {
           alert('Emergency kill switch failed: ' + err.message);
