@@ -17,6 +17,8 @@ services:
           property: connectionString
       - key: STATE_STORE
         value: db
+      - key: PYTHON_VERSION
+        value: "3.11.11"
       - key: DEPTH_MODE
         value: demo
       - key: COPIER_ENABLED
@@ -99,6 +101,8 @@ services:
           property: connectionString
       - key: STATE_STORE
         value: db
+      - key: PYTHON_VERSION
+        value: "3.11.11"
       - key: DEPTH_MODE
         value: demo
       - key: COPIER_ENABLED

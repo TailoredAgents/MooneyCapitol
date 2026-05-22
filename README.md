@@ -308,7 +308,7 @@ When ready:
 ## Deployment
 
 - `render.yaml` defines the API service, worker service, and managed Postgres database.
-- `runtime.txt` pins Render to Python 3.11 so NumPy, pandas, scikit-learn, and XGBoost install from stable wheels instead of slow Python 3.14 source builds.
+- `runtime.txt`, `.python-version`, and the Blueprint `PYTHON_VERSION=3.11.11` env vars pin Render to Python 3.11 so NumPy, pandas, scikit-learn, and XGBoost install from stable wheels instead of slow Python 3.14 source builds.
 - Render runs `python -m app.tools.run_migrations` as a pre-deploy command for both API and worker services.
 - The migration runner uses a Postgres advisory lock so concurrent API/worker deploys do not run Alembic at the same time.
 - The managed Postgres plan is set to `basic-256mb`; do not use expiring free Postgres for a real-money launch.
