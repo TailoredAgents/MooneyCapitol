@@ -51,6 +51,8 @@ OPENAI_TRADE_JOURNAL_MODEL=gpt-5.4-mini
 OPENAI_RESEARCH_MODEL=gpt-5.5
 OPENAI_AI_FEATURES_ENABLED=0
 OPENAI_RESEARCH_ENABLED=0
+OPENAI_DAILY_REQUEST_LIMIT=200
+OPENAI_RESEARCH_DAILY_REQUEST_LIMIT=30
 ```
 
 ## Architecture
@@ -258,6 +260,7 @@ Potential `artifact_type` values:
 - Always store model and prompt version with output.
 - Add budget controls before enabling all features at once.
 - Start with AI features disabled by default in Render.
+- Enforce daily request caps with `OPENAI_DAILY_REQUEST_LIMIT` and a lower `OPENAI_RESEARCH_DAILY_REQUEST_LIMIT`; set either to `0` only when intentionally unlimited.
 
 ## Recommended Implementation Order
 

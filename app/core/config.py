@@ -99,6 +99,8 @@ class ReportsConfig(BaseModel):
 class OpenAIConfig(BaseModel):
     ai_features_enabled: bool = False
     research_enabled: bool = False
+    daily_request_limit: int = 200
+    research_daily_request_limit: int = 30
     scout_explanation_model: str = "gpt-5.4-mini"
     daily_recap_model: str = "gpt-5.4"
     learning_translation_model: str = "gpt-5.4-mini"
@@ -185,6 +187,8 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_ai_features_enabled: bool = False
     openai_research_enabled: bool = False
+    openai_daily_request_limit: int = 200
+    openai_research_daily_request_limit: int = 30
     openai_scout_explanation_model: str = "gpt-5.4-mini"
     openai_daily_recap_model: str = "gpt-5.4"
     openai_learning_translation_model: str = "gpt-5.4-mini"

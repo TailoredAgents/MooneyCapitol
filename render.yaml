@@ -33,6 +33,10 @@ services:
         value: "0"
       - key: OPENAI_RESEARCH_ENABLED
         value: "0"
+      - key: OPENAI_DAILY_REQUEST_LIMIT
+        value: "200"
+      - key: OPENAI_RESEARCH_DAILY_REQUEST_LIMIT
+        value: "30"
       - key: OPENAI_SCOUT_EXPLANATION_MODEL
         value: gpt-5.4-mini
       - key: OPENAI_DAILY_RECAP_MODEL
@@ -131,6 +135,10 @@ services:
         value: "0"
       - key: OPENAI_RESEARCH_ENABLED
         value: "0"
+      - key: OPENAI_DAILY_REQUEST_LIMIT
+        value: "200"
+      - key: OPENAI_RESEARCH_DAILY_REQUEST_LIMIT
+        value: "30"
       - key: OPENAI_SCOUT_EXPLANATION_MODEL
         value: gpt-5.4-mini
       - key: OPENAI_DAILY_RECAP_MODEL

@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.core.config import AppConfig, OpenAIConfig
 from app.db.models import AIArtifact, Base
 from app.services.ai_artifacts import complete_ai_artifact, create_ai_artifact, fail_ai_artifact
-from app.services.ai_client import OpenAITextClient, _extract_output_text, openai_model_from_env
+from app.services.ai_client import OpenAITextClient, _extract_output_text, openai_model_from_env, reserve_openai_budget
 
 
 class FakeSession:
@@ -24,6 +24,8 @@ def test_openai_config_defaults_are_disabled():
     assert isinstance(cfg.openai, OpenAIConfig)
     assert cfg.openai.ai_features_enabled is False
     assert cfg.openai.research_enabled is False
+    assert cfg.openai.daily_request_limit == 200
+    assert cfg.openai.research_daily_request_limit == 30
     assert cfg.openai.scout_explanation_model == "gpt-5.4-mini"
     assert cfg.openai.research_model == "gpt-5.5"
 
@@ -88,6 +90,39 @@ def test_openai_client_from_env_respects_feature_flag(monkeypatch):
     assert client.enabled is True
     assert client.api_key == "test-key"
     assert openai_model_from_env("OPENAI_SCOUT_EXPLANATION_MODEL", "gpt-5.4-mini") == "custom-model"
+
+
+def test_openai_budget_reserves_daily_and_feature_usage(monkeypatch):
+    store = {}
+    monkeypatch.setenv("OPENAI_DAILY_REQUEST_LIMIT", "2")
+    monkeypatch.setenv("OPENAI_RESEARCH_DAILY_REQUEST_LIMIT", "1")
+    monkeypatch.setattr("app.services.ai_client.get_json", lambda key: store.get(key))
+    monkeypatch.setattr("app.services.ai_client.set_json", lambda key, value: store.__setitem__(key, value))
+
+    first = reserve_openai_budget(metadata={"feature": "ticker_research"})
+    second = reserve_openai_budget(metadata={"feature": "ticker_research"})
+    third = reserve_openai_budget(metadata={"feature": "daily_recap"})
+
+    assert first.allowed is True
+    assert first.daily_count == 1
+    assert first.research_count == 1
+    assert second.allowed is False
+    assert "research daily request limit" in (second.reason or "")
+    assert third.allowed is True
+    assert third.daily_count == 2
+
+
+def test_openai_client_returns_limited_when_budget_is_exhausted(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.ai_client.reserve_openai_budget",
+        lambda metadata=None: type("Decision", (), {"allowed": False, "reason": "limit reached"})(),
+    )
+    client = OpenAITextClient(enabled=True, api_key="test")
+
+    result = client.generate_text(model="gpt-5.4-mini", instructions="x", input_text="y")
+
+    assert result.status == "limited"
+    assert result.error == "limit reached"
 
 
 def test_extract_output_text_supports_responses_shapes():

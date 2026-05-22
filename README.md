@@ -333,6 +333,8 @@ Deploy-now defaults:
 - `LEARNING_SANDBOX_ENABLED=0`
 - `OPENAI_AI_FEATURES_ENABLED=0`
 - `OPENAI_RESEARCH_ENABLED=0`
+- `OPENAI_DAILY_REQUEST_LIMIT=200`
+- `OPENAI_RESEARCH_DAILY_REQUEST_LIMIT=30`
 
 Set these during the first Render Blueprint deploy:
 
@@ -369,6 +371,6 @@ Before live validation:
 
 Latest full local verification:
 
-- `pytest -q` -> `176 passed, 1 skipped`
+- `pytest -q` -> `178 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0005_ai_artifacts (head)`

@@ -91,6 +91,8 @@ def test_scout_page_has_trader_cockpit_status_and_lane_counts():
     assert 'id="active-count"' in html
     assert "Selected Symbol Depth" in html
     assert "Select an alert to view market depth" in html
+    assert "AI Research" in html
+    assert 'id="scout-ai-research"' in html
     assert "AI explanation" in html
     assert "item.ai_explanation" in html
     assert "Catalyst research" in html
@@ -113,6 +115,9 @@ def test_trade_monitor_has_summary_cards_and_latency_chips():
     assert "latencyChip(item.copy_latency_ms)" in html
     assert "item.ai_journal" in html
     assert "No trade activity yet" in html
+    assert "Daily AI Recap" in html
+    assert "renderDailyRecap" in html
+    assert "/reports/eod/ai" in html
 
 
 def test_launch_page_displays_ai_learning_translation_when_available():
