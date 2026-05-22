@@ -363,10 +363,41 @@
       .owner-panel .panel,
       .owner-panel .stat,
       .owner-panel table {
-        border-color: #f3c7c7;
+        border-color: var(--line);
       }
       .owner-panel .panel {
-        box-shadow: 0 1px 0 rgba(153, 27, 27, 0.05);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+      }
+      .readiness-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 12px 0 14px;
+      }
+      .readiness-summary-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px 12px;
+      }
+      .readiness-summary-card .label {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+      .readiness-summary-card .value {
+        margin-top: 4px;
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .readiness-summary-card.blocker .value { color: var(--danger); }
+      .readiness-summary-card.warning .value { color: var(--warning); }
+      .readiness-summary-card.passing .value { color: var(--success); }
+      .danger-zone {
+        border-top: 1px solid var(--line);
+        margin-top: 14px;
+        padding-top: 14px;
       }
       .tab-panel { display: none; }
       .tab-panel.active { display: block; }
@@ -586,7 +617,7 @@
       .check.bad { border-color: #f3b5ae; }
       .check .mark { font-weight: 800; margin-right: 6px; }
       @media (max-width: 1000px) {
-        .layout, .grid, .grid.two, .check-list, .scout-status-grid, .monitor-grid { grid-template-columns: 1fr; }
+        .layout, .grid, .grid.two, .check-list, .scout-status-grid, .monitor-grid, .readiness-summary-grid { grid-template-columns: 1fr; }
         .account-refresh-bar { align-items: flex-start; flex-direction: column; }
         header { grid-template-columns: 1fr; align-items: flex-start; }
         .header-right { justify-content: flex-start; }
@@ -782,10 +813,11 @@
         <div class="page-heading">
           <div>
             <h2>Copier Settings</h2>
-            <p>Developer controls for copy mode, target accounts, kill switch state, and copier readiness. These settings can affect real orders.</p>
+            <p>Control copy mode, target accounts, and emergency stop behavior.</p>
           </div>
           <span class="page-badge admin">Developer Setup</span>
         </div>
+        <h2>Copier State</h2>
         <div class="grid">
           <div class="stat">
             <div class="muted">Copier</div>
@@ -806,23 +838,37 @@
         </div>
 
         <div class="section panel">
-          <h2>Readiness</h2>
+          <h2>Launch Blockers</h2>
           <div id="readiness-summary" class="status-line">Loading...</div>
+          <div class="readiness-summary-grid">
+            <div class="readiness-summary-card blocker">
+              <div class="label">Blockers</div>
+              <div class="value" id="readiness-blocker-count">-</div>
+            </div>
+            <div class="readiness-summary-card warning">
+              <div class="label">Warnings</div>
+              <div class="value" id="readiness-warning-count">-</div>
+            </div>
+            <div class="readiness-summary-card passing">
+              <div class="label">Passing</div>
+              <div class="value" id="readiness-passing-count">-</div>
+            </div>
+          </div>
           <div id="readiness-list" class="check-list section"></div>
         </div>
 
         <div class="section panel">
-          <h2>Global Controls</h2>
+          <h2>Copy Controls</h2>
           <div class="grid two">
             <label>
-              <span class="muted">Enabled</span>
+              <span class="muted">Copier Enabled</span>
               <select id="global-enabled">
                 <option value="false">Disabled</option>
                 <option value="true">Enabled</option>
               </select>
             </label>
             <label>
-              <span class="muted">Mode</span>
+              <span class="muted">Copy Mode</span>
               <select id="global-mode">
                 <option value="read_only">read_only</option>
                 <option value="test">test</option>
@@ -830,15 +876,19 @@
               </select>
             </label>
             <label>
-              <span class="muted">Master Equity</span>
-              <input id="global-master-equity" type="number" min="0" step="0.01" />
+              <span class="muted">Master Equity Override</span>
+              <input id="global-master-equity" type="number" min="0" step="0.01" placeholder="Usually pulled from Webull" />
             </label>
           </div>
           <div class="actions section">
-            <button class="primary" id="save-global">Save Settings</button>
-            <button class="danger" id="enable-kill">Enable Kill Switch</button>
+            <button class="primary" id="save-global">Save Copy Settings</button>
             <button id="disable-kill">Disable Kill Switch</button>
-            <button class="danger emergency-kill" id="emergency-kill" title="Emergency Kill Switch">Emergency Stop</button>
+          </div>
+          <div class="danger-zone">
+            <div class="actions">
+              <button class="danger" id="enable-kill">Enable Kill Switch</button>
+              <button class="danger emergency-kill" id="emergency-kill" title="Emergency Kill Switch">Emergency Stop</button>
+            </div>
           </div>
           <div id="global-status" class="status-line"></div>
         </div>
@@ -849,10 +899,10 @@
             <table>
               <thead>
                 <tr>
-                  <th>Target</th>
-                  <th>Enabled</th>
-                  <th>Equity</th>
-                  <th>Mode</th>
+                  <th>Copy Account</th>
+                  <th>Copying</th>
+                  <th>Equity Source / Override</th>
+                  <th>Sizing</th>
                   <th></th>
                 </tr>
               </thead>
@@ -1214,7 +1264,7 @@
           <tr data-target="${escapeHtml(target.name)}">
             <td><strong>${escapeHtml(target.name)}</strong><div class="muted">${escapeHtml(target.environment || '')}</div></td>
             <td><input data-field="enabled" type="checkbox" ${target.enabled ? 'checked' : ''} /></td>
-            <td><input data-field="equity" type="number" min="0" step="0.01" value="${target.equity || ''}" /></td>
+            <td><input data-field="equity" type="number" min="0" step="0.01" value="${target.equity || ''}" placeholder="Auto from Webull" /></td>
             <td><span class="pill">percent_equity</span></td>
             <td><button class="primary" data-save-target="${escapeHtml(target.name)}">Save</button></td>
           </tr>
@@ -1306,16 +1356,23 @@
 
       function renderReadiness(payload) {
         const summary = document.getElementById('readiness-summary');
+        const checks = [...(payload.checks || [])];
+        const blockers = checks.filter((check) => !check.ok && check.severity === 'blocker');
+        const warnings = checks.filter((check) => !check.ok && check.severity === 'warning');
+        const passing = checks.filter((check) => check.ok);
+        document.getElementById('readiness-blocker-count').textContent = String(blockers.length);
+        document.getElementById('readiness-warning-count').textContent = String(warnings.length);
+        document.getElementById('readiness-passing-count').textContent = String(passing.length);
         summary.textContent = payload.ready
           ? 'No blockers detected.'
-          : `${payload.blockers.length} blocker${payload.blockers.length === 1 ? '' : 's'} detected.`;
+          : `${blockers.length} blocker${blockers.length === 1 ? '' : 's'} detected.`;
         summary.className = `status-line ${payload.ready ? 'ok' : 'error'}`;
         const priority = { blocker: 0, warning: 1, info: 2 };
-        const checks = [...(payload.checks || [])].sort((a, b) => {
+        const sorted = checks.sort((a, b) => {
           if (a.ok !== b.ok) return a.ok ? 1 : -1;
           return (priority[a.severity] ?? 3) - (priority[b.severity] ?? 3);
         });
-        document.getElementById('readiness-list').innerHTML = checks.map((check) => `
+        document.getElementById('readiness-list').innerHTML = sorted.map((check) => `
           <div class="check ${check.ok ? 'ok' : 'bad'}">
             <span class="mark">${check.ok ? 'OK' : '!'}</span>
             <span>${escapeHtml(check.label)}</span>

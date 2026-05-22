@@ -51,6 +51,24 @@ def test_dashboard_v3_separates_trader_and_owner_navigation():
     assert "Emergency Stop" in html
 
 
+def test_copier_settings_uses_control_console_layout():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert "Control copy mode, target accounts, and emergency stop behavior." in html
+    assert "Copier State" in html
+    assert "Launch Blockers" in html
+    assert "Copy Controls" in html
+    assert "Save Copy Settings" in html
+    assert "Master Equity Override" in html
+    assert "Usually pulled from Webull" in html
+    assert "Copy Account" in html
+    assert "Equity Source / Override" in html
+    assert 'id="readiness-blocker-count"' in html
+    assert 'id="readiness-warning-count"' in html
+    assert 'id="readiness-passing-count"' in html
+    assert "These settings can affect real orders." not in html
+
+
 def test_scout_page_has_trader_cockpit_status_and_lane_counts():
     html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
 
