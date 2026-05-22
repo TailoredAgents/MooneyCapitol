@@ -9,6 +9,8 @@ MooneyCapitol is intended to become a two-part trading operations platform:
 
 The final system should support discovery, alerting, execution copying, reporting, and learning feedback in one platform. The scout and copier should feed each other through shared data, but they should remain separate runtime paths so a slow scan, report, or dashboard update cannot delay copied orders.
 
+OpenAI is planned as a read-only intelligence layer for explanations, recaps, learning-report translation, journals, and ticker/catalyst research. It is not part of trade execution or copier sizing. Detailed plan: `docs/OPENAI_AI_FEATURES_PLAN.md`.
+
 ## 2. Pre-Launch Validation System
 
 **Current status:** The system is feature-complete enough for validation testing, but it is not cleared for live money until Webull credentials, live read-only sessions, latency, reconciliation, and tiny-funds tests pass.
@@ -511,6 +513,31 @@ Acceptance criteria:
 - Learning dataset can include copied-trade outcomes without mixing them incorrectly with scout-only alerts.
 - Slippage and rejection rates are visible by target account.
 - Reports can separate master and personal copy-account performance.
+
+## 11.1 Phase 7A: OpenAI Read-Only Intelligence Layer
+
+Detailed implementation plan: `docs/OPENAI_AI_FEATURES_PLAN.md`.
+
+Scope:
+
+- Scout alert explanations.
+- Daily trading recap.
+- Learning report translation.
+- Trade journal automation.
+- Ticker/catalyst research summaries.
+
+Out of scope:
+
+- Chat-style dashboard assistant.
+- Any AI involvement in order submission, copied-order sizing, risk-control decisions, or the sub-300ms copier hot path.
+
+Acceptance criteria:
+
+- AI features can be disabled globally by env/config.
+- AI failures do not break scout alerts, copier execution, reports, learning jobs, or dashboard loading.
+- AI outputs are stored with model name, prompt version, source data, status, and error metadata.
+- Short scout explanations can appear in Slack/dashboard after the base alert is already emitted.
+- Research summaries are timestamped and source-aware.
 
 ## 12. Phase 8: Controlled Live Trading Rollout
 

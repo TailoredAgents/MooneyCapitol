@@ -1,6 +1,6 @@
 # MooneyCapitol Project Handoff
 
-This is the canonical restart document. If a new assistant or developer picks up the project, read this first, then `README.md`, `docs/MOONEYCAPITOL_ROADMAP.md`, and `docs/HYBRID_XGBOOST_LEARNING_PLAN.md`.
+This is the canonical restart document. If a new assistant or developer picks up the project, read this first, then `README.md`, `docs/MOONEYCAPITOL_ROADMAP.md`, `docs/HYBRID_XGBOOST_LEARNING_PLAN.md`, and `docs/OPENAI_AI_FEATURES_PLAN.md`.
 
 ## Product Vision
 
@@ -65,6 +65,14 @@ The scout and copier share data for reporting and learning, but their runtime pa
 - Protected `GET /launch/readiness` aggregates existing readiness signals instead of duplicating their logic.
 - Dashboard has a Launch tab for database migration state, worker heartbeat, operator auth, Polygon/Slack/depth status, copier readiness, P&L freshness, read-only validation counts/history, copied-order latency samples, and learning report availability.
 - This is display-only and does not touch the copier hot path.
+
+### OpenAI AI Feature Direction
+
+- OpenAI is planned only for read-only explanation, summarization, journaling, learning translation, and ticker/catalyst research.
+- Approved AI features are scout alert explanations, daily trading recaps, learning report translation, trade journal automation, and ticker/catalyst research summaries.
+- Chat-style dashboard assistant features are explicitly not wanted.
+- OpenAI must never place trades, size trades, approve copier actions, override risk controls, or run inside the copier hot path.
+- Detailed plan: `docs/OPENAI_AI_FEATURES_PLAN.md`.
 
 ### Render Blueprint
 
