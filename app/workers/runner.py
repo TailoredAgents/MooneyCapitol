@@ -48,6 +48,7 @@ from app.services.live_state import ensure_lanes_initialized
 from app.services.pnl_monitor import PnlMonitor
 from app.services.runtime import ensure_worker_tick_initialized, update_worker_tick
 from app.services.scout_explanations import generate_scout_alert_explanation
+from app.services.ticker_research import generate_ticker_research_for_alert
 from app.services.trade_journals import generate_pending_trade_journals
 from app.services.watchlist import (
     WatchlistItem,
@@ -370,6 +371,7 @@ def fetch_alert_status(alert_id: int) -> dict | None:
         if not alert:
             return None
         explanation = _latest_scout_explanation(session, alert_id)
+        research = _latest_ticker_research(session, alert_id)
         return {
             "status": alert.status,
             "ack_by": alert.ack_by,
@@ -378,6 +380,7 @@ def fetch_alert_status(alert_id: int) -> dict | None:
             "payload": alert.payload_json,
             "slack_message_ts": alert.slack_message_ts,
             "ai_explanation": explanation,
+            "ticker_research": research,
         }
 
 
@@ -387,6 +390,20 @@ def _latest_scout_explanation(session, alert_id: int) -> str | None:
     artifact = latest_ai_artifact(
         session,
         artifact_type="scout_explanation",
+        source_type="alert",
+        source_id=alert_id,
+    )
+    if artifact and artifact.status == "completed" and artifact.output_text:
+        return artifact.output_text
+    return None
+
+
+def _latest_ticker_research(session, alert_id: int) -> str | None:
+    from app.services.ai_artifacts import latest_ai_artifact
+
+    artifact = latest_ai_artifact(
+        session,
+        artifact_type="ticker_research",
         source_type="alert",
         source_id=alert_id,
     )
@@ -425,6 +442,38 @@ def _log_scout_explanation_result(future) -> None:
         return
     if artifact_id:
         logger.info("scout_explanation.stored", artifact_id=artifact_id)
+
+
+def schedule_ticker_research(
+    ctx: WorkerContext,
+    *,
+    alert_id: int | None,
+    alert_type: str,
+    symbol: str,
+    direction: str | None,
+    payload: dict,
+) -> None:
+    if not alert_id:
+        return
+    future = ctx.ai_executor.submit(
+        generate_ticker_research_for_alert,
+        alert_id=alert_id,
+        alert_type=alert_type,
+        symbol=symbol,
+        direction=direction,
+        payload=payload,
+    )
+    future.add_done_callback(_log_ticker_research_result)
+
+
+def _log_ticker_research_result(future) -> None:
+    try:
+        artifact_id = future.result()
+    except Exception as exc:  # pragma: no cover - defensive callback
+        logger.warning("ticker_research.failed", err=str(exc))
+        return
+    if artifact_id:
+        logger.info("ticker_research.stored", artifact_id=artifact_id)
 
 
 def schedule_learning_translation(ctx: WorkerContext, *, trade_date: date, result: dict) -> None:
@@ -694,6 +743,7 @@ def _update_dashboard(ctx: WorkerContext) -> None:
                 "status": dstate.action_status,
                 "pills": pill,
                 "ai_explanation": info.get("ai_explanation") if dstate.last_alert_id and info else None,
+                "ticker_research": info.get("ticker_research") if dstate.last_alert_id and info else None,
             }
 
             if dstate.active:
@@ -973,6 +1023,23 @@ async def scan_consolidations(ctx: WorkerContext):
                                 "features": dstate.features,
                             },
                         )
+                        schedule_ticker_research(
+                            ctx,
+                            alert_id=dstate.last_alert_id,
+                            alert_type="primed",
+                            symbol=symbol,
+                            direction=direction,
+                            payload={
+                                "entry": primed_payload.get("entry"),
+                                "stop": primed_payload.get("stop"),
+                                "target": primed_payload.get("target"),
+                                "rr": primed_payload.get("rr"),
+                                "l2": primed_payload.get("l2"),
+                                "spread": primed_payload.get("spread"),
+                                "p2r": primed_payload.get("p2r"),
+                                "features": dstate.features,
+                            },
+                        )
                         dstate.action_status = "open"
                 else:
                     if dstate.primed and (not lean_ok or box.spread_cents > 1.0):
@@ -1095,6 +1162,14 @@ async def scan_consolidations(ctx: WorkerContext):
                         payload=payload,
                     )
                     schedule_scout_explanation(
+                        ctx,
+                        alert_id=direction_state.last_alert_id,
+                        alert_type="trigger",
+                        symbol=symbol,
+                        direction=trigger.direction,
+                        payload=payload,
+                    )
+                    schedule_ticker_research(
                         ctx,
                         alert_id=direction_state.last_alert_id,
                         alert_type="trigger",

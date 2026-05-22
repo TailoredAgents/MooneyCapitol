@@ -1407,6 +1407,9 @@
           const aiExplanation = item.ai_explanation
             ? `<div class="ai-explanation"><span class="label">AI explanation</span>${escapeHtml(item.ai_explanation)}</div>`
             : '';
+          const tickerResearch = item.ticker_research
+            ? `<div class="ai-explanation"><span class="label">Catalyst research</span>${escapeHtml(item.ticker_research)}</div>`
+            : '';
           
           // Add p2R score if available
           const p2rText = item.pills && item.pills.find(p => p.includes('p2R')) ? '' : '';
@@ -1427,6 +1430,7 @@
                 ${item.l2 ? ` • <span>${escapeHtml(item.l2)}</span>` : ''}
               </div>
               ${aiExplanation}
+              ${tickerResearch}
               ${statusText}
               ${pills ? `<div class="pills">${pills}</div>` : ''}
             </div>`;

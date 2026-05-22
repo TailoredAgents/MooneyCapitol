@@ -77,6 +77,24 @@ class PolygonClient:
         results = data.get("results") or []
         return int(results[0]["v"]) if results else None
 
+    async def get_ticker_details(self, ticker: str) -> dict[str, Any] | None:
+        if self.demo_mode:
+            return None
+        data = await self._request("GET", f"/v3/reference/tickers/{ticker.upper()}")
+        result = data.get("results")
+        return result if isinstance(result, dict) else None
+
+    async def get_ticker_news(self, ticker: str, limit: int = 5) -> list[dict[str, Any]]:
+        if self.demo_mode:
+            return []
+        data = await self._request(
+            "GET",
+            "/v2/reference/news",
+            {"ticker": ticker.upper(), "limit": limit, "order": "desc", "sort": "published_utc"},
+        )
+        results = data.get("results") or []
+        return [row for row in results if isinstance(row, dict)]
+
     async def list_top_gappers(
         self,
         limit: int,
