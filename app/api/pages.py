@@ -34,6 +34,7 @@ def _render_public_policy(
     eyebrow: str,
     updated: str,
     path: str,
+    summary_cards: list[dict[str, str]],
     sections: list[dict[str, object]],
 ) -> HTMLResponse:
     template = env.get_template("public_policy.html")
@@ -46,6 +47,7 @@ def _render_public_policy(
             updated=updated,
             canonical_url=canonical_url,
             active_path=path,
+            summary_cards=summary_cards,
             sections=sections,
         )
     )
@@ -117,6 +119,11 @@ def platform_overview():
         eyebrow="Platform overview",
         updated="May 23, 2026",
         path="/platform",
+        summary_cards=[
+            {"label": "Access", "value": "Private internal console"},
+            {"label": "Core loop", "value": "Scout, monitor, review"},
+            {"label": "Decisioning", "value": "Human trader remains in control"},
+        ],
         sections=[
             {
                 "heading": "What Mooney Trading is",
@@ -170,6 +177,11 @@ def public_faq():
         eyebrow="Common questions",
         updated="May 23, 2026",
         path="/faq",
+        summary_cards=[
+            {"label": "Audience", "value": "Authorized internal users"},
+            {"label": "Public access", "value": "Information only"},
+            {"label": "AI role", "value": "Read-only explanations"},
+        ],
         sections=[
             {
                 "heading": "Is Mooney Trading open to the public?",
@@ -223,6 +235,11 @@ def risk_disclosure():
         eyebrow="Trading risk disclosure",
         updated="May 23, 2026",
         path="/risk-disclosure",
+        summary_cards=[
+            {"label": "Risk", "value": "Loss of principal is possible"},
+            {"label": "Advice", "value": "No public recommendations"},
+            {"label": "Technology", "value": "Systems can fail or delay"},
+        ],
         sections=[
             {
                 "heading": "Trading risk",
@@ -268,6 +285,11 @@ def privacy_policy():
         eyebrow="Privacy notice",
         updated="May 23, 2026",
         path="/privacy",
+        summary_cards=[
+            {"label": "Public site", "value": "No public signup flow"},
+            {"label": "Internal data", "value": "Operator access only"},
+            {"label": "Secrets", "value": "Stored outside public pages"},
+        ],
         sections=[
             {
                 "heading": "Public site",

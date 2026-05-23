@@ -118,6 +118,9 @@ def test_public_policy_template_keeps_policy_pages_static_and_public_safe():
     assert 'id="main-content"' in html
     assert "prefers-reduced-motion" in html
     assert "aria-current=\"page\"" in html
+    assert "summary-grid" in html
+    assert "summary-card" in html
+    assert 'aria-label="Page summary"' in html
     assert '<img src="/static/favicon-32.png"' not in html
     assert "Last updated:" in html
     assert "Mooney Trading public information pages." in html
@@ -153,6 +156,9 @@ def test_public_policy_pages_render_page_specific_metadata():
     assert '<span class="brand-mark" aria-hidden="true">MT</span>' in response.text
     assert '<a class="skip-link" href="#main-content">Skip to content</a>' in response.text
     assert '<a href="/platform" aria-current="page">Platform</a>' in response.text
+    assert '<section class="summary-grid" aria-label="Page summary">' in response.text
+    assert "Private internal console" in response.text
+    assert "Human trader remains in control" in response.text
     assert 'href="/dashboard"' not in response.text
 
 

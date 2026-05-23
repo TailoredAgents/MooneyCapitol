@@ -202,6 +202,32 @@
         font-size: 14px;
         font-weight: 750;
       }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.86);
+        padding: 18px;
+        box-shadow: var(--soft-shadow);
+      }
+      .summary-card .label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      .summary-card .value {
+        margin-top: 7px;
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1.2;
+      }
       .policy-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -272,7 +298,11 @@
         .policy-grid {
           grid-template-columns: 1fr;
         }
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
         .hero,
+        .summary-card,
         .policy-section {
           border-radius: 12px;
           padding: 20px;
@@ -335,6 +365,15 @@
           <h1>{{ title }}</h1>
           <div class="updated">Last updated: {{ updated }}</div>
         </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Page summary">
+        {% for card in summary_cards %}
+          <div class="summary-card">
+            <div class="label">{{ card.label }}</div>
+            <div class="value">{{ card.value }}</div>
+          </div>
+        {% endfor %}
       </section>
 
       <div class="policy-grid">
