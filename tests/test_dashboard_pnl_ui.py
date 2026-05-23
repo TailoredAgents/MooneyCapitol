@@ -87,6 +87,7 @@ def test_copier_settings_uses_control_console_layout():
     assert "Master Equity Override" in html
     assert "Usually pulled from Webull" in html
     assert "Copy Account" in html
+    assert "target.display_name || target.name" in html
     assert "Equity Source / Override" in html
     assert 'id="readiness-blocker-count"' in html
     assert 'id="readiness-warning-count"' in html

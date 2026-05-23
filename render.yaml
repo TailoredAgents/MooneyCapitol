@@ -81,6 +81,8 @@ services:
         sync: false
       - key: WEBULL_PERSONAL_ACCOUNT_ID
         sync: false
+      - key: WEBULL_PERSONAL_DISPLAY_NAME
+        value: Austin Dugger's Account
       - key: LEARNING_XGB_MIN_ROWS
         value: "20"
       - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES
@@ -183,6 +185,8 @@ services:
         sync: false
       - key: WEBULL_PERSONAL_ACCOUNT_ID
         sync: false
+      - key: WEBULL_PERSONAL_DISPLAY_NAME
+        value: Austin Dugger's Account
       - key: LEARNING_XGB_MIN_ROWS
         value: "20"
       - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES

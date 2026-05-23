@@ -18,6 +18,7 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count("OPENAI_AI_FEATURES_ENABLED") == 2
     assert text.count("OPENAI_DAILY_REQUEST_LIMIT") == 2
     assert text.count("OPENAI_RESEARCH_DAILY_REQUEST_LIMIT") == 2
+    assert text.count("WEBULL_PERSONAL_DISPLAY_NAME") == 2
     assert text.count('value: "0"') >= 6
     assert text.count("SLACK_SIGNING_SECRET") == 2
     assert "WEBULL_MASTER_ACCOUNT_EQUITY" not in text

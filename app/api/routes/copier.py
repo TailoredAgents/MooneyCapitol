@@ -531,6 +531,8 @@ def _serialize_reconciliation(row: CopyReconciliation) -> dict:
 def _serialize_target_config(target) -> dict:
     return {
         "name": target.name,
+        "display_name": getattr(target, "display_name", None),
+        "display_name_env": getattr(target, "display_name_env", None),
         "broker": target.broker,
         "environment": target.environment,
         "enabled": target.enabled,

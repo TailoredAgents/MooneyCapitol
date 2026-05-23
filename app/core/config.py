@@ -115,6 +115,8 @@ class DepthProviderConfig(BaseModel):
 
 class CopyTargetAccountConfig(BaseModel):
     name: str
+    display_name: str | None = None
+    display_name_env: str | None = None
     broker: str = "webull"
     environment: str = "test"
     enabled: bool = False
@@ -159,6 +161,8 @@ class CopierConfig(BaseModel):
     targets: list[CopyTargetAccountConfig] = [
         CopyTargetAccountConfig(
             name="personal",
+            display_name="Austin Dugger's Account",
+            display_name_env="WEBULL_PERSONAL_DISPLAY_NAME",
             endpoint_env="WEBULL_PERSONAL_API_ENDPOINT",
             api_key_env="WEBULL_PERSONAL_APP_KEY",
             api_secret_env="WEBULL_PERSONAL_APP_SECRET",

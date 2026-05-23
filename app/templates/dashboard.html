@@ -1665,7 +1665,7 @@
       function renderTargets(items) {
         targetsBody.innerHTML = items.map((target) => `
           <tr data-target="${escapeHtml(target.name)}">
-            <td><strong>${escapeHtml(target.name)}</strong><div class="muted">${escapeHtml(target.environment || '')}</div></td>
+            <td><strong>${escapeHtml(target.display_name || target.name)}</strong><div class="muted">${escapeHtml(target.name)} | ${escapeHtml(target.environment || '')}</div></td>
             <td><input data-field="enabled" type="checkbox" ${target.enabled ? 'checked' : ''} /></td>
             <td><input data-field="equity" type="number" min="0" step="0.01" value="${target.equity || ''}" placeholder="Auto from Webull" /></td>
             <td><span class="pill">percent_equity</span></td>

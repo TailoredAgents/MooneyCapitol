@@ -10,7 +10,7 @@ from sqlalchemy import and_, desc, select
 
 from app.copier.reconciliation import normalize_positions
 from app.copier.webull_client import WebullTradingClient
-from app.core.config import CopierConfig
+from app.core.config import CopierConfig, CopyTargetAccountConfig
 from app.core.config_store import CONFIG
 from app.db.models import AccountSnapshot, PnlAlert, PositionSnapshot, TradingSession
 from app.db.session import get_session
@@ -227,7 +227,7 @@ def build_monitored_accounts(config: CopierConfig) -> list[MonitoredAccount]:
         try:
             accounts.append(
                 MonitoredAccount(
-                    name=target.name,
+                    name=target_display_name(target),
                     account_ref=account_ref,
                     account_type="copy",
                     client=WebullTradingClient.from_env(
@@ -242,6 +242,16 @@ def build_monitored_accounts(config: CopierConfig) -> list[MonitoredAccount]:
         except Exception as exc:
             logger.warning("pnl_monitor.target_client_unavailable", target=target.name, err=str(exc))
     return accounts
+
+
+def target_display_name(target: CopyTargetAccountConfig) -> str:
+    if target.display_name_env:
+        value = os.getenv(target.display_name_env)
+        if value and value.strip():
+            return value.strip()
+    if target.display_name and target.display_name.strip():
+        return target.display_name.strip()
+    return target.name
 
 
 def normalize_account_balance(payload: dict[str, Any]) -> NormalizedBalance:

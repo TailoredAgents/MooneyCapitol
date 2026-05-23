@@ -1,11 +1,13 @@
 from contextlib import contextmanager
 
+from app.core.config import CopyTargetAccountConfig
 from app.services.pnl_monitor import (
     MonitoredAccount,
     PnlMonitor,
     PnlRiskLimits,
     assess_risk,
     normalize_account_balance,
+    target_display_name,
 )
 
 
@@ -96,6 +98,24 @@ def test_normalize_account_balance_accepts_webull_openapi_balance_shape():
     assert balance.equity_value == 165.27
     assert balance.cash_balance == 165.27
     assert balance.buying_power == 661.08
+
+
+def test_target_display_name_prefers_env_then_config(monkeypatch):
+    target = CopyTargetAccountConfig(
+        name="personal",
+        display_name="Austin Dugger's Account",
+        display_name_env="WEBULL_PERSONAL_DISPLAY_NAME",
+        endpoint_env="WEBULL_PERSONAL_API_ENDPOINT",
+        api_key_env="WEBULL_PERSONAL_APP_KEY",
+        api_secret_env="WEBULL_PERSONAL_APP_SECRET",
+        account_id_env="WEBULL_PERSONAL_ACCOUNT_ID",
+    )
+
+    assert target_display_name(target) == "Austin Dugger's Account"
+
+    monkeypatch.setenv("WEBULL_PERSONAL_DISPLAY_NAME", "Austin Live Account")
+
+    assert target_display_name(target) == "Austin Live Account"
 
 
 def test_assess_risk_flags_loss_limit():
