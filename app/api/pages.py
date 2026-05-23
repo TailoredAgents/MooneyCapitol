@@ -117,7 +117,7 @@ def platform_overview():
                 "heading": "What Mooney Trading is",
                 "items": [
                     "Mooney Trading is a private trading operations platform built around a human trader, monitored account data, and internal operator controls.",
-                    "The system combines a live scout, copy execution oversight, account monitoring, latency tracking, and review reports in one authenticated dashboard.",
+                    "The system combines a live scout, copy execution oversight, account monitoring, latency tracking, and review reports in one authenticated internal console.",
                     "The public site explains the platform at a high level and does not provide public account access, public trading signals, or investor onboarding.",
                 ],
             },
@@ -132,7 +132,7 @@ def platform_overview():
             {
                 "heading": "Operator workflow",
                 "items": [
-                    "The dashboard separates trader-facing views from developer and launch-readiness controls.",
+                    "The internal console separates trader-facing views from developer and launch-readiness controls.",
                     "Operators can monitor account value, positions, fills, copied order status, latency, slippage, and system readiness.",
                     "Operational controls, credentials, account identifiers, readiness checks, and execution settings stay inside authenticated access.",
                 ],
@@ -170,7 +170,7 @@ def public_faq():
                 "items": [
                     "No. Mooney Trading is currently a private trading operations platform for authorized internal users.",
                     "The public site is informational and does not provide account access, signup, public trading signals, or investor onboarding.",
-                    "The operator dashboard remains behind authenticated access.",
+                    "The private internal console remains behind authenticated access and is not linked from the public website.",
                 ],
             },
             {
@@ -237,7 +237,7 @@ def risk_disclosure():
                 "heading": "No public copy-trading offer",
                 "items": [
                     "This site does not offer public account management, advisory services, investor access, or a public copy-trading product.",
-                    "The operator dashboard is reserved for authorized internal users.",
+                    "The private internal console is reserved for authorized internal users.",
                     "Any future product, service, or investor-facing program would need separate legal, regulatory, brokerage, and operational review before launch.",
                 ],
             },
@@ -265,15 +265,15 @@ def privacy_policy():
                 "heading": "Public site",
                 "items": [
                     "The public site is informational and does not include a public account sign-up flow.",
-                    "Visitors can view the homepage, risk disclosure, privacy notice, and public assets without accessing the operator dashboard.",
+                    "Visitors can view the homepage, risk disclosure, privacy notice, and public assets without accessing internal trading tools.",
                     "The public site should not be used to submit brokerage credentials, account numbers, private trading information, or personal financial data.",
                 ],
             },
             {
-                "heading": "Operator dashboard",
+                "heading": "Internal operator console",
                 "items": [
-                    "The dashboard is separate from the public site and is intended only for authorized operators.",
-                    "Dashboard activity can involve operational records such as account snapshots, alerts, fills, copied order records, latency measurements, AI summaries, and audit logs.",
+                    "The internal console is separate from the public site and is intended only for authorized operators.",
+                    "Internal activity can involve operational records such as account snapshots, alerts, fills, copied order records, latency measurements, AI summaries, and audit logs.",
                     "Brokerage credentials and API keys belong in Render environment variables or approved secret storage, not in public pages, screenshots, chat messages, or source code.",
                 ],
             },
@@ -290,7 +290,7 @@ def privacy_policy():
                 "items": [
                     "This notice is a practical project notice, not a substitute for a lawyer-reviewed privacy policy.",
                     "Before collecting customer information, accepting investor interest, or offering a public service, this page should be replaced or reviewed by qualified counsel.",
-                    "Material changes to the public site or dashboard data flows should be reflected here before launch.",
+                    "Material changes to the public site or internal data flows should be reflected here before launch.",
                 ],
             },
         ],

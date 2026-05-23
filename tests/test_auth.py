@@ -186,7 +186,8 @@ def test_public_homepage_is_available_without_login_when_dashboard_auth_configur
 
     assert resp.status_code == 200
     assert "Mooney Trading" in resp.text
-    assert 'href="/dashboard"' in resp.text
+    assert 'href="/dashboard"' not in resp.text
+    assert "Operator Dashboard" not in resp.text
     assert "Live Scout" in resp.text
     assert "Trade Copier" in resp.text
     assert "Account Monitor" in resp.text
@@ -239,7 +240,9 @@ def test_public_platform_page_is_available_without_login(monkeypatch):
     assert "Learning and review" in resp.text
     assert "Launch boundaries" in resp.text
     assert "does not provide public account access, public trading signals, or investor onboarding" in resp.text
-    assert "Operator Dashboard" in resp.text
+    assert "authenticated internal console" in resp.text
+    assert 'href="/dashboard"' not in resp.text
+    assert "Operator Dashboard" not in resp.text
     assert "Copier Settings" not in resp.text
     assert "WEBULL_MASTER" not in resp.text
 
@@ -259,7 +262,9 @@ def test_public_faq_page_is_available_without_login(monkeypatch):
     assert "Does the system trade by itself?" in resp.text
     assert "What would need to happen before a public product?" in resp.text
     assert "does not provide account access, signup, public trading signals, or investor onboarding" in resp.text
-    assert "Operator Dashboard" in resp.text
+    assert "private internal console" in resp.text
+    assert 'href="/dashboard"' not in resp.text
+    assert "Operator Dashboard" not in resp.text
     assert "Copier Settings" not in resp.text
     assert "WEBULL_MASTER" not in resp.text
 
@@ -278,15 +283,19 @@ def test_public_risk_and_privacy_pages_are_available_without_login(monkeypatch):
     assert "No financial advice" in risk.text
     assert "No public copy-trading offer" in risk.text
     assert "Technology limitations" in risk.text
-    assert "Operator Dashboard" in risk.text
+    assert "private internal console" in risk.text
+    assert 'href="/dashboard"' not in risk.text
+    assert "Operator Dashboard" not in risk.text
     assert "Copier Settings" not in risk.text
     assert "WEBULL_MASTER" not in risk.text
 
     assert privacy.status_code == 200
     assert "Privacy Notice" in privacy.text
     assert "Public site" in privacy.text
-    assert "Operator dashboard" in privacy.text
+    assert "Internal operator console" in privacy.text
     assert "Service providers" in privacy.text
+    assert 'href="/dashboard"' not in privacy.text
+    assert "Operator Dashboard" not in privacy.text
     assert "Copier Settings" not in privacy.text
     assert "WEBULL_PERSONAL" not in privacy.text
 

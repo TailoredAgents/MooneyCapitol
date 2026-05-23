@@ -100,7 +100,8 @@ def test_public_policy_template_keeps_policy_pages_static_and_public_safe():
     assert "Mooney Trading public information pages." in html
     assert 'href="/platform"' in html
     assert 'href="/faq"' in html
-    assert 'href="/dashboard"' in html
+    assert 'href="/dashboard"' not in html
+    assert "Operator Dashboard" not in html
     assert "<script" not in html
     assert "fetch(" not in html
     assert "api('/" not in html
@@ -125,10 +126,11 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "From signal to review." in html
     assert "Built around the live trading stack." in html
     assert "Public site" in html
-    assert "Authenticated operator console" in html
-    assert "Operational data, account controls, readiness checks, and execution controls stay inside authenticated dashboard access." in html
-    assert "Private operator access." in html
-    assert "Operator Dashboard" in html
+    assert "Private internal console" in html
+    assert "Operational data, account controls, readiness checks, and execution controls stay inside authenticated internal access." in html
+    assert "Public information only." in html
+    assert 'href="/dashboard"' not in html
+    assert "Operator Dashboard" not in html
     assert "No public account access, advisory service, or investment product is offered" in html
     assert "does not provide financial advice, investment recommendations, performance projections, or guaranteed outcomes" in html
     assert "Nothing on this page is an offer to buy or sell securities" in html
@@ -144,6 +146,7 @@ def test_public_homepage_does_not_include_private_dashboard_implementation_detai
         "fetch(",
         "api('/",
         "data-tab=",
+        "/dashboard",
         "/copier",
         "/pnl",
         "/launch",
