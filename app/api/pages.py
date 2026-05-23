@@ -33,15 +33,18 @@ def _render_public_policy(
     description: str,
     eyebrow: str,
     updated: str,
+    path: str,
     sections: list[dict[str, object]],
 ) -> HTMLResponse:
     template = env.get_template("public_policy.html")
+    canonical_url = f"{PUBLIC_SITE_URL}{path}"
     return HTMLResponse(
         template.render(
             title=title,
             description=description,
             eyebrow=eyebrow,
             updated=updated,
+            canonical_url=canonical_url,
             sections=sections,
         )
     )
@@ -112,6 +115,7 @@ def platform_overview():
         description="A plain-language overview of the Mooney Trading private trading operations platform.",
         eyebrow="Platform overview",
         updated="May 23, 2026",
+        path="/platform",
         sections=[
             {
                 "heading": "What Mooney Trading is",
@@ -164,6 +168,7 @@ def public_faq():
         description="Common questions about the Mooney Trading private trading operations platform.",
         eyebrow="Common questions",
         updated="May 23, 2026",
+        path="/faq",
         sections=[
             {
                 "heading": "Is Mooney Trading open to the public?",
@@ -216,6 +221,7 @@ def risk_disclosure():
         description="Important risk information for visitors reviewing Mooney Trading.",
         eyebrow="Trading risk disclosure",
         updated="May 23, 2026",
+        path="/risk-disclosure",
         sections=[
             {
                 "heading": "Trading risk",
@@ -260,6 +266,7 @@ def privacy_policy():
         description="High-level privacy notice for the Mooney Trading public site.",
         eyebrow="Privacy notice",
         updated="May 23, 2026",
+        path="/privacy",
         sections=[
             {
                 "heading": "Public site",

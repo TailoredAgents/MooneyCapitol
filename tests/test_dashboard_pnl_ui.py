@@ -1,5 +1,16 @@
 from pathlib import Path
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+
+def _public_client() -> TestClient:
+    from app.api.pages import router as pages_router
+
+    app = FastAPI()
+    app.include_router(pages_router)
+    return TestClient(app)
+
 
 def test_dashboard_exposes_pnl_tab_and_existing_pnl_api_calls():
     html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
@@ -100,6 +111,10 @@ def test_public_policy_template_keeps_policy_pages_static_and_public_safe():
     html = Path("app/templates/public_policy.html").read_text(encoding="utf-8")
 
     assert "{{ title }} | Mooney Trading" in html
+    assert 'href="{{ canonical_url }}"' in html
+    assert 'content="{{ canonical_url }}"' in html
+    assert "brand-mark" in html
+    assert '<img src="/static/favicon-32.png"' not in html
     assert "Last updated:" in html
     assert "Mooney Trading public information pages." in html
     assert 'href="/platform"' in html
@@ -120,6 +135,19 @@ def test_public_policy_template_keeps_policy_pages_static_and_public_safe():
     assert "Emergency Stop" not in html
     assert "Copier Settings" not in html
     assert "Launch Readiness" not in html
+
+
+def test_public_policy_pages_render_page_specific_metadata():
+    client = _public_client()
+
+    response = client.get("/platform")
+
+    assert response.status_code == 200
+    assert '<link rel="canonical" href="https://mooneytrading.com/platform" />' in response.text
+    assert '<meta property="og:url" content="https://mooneytrading.com/platform" />' in response.text
+    assert '<meta property="og:title" content="Platform Overview | Mooney Trading" />' in response.text
+    assert '<span class="brand-mark" aria-hidden="true">MT</span>' in response.text
+    assert 'href="/dashboard"' not in response.text
 
 
 def test_public_homepage_has_customer_facing_sections_without_private_controls():

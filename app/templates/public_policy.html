@@ -6,25 +6,41 @@
     <title>{{ title }} | Mooney Trading</title>
     <meta name="description" content="{{ description }}" />
     <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="{{ canonical_url }}" />
+    <meta property="og:site_name" content="Mooney Trading" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{ title }} | Mooney Trading" />
+    <meta property="og:description" content="{{ description }}" />
+    <meta property="og:url" content="{{ canonical_url }}" />
+    <meta property="og:image" content="https://mooneytrading.com/static/favicon.png" />
+    <meta property="og:image:alt" content="Mooney Trading logo" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ title }} | Mooney Trading" />
+    <meta name="twitter:description" content="{{ description }}" />
+    <meta name="twitter:image" content="https://mooneytrading.com/static/favicon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/static/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
     <style>
       :root {
-        --bg: #f5f7fb;
+        --bg: #f4f7fb;
         --surface: #ffffff;
         --text: #172033;
         --muted: #64748b;
         --line: #dbe3ee;
         --blue: #2563eb;
-        --shadow: 0 18px 54px rgba(15, 23, 42, 0.12);
+        --blue-strong: #1d4ed8;
+        --shadow: 0 22px 70px rgba(15, 23, 42, 0.14);
+        --soft-shadow: 0 14px 38px rgba(15, 23, 42, 0.08);
         color-scheme: light;
       }
 
       * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
       body {
         margin: 0;
-        background: var(--bg);
+        background:
+          linear-gradient(180deg, #f8fbff 0%, #eef3f9 48%, #f7f9fc 100%);
         color: var(--text);
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         line-height: 1.55;
@@ -35,11 +51,12 @@
         top: 0;
         z-index: 20;
         border-bottom: 1px solid rgba(219, 227, 238, 0.8);
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(14px);
+        background: rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
       }
       .nav {
-        width: min(980px, calc(100% - 32px));
+        width: min(1040px, calc(100% - 32px));
         min-height: 72px;
         margin: 0 auto;
         display: flex;
@@ -50,22 +67,38 @@
       .brand {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         font-weight: 900;
+        font-size: 16px;
       }
-      .brand img {
-        width: 34px;
-        height: 34px;
-        border-radius: 9px;
-        object-fit: cover;
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(37, 99, 235, 0.24);
+        border-radius: 11px;
+        background: linear-gradient(135deg, #ffffff, #eaf2ff);
+        color: var(--blue);
+        box-shadow: 0 10px 26px rgba(37, 99, 235, 0.14);
+        font-size: 13px;
+        font-weight: 950;
       }
       .nav-links {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 10px;
         color: var(--muted);
         font-size: 14px;
         font-weight: 850;
+      }
+      .nav-links a {
+        border-radius: 999px;
+        padding: 8px 10px;
+      }
+      .nav-links a:hover {
+        background: rgba(37, 99, 235, 0.08);
+        color: var(--blue-strong);
       }
       .button {
         display: inline-flex;
@@ -79,30 +112,63 @@
         color: var(--text);
         font-size: 14px;
         font-weight: 900;
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 9px 24px rgba(15, 23, 42, 0.08);
+        transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
+      }
+      .button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 13px 30px rgba(15, 23, 42, 0.12);
       }
       .page {
-        width: min(980px, calc(100% - 32px));
+        width: min(1040px, calc(100% - 32px));
         margin: 0 auto;
-        padding: 68px 0;
+        padding: 64px 0 72px;
       }
       .hero {
+        position: relative;
+        overflow: hidden;
         border: 1px solid var(--line);
-        border-radius: 16px;
-        background: #fff;
-        padding: 34px;
+        border-radius: 22px;
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(241, 246, 253, 0.92));
+        padding: 42px;
         box-shadow: var(--shadow);
       }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.38;
+        background-image:
+          linear-gradient(rgba(37, 99, 235, 0.055) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(37, 99, 235, 0.055) 1px, transparent 1px);
+        background-size: 48px 48px;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 76%, transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 12%, #000 76%, transparent);
+      }
+      .hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 760px;
+      }
       .eyebrow {
-        color: var(--blue);
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--blue-strong);
+        padding: 0 11px;
         font-size: 12px;
         font-weight: 900;
         text-transform: uppercase;
       }
       h1 {
-        margin: 12px 0 10px;
+        margin: 18px 0 12px;
         color: #0f172a;
-        font-size: 44px;
+        font-size: 52px;
         line-height: 1.04;
       }
       .updated {
@@ -112,15 +178,28 @@
       }
       .policy-grid {
         display: grid;
-        gap: 14px;
-        margin-top: 22px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 28px;
       }
       .policy-section {
+        position: relative;
+        overflow: hidden;
         border: 1px solid var(--line);
-        border-radius: 12px;
-        background: #fff;
-        padding: 22px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff, #f9fbff);
+        padding: 24px;
+        box-shadow: var(--soft-shadow);
       }
+      .policy-section::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 3px;
+        background: var(--blue);
+      }
+      .policy-section:nth-child(2n)::before { background: #0f9f6e; }
+      .policy-section:nth-child(3n)::before { background: #b7791f; }
       .policy-section h2 {
         margin: 0 0 12px;
         color: #0f172a;
@@ -136,9 +215,10 @@
       .site-footer {
         border-top: 1px solid var(--line);
         padding: 24px 0;
+        background: rgba(255, 255, 255, 0.58);
       }
       .footer-inner {
-        width: min(980px, calc(100% - 32px));
+        width: min(1040px, calc(100% - 32px));
         margin: 0 auto;
         display: flex;
         justify-content: space-between;
@@ -160,18 +240,34 @@
           display: none;
         }
         .page {
+          width: min(100% - 28px, 760px);
           padding: 42px 0;
+        }
+        .policy-grid {
+          grid-template-columns: 1fr;
         }
         .hero,
         .policy-section {
           border-radius: 12px;
           padding: 20px;
         }
+        .hero::after { opacity: 0.24; }
         h1 {
           font-size: 34px;
         }
+        .brand-mark {
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          font-size: 12px;
+        }
         .footer-inner {
+          width: min(100% - 28px, 760px);
           flex-direction: column;
+        }
+        .footer-links {
+          flex-wrap: wrap;
+          white-space: normal;
         }
       }
     </style>
@@ -180,7 +276,7 @@
     <header class="site-header">
       <nav class="nav" aria-label="Main navigation">
         <a class="brand" href="/">
-          <img src="/static/favicon-32.png" alt="" />
+          <span class="brand-mark" aria-hidden="true">MT</span>
           <span>Mooney Trading</span>
         </a>
         <div class="nav-links">
@@ -194,9 +290,11 @@
 
     <main class="page">
       <section class="hero">
-        <div class="eyebrow">{{ eyebrow }}</div>
-        <h1>{{ title }}</h1>
-        <div class="updated">Last updated: {{ updated }}</div>
+        <div class="hero-content">
+          <div class="eyebrow">{{ eyebrow }}</div>
+          <h1>{{ title }}</h1>
+          <div class="updated">Last updated: {{ updated }}</div>
+        </div>
       </section>
 
       <div class="policy-grid">
