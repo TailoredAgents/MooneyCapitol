@@ -767,6 +767,9 @@
         .nav-group {
           margin-bottom: 10px;
         }
+        .developer-nav {
+          display: none;
+        }
         .nav-label {
           margin: 0 2px 6px;
           font-size: 10px;
@@ -779,9 +782,6 @@
         }
         .nav-group:first-of-type .tabs {
           grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-        .nav-group:last-of-type .tabs {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .tab-button {
           grid-template-columns: minmax(0, 1fr);
@@ -920,7 +920,6 @@
       }
       @media (max-width: 340px) {
         .nav-group:first-of-type .tabs,
-        .nav-group:last-of-type .tabs,
         .scout-status-grid,
         .monitor-grid,
         .readiness-summary-grid {
@@ -968,7 +967,7 @@
             </button>
           </nav>
         </div>
-        <div class="nav-group">
+        <div class="nav-group developer-nav">
           <div class="nav-label admin">Developer Setup</div>
           <nav class="tabs" aria-label="Developer setup">
             <button class="tab-button" data-tab="copier">
