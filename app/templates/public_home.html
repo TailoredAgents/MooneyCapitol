@@ -116,22 +116,22 @@
       }
 
       .hero {
-        min-height: calc(100vh - 72px);
+        min-height: 680px;
         display: grid;
         align-items: center;
         position: relative;
         overflow: hidden;
         background:
-          linear-gradient(90deg, rgba(245, 247, 251, 0.98), rgba(245, 247, 251, 0.88));
+          linear-gradient(135deg, rgba(245, 247, 251, 0.98), rgba(235, 241, 250, 0.92));
       }
       .hero-inner {
         width: min(1180px, calc(100% - 32px));
         margin: 0 auto;
         display: grid;
-        grid-template-columns: minmax(0, 0.95fr) minmax(360px, 0.75fr);
-        gap: 52px;
+        grid-template-columns: minmax(0, 0.92fr) minmax(380px, 0.78fr);
+        gap: 60px;
         align-items: center;
-        padding: 70px 0 88px;
+        padding: 56px 0 64px;
       }
       .eyebrow {
         color: var(--blue);
@@ -141,35 +141,70 @@
       }
       h1 {
         max-width: 730px;
-        margin: 14px 0 18px;
+        margin: 14px 0 16px;
         color: #0f172a;
-        font-size: 66px;
-        line-height: 0.98;
+        font-size: 62px;
+        line-height: 1.02;
         letter-spacing: 0;
       }
       .hero-copy {
-        max-width: 680px;
+        max-width: 650px;
         color: #46566d;
-        font-size: 19px;
+        font-size: 18px;
       }
       .hero-actions {
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
-        margin-top: 28px;
+        margin-top: 26px;
       }
       .hero-note {
-        margin-top: 20px;
+        margin-top: 18px;
         color: var(--muted);
         font-size: 13px;
         font-weight: 700;
       }
+      .hero-proof {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        max-width: 640px;
+        margin-top: 28px;
+      }
+      .proof-item {
+        border: 1px solid rgba(219, 227, 238, 0.9);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 12px;
+      }
+      .proof-item strong {
+        display: block;
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 900;
+      }
+      .proof-item span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+      }
       .product-visual {
         border: 1px solid rgba(219, 227, 238, 0.9);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.88);
-        box-shadow: var(--shadow);
-        padding: 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 30px 88px rgba(15, 23, 42, 0.16);
+        padding: 18px;
+        position: relative;
+      }
+      .product-visual::before {
+        content: "";
+        position: absolute;
+        inset: -18px;
+        z-index: -1;
+        border-radius: 28px;
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.13), rgba(15, 159, 110, 0.12));
       }
       .terminal-bar {
         display: flex;
@@ -193,9 +228,9 @@
       }
       .visual-card {
         border: 1px solid var(--line);
-        border-radius: 10px;
+        border-radius: 12px;
         background: #fff;
-        padding: 13px;
+        padding: 15px;
       }
       .visual-card .topline {
         display: flex;
@@ -209,8 +244,23 @@
       .visual-card .metric {
         margin-top: 8px;
         color: #0f172a;
-        font-size: 22px;
+        font-size: 23px;
         font-weight: 900;
+      }
+      .visual-meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .visual-meta span {
+        border-radius: 10px;
+        background: #f1f5f9;
+        color: #334155;
+        padding: 8px;
+        font-size: 11px;
+        font-weight: 900;
+        text-align: center;
       }
       .bars {
         display: grid;
@@ -425,7 +475,8 @@
         .feature-grid,
         .process,
         .tech-grid,
-        .access-split {
+        .access-split,
+        .hero-proof {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
@@ -441,11 +492,15 @@
           background: linear-gradient(180deg, rgba(245, 247, 251, 0.98), rgba(245, 247, 251, 0.92));
         }
         .hero-inner {
-          padding: 56px 0 46px;
+          padding: 42px 0 46px;
           gap: 28px;
         }
         h1 { font-size: 38px; }
         .hero-copy { font-size: 16px; }
+        .hero-proof,
+        .visual-meta {
+          grid-template-columns: 1fr;
+        }
         .section { padding: 46px 0; }
         .section-header {
           align-items: start;
@@ -489,15 +544,20 @@
         <div class="hero-inner">
           <div>
             <div class="eyebrow">Private trading operations platform</div>
-            <h1>Scout, mirror, monitor, and learn from live trading activity.</h1>
+            <h1>Private trading operations, monitored from one system.</h1>
             <p class="hero-copy">
-              Mooney Trading brings market scanning, Webull account monitoring, copy execution oversight, latency tracking, and review reports into one operator-controlled system.
+              Mooney Trading organizes scout signals, copied execution oversight, account activity, latency, and post-trade review for an internal trading workflow.
             </p>
             <div class="hero-actions">
               <a class="button" href="#platform">View Platform</a>
               <a class="button primary" href="/faq">Read FAQ</a>
             </div>
             <div class="hero-note">Built for internal trading operations. No public account access, advisory service, or investment product is offered from this page.</div>
+            <div class="hero-proof" aria-label="Platform focus areas">
+              <div class="proof-item"><strong>Scout</strong><span>Setup context</span></div>
+              <div class="proof-item"><strong>Monitor</strong><span>Account visibility</span></div>
+              <div class="proof-item"><strong>Review</strong><span>Post-trade reports</span></div>
+            </div>
           </div>
 
           <div class="product-visual" aria-label="Platform status preview">
@@ -529,6 +589,11 @@
                   <div class="bar green"><span style="width: 54%"></span></div>
                 </div>
               </div>
+            </div>
+            <div class="visual-meta">
+              <span>Internal access</span>
+              <span>Readiness gates</span>
+              <span>Audit trail</span>
             </div>
           </div>
         </div>

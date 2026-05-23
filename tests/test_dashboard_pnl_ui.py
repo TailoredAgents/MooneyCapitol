@@ -126,6 +126,14 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
 
     assert "Private trading operations platform" in html
+    assert "Private trading operations, monitored from one system." in html
+    assert "Mooney Trading organizes scout signals, copied execution oversight, account activity, latency, and post-trade review" in html
+    assert "hero-proof" in html
+    assert "visual-meta" in html
+    assert "Internal access" in html
+    assert "Readiness gates" in html
+    assert "Audit trail" in html
+    assert "Scout, mirror, monitor, and learn from live trading activity." not in html
     assert "A focused system for trading operations." in html
     assert "From signal to review." in html
     assert "Built around the live trading stack." in html
