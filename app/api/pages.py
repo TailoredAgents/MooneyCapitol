@@ -3,7 +3,7 @@ from __future__ import annotations
 from urllib.parse import parse_qs
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.api.auth import (
@@ -15,6 +15,7 @@ from app.api.auth import (
 
 
 router = APIRouter()
+PUBLIC_SITE_URL = "https://mooneytrading.com"
 
 env = Environment(
     loader=FileSystemLoader("app/templates"), autoescape=select_autoescape(["html", "xml"])
@@ -30,6 +31,47 @@ def _render_login(error: str | None = None, status_code: int = 200) -> HTMLRespo
 def public_home():
     template = env.get_template("public_home.html")
     return template.render()
+
+
+@router.get("/robots.txt", include_in_schema=False)
+def robots_txt():
+    body = "\n".join(
+        [
+            "User-agent: *",
+            "Allow: /",
+            "Disallow: /dashboard",
+            "Disallow: /login",
+            "Disallow: /health",
+            "Disallow: /config",
+            "Disallow: /watchlist",
+            "Disallow: /setups",
+            "Disallow: /reports",
+            "Disallow: /learning",
+            "Disallow: /copier",
+            "Disallow: /launch",
+            "Disallow: /pnl",
+            "Disallow: /slack",
+            "Disallow: /slash",
+            "Disallow: /ws",
+            f"Sitemap: {PUBLIC_SITE_URL}/sitemap.xml",
+            "",
+        ]
+    )
+    return PlainTextResponse(body)
+
+
+@router.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml():
+    body = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{PUBLIC_SITE_URL}/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+"""
+    return Response(content=body, media_type="application/xml")
 
 
 @router.get("/login", response_class=HTMLResponse)

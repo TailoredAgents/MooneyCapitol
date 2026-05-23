@@ -195,6 +195,30 @@ def test_public_homepage_is_available_without_login_when_dashboard_auth_configur
     assert "Copier Settings" not in resp.text
 
 
+def test_public_robots_and_sitemap_expose_only_customer_homepage(monkeypatch):
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")
+    monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
+
+    client = TestClient(_build_app_with_auth_routes())
+    robots = client.get("/robots.txt")
+    sitemap = client.get("/sitemap.xml")
+
+    assert robots.status_code == 200
+    assert "User-agent: *" in robots.text
+    assert "Allow: /" in robots.text
+    assert "Disallow: /dashboard" in robots.text
+    assert "Disallow: /copier" in robots.text
+    assert "Disallow: /pnl" in robots.text
+    assert "Sitemap: https://mooneytrading.com/sitemap.xml" in robots.text
+
+    assert sitemap.status_code == 200
+    assert sitemap.headers["content-type"].startswith("application/xml")
+    assert "<loc>https://mooneytrading.com/</loc>" in sitemap.text
+    assert "/dashboard" not in sitemap.text
+    assert "/copier" not in sitemap.text
+
+
 def test_login_page_renders_when_configured(monkeypatch):
     _clear_auth_env(monkeypatch)
     monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")

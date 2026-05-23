@@ -61,6 +61,20 @@ def test_pages_include_png_favicon_link():
     assert 'href="/static/apple-touch-icon.png"' in public_home
 
 
+def test_public_homepage_has_share_and_search_metadata():
+    html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
+
+    assert '<meta name="robots" content="index,follow" />' in html
+    assert '<link rel="canonical" href="https://mooneytrading.com/" />' in html
+    assert '<meta property="og:site_name" content="Mooney Trading" />' in html
+    assert '<meta property="og:type" content="website" />' in html
+    assert 'content="Mooney Trading | Private Trading Operations Platform"' in html
+    assert '<meta property="og:url" content="https://mooneytrading.com/" />' in html
+    assert '<meta property="og:image" content="https://mooneytrading.com/static/favicon.png" />' in html
+    assert '<meta name="twitter:card" content="summary_large_image" />' in html
+    assert '<meta name="twitter:image" content="https://mooneytrading.com/static/favicon.png" />' in html
+
+
 def test_public_homepage_has_customer_facing_sections_without_private_controls():
     html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
 
