@@ -187,6 +187,11 @@ def test_public_homepage_is_available_without_login_when_dashboard_auth_configur
     assert resp.status_code == 200
     assert "Mooney Trading" in resp.text
     assert 'href="/dashboard"' in resp.text
+    assert "Live Scout" in resp.text
+    assert "Trade Copier" in resp.text
+    assert "Account Monitor" in resp.text
+    assert "Learning Reports" in resp.text
+    assert "Trading involves risk" in resp.text
     assert "Copier Settings" not in resp.text
 
 

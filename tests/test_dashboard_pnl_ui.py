@@ -61,6 +61,20 @@ def test_pages_include_png_favicon_link():
     assert 'href="/static/apple-touch-icon.png"' in public_home
 
 
+def test_public_homepage_has_customer_facing_sections_without_private_controls():
+    html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
+
+    assert "Private trading operations platform" in html
+    assert "A focused system for trading operations." in html
+    assert "From signal to review." in html
+    assert "Built around the live trading stack." in html
+    assert "Private operator access." in html
+    assert "Operator Dashboard" in html
+    assert "Copier Settings" not in html
+    assert "Launch Readiness" not in html
+    assert "Emergency Stop" not in html
+
+
 def test_dashboard_v3_separates_trader_and_owner_navigation():
     html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
 

@@ -217,6 +217,6 @@ This is a **sophisticated, enterprise-grade trading platform** with:
 
 Latest full local verification:
 
-- `pytest -q` -> `186 passed, 1 skipped`
+- `pytest -q` -> `187 passed, 1 skipped`
 - `python -m compileall app tests` -> passed
 - `alembic heads` -> `0005_ai_artifacts (head)`
