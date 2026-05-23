@@ -338,6 +338,55 @@
         font-size: 18px;
         font-weight: 800;
       }
+      .pnl-summary-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .pnl-summary-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 16px;
+        box-shadow: var(--shadow-md);
+      }
+      .pnl-summary-card.master { border-color: rgba(37, 99, 235, 0.28); }
+      .pnl-summary-card.copy { border-color: rgba(16, 185, 129, 0.28); }
+      .pnl-summary-card.combined { border-color: rgba(15, 23, 42, 0.16); }
+      .pnl-summary-card .label {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      .pnl-summary-card .value {
+        margin-top: 6px;
+        color: var(--text);
+        font-size: 26px;
+        font-weight: 900;
+      }
+      .pnl-summary-card .subgrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .pnl-summary-card .submetric {
+        border-top: 1px solid var(--line);
+        padding-top: 9px;
+      }
+      .pnl-summary-card .submetric span {
+        display: block;
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .pnl-summary-card .submetric strong {
+        display: block;
+        margin-top: 3px;
+        font-size: 14px;
+      }
       .status-chip,
       .latency-chip {
         display: inline-flex;
@@ -810,7 +859,8 @@
         }
         .scout-status-grid,
         .monitor-grid,
-        .readiness-summary-grid {
+        .readiness-summary-grid,
+        .pnl-summary-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 10px;
           margin-bottom: 14px;
@@ -818,6 +868,7 @@
         .scout-status-card,
         .monitor-card,
         .readiness-summary-card,
+        .pnl-summary-card,
         .stat {
           min-height: auto;
           padding: 11px 12px;
@@ -825,7 +876,8 @@
         .layout,
         .grid,
         .grid.two,
-        .check-list {
+        .check-list,
+        .pnl-summary-grid {
           grid-template-columns: 1fr;
           gap: 12px;
         }
@@ -904,12 +956,14 @@
         }
         .monitor-card .value,
         .readiness-summary-card .value,
+        .pnl-summary-card .value,
         .stat .value {
           font-size: 16px;
         }
         .scout-status-grid,
         .monitor-grid,
-        .readiness-summary-grid {
+        .readiness-summary-grid,
+        .pnl-summary-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .scout-status-card .status-value,
@@ -922,7 +976,8 @@
         .nav-group:first-of-type .tabs,
         .scout-status-grid,
         .monitor-grid,
-        .readiness-summary-grid {
+        .readiness-summary-grid,
+        .pnl-summary-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -1308,26 +1363,36 @@
             <p>Live equity, buying power, daily P&L, exposure, drawdown, positions, and risk alerts for monitored accounts.</p>
           </div>
         </div>
-        <div class="monitor-grid" aria-label="Account monitor summary">
-          <div class="stat">
-            <div class="muted">Accounts</div>
-            <div id="pnl-account-count" class="value">-</div>
+        <div class="pnl-summary-grid" aria-label="Account monitor summary">
+          <div class="pnl-summary-card master">
+            <div class="label">Master Account</div>
+            <div id="pnl-master-equity" class="value">-</div>
+            <div class="subgrid">
+              <div class="submetric"><span>Today P&L</span><strong id="pnl-master-today">-</strong></div>
+              <div class="submetric"><span>Exposure</span><strong id="pnl-master-exposure">-</strong></div>
+              <div class="submetric"><span>Buying Power</span><strong id="pnl-master-buying-power">-</strong></div>
+              <div class="submetric"><span>Accounts</span><strong id="pnl-master-count">-</strong></div>
+            </div>
           </div>
-          <div class="stat">
-            <div class="muted">Total Equity</div>
+          <div class="pnl-summary-card copy">
+            <div class="label">Copy Accounts Combined</div>
+            <div id="pnl-copy-equity" class="value">-</div>
+            <div class="subgrid">
+              <div class="submetric"><span>Today P&L</span><strong id="pnl-copy-today">-</strong></div>
+              <div class="submetric"><span>Exposure</span><strong id="pnl-copy-exposure">-</strong></div>
+              <div class="submetric"><span>Buying Power</span><strong id="pnl-copy-buying-power">-</strong></div>
+              <div class="submetric"><span>Accounts</span><strong id="pnl-copy-count">-</strong></div>
+            </div>
+          </div>
+          <div class="pnl-summary-card combined">
+            <div class="label">All Accounts Combined</div>
             <div id="pnl-total-value" class="value">-</div>
-          </div>
-          <div class="stat">
-            <div class="muted">Today P&L</div>
-            <div id="pnl-total-today" class="value">-</div>
-          </div>
-          <div class="stat">
-            <div class="muted">Exposure</div>
-            <div id="pnl-total-exposure" class="value">-</div>
-          </div>
-          <div class="stat">
-            <div class="muted">Active Alerts</div>
-            <div id="pnl-active-alerts" class="value">-</div>
+            <div class="subgrid">
+              <div class="submetric"><span>Today P&L</span><strong id="pnl-total-today">-</strong></div>
+              <div class="submetric"><span>Exposure</span><strong id="pnl-total-exposure">-</strong></div>
+              <div class="submetric"><span>Active Alerts</span><strong id="pnl-active-alerts">-</strong></div>
+              <div class="submetric"><span>Accounts</span><strong id="pnl-account-count">-</strong></div>
+            </div>
           </div>
         </div>
 
@@ -1815,11 +1880,18 @@
 
       function renderPnlSummary(summary) {
         const accounts = summary.accounts || [];
-        document.getElementById('pnl-account-count').textContent = summary.account_count ?? accounts.length;
-        document.getElementById('pnl-total-value').textContent = formatMoney(summary.total_value);
-        document.getElementById('pnl-total-today').innerHTML = moneySpan(summary.total_pnl_today);
-        document.getElementById('pnl-total-exposure').textContent = formatMoney(totalExposure(accounts));
-        document.getElementById('pnl-active-alerts').textContent = summary.active_alerts ?? 0;
+        const combinedSummary = summary.combined_summary || {
+          account_count: summary.account_count ?? accounts.length,
+          total_value: summary.total_value,
+          total_pnl_today: summary.total_pnl_today,
+          total_exposure: totalExposure(accounts),
+          active_alerts: summary.active_alerts,
+        };
+        const masterSummary = summary.master_summary || bucketFromAccounts(accounts.filter((account) => account.account_type === 'master'));
+        const copySummary = summary.copy_summary || bucketFromAccounts(accounts.filter((account) => account.account_type === 'copy'));
+        renderPnlSummaryBucket('master', masterSummary);
+        renderPnlSummaryBucket('copy', copySummary);
+        renderPnlSummaryBucket('total', combinedSummary);
         document.getElementById('pnl-last-refresh').textContent = latestAccountTime(accounts);
         pnlAccountsBody.innerHTML = accounts.length ? accounts.map((account) => `
           <tr>
@@ -1843,6 +1915,18 @@
               </div>
             </td>
           </tr>`;
+      }
+
+      function renderPnlSummaryBucket(prefix, bucket) {
+        setText(`pnl-${prefix}-equity`, formatMoney(bucket?.total_value));
+        setText(`pnl-${prefix}-value`, formatMoney(bucket?.total_value));
+        setText(`pnl-${prefix}-exposure`, formatMoney(bucket?.total_exposure));
+        setText(`pnl-${prefix}-buying-power`, formatMoney(bucket?.buying_power));
+        setText(`pnl-${prefix}-count`, String(bucket?.account_count ?? 0));
+        const today = document.getElementById(`pnl-${prefix}-today`);
+        if (today) today.innerHTML = moneySpan(bucket?.total_pnl_today);
+        const alerts = document.getElementById(`pnl-${prefix}-alerts`);
+        if (alerts) alerts.textContent = String(bucket?.active_alerts ?? 0);
       }
 
       function renderPnlPositions(items) {
@@ -1983,6 +2067,22 @@
         return accounts.reduce((sum, account) => {
           const exposure = Number(account.total_exposure);
           return Number.isFinite(exposure) ? sum + exposure : sum;
+        }, 0);
+      }
+      function bucketFromAccounts(accounts) {
+        return {
+          account_count: accounts.length,
+          total_value: sumAccounts(accounts, 'total_value'),
+          total_pnl_today: sumAccounts(accounts, 'total_pnl_today'),
+          buying_power: sumAccounts(accounts, 'buying_power'),
+          total_exposure: sumAccounts(accounts, 'total_exposure'),
+          active_alerts: 0,
+        };
+      }
+      function sumAccounts(accounts, key) {
+        return accounts.reduce((sum, account) => {
+          const value = Number(account[key]);
+          return Number.isFinite(value) ? sum + value : sum;
         }, 0);
       }
       function latestAccountTime(accounts) {

@@ -124,6 +124,8 @@ def get_summary(session: Session = Depends(db_session)):
     rows = latest_account_snapshots(session)
     total_value = sum(float(row.total_value or 0.0) for row in rows)
     total_pnl = sum(float(row.total_pnl_today or 0.0) for row in rows)
+    master_rows = [row for row in rows if row.account_type == "master"]
+    copy_rows = [row for row in rows if row.account_type == "copy"]
     active_alerts = (
         session.execute(select(PnlAlert).where(PnlAlert.acknowledged.is_(False))).scalars().all()
     )
@@ -131,8 +133,28 @@ def get_summary(session: Session = Depends(db_session)):
         "account_count": len(rows),
         "total_value": total_value,
         "total_pnl_today": total_pnl,
+        "combined_summary": _summary_bucket(rows, active_alerts),
+        "master_summary": _summary_bucket(master_rows, active_alerts),
+        "copy_summary": _summary_bucket(copy_rows, active_alerts),
         "active_alerts": len(active_alerts),
         "accounts": [_snapshot_response(row).model_dump() for row in rows],
+    }
+
+
+def _summary_bucket(rows: list[AccountSnapshot], alerts: list[PnlAlert]) -> dict:
+    account_refs = {row.account_ref for row in rows}
+    matching_alerts = [alert for alert in alerts if alert.account_ref in account_refs]
+    latest = max((row.snapshot_time for row in rows), default=None)
+    return {
+        "account_count": len(rows),
+        "total_value": sum(float(row.total_value or 0.0) for row in rows),
+        "total_pnl_today": sum(float(row.total_pnl_today or 0.0) for row in rows),
+        "cash_balance": sum(float(row.cash_balance or 0.0) for row in rows),
+        "buying_power": sum(float(row.buying_power or 0.0) for row in rows),
+        "total_exposure": sum(float(row.total_exposure or 0.0) for row in rows),
+        "position_count": sum(int(row.position_count or 0) for row in rows),
+        "active_alerts": len(matching_alerts),
+        "last_refresh": latest.isoformat() if latest else None,
     }
 
 
