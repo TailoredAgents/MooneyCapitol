@@ -68,6 +68,9 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "A focused system for trading operations." in html
     assert "From signal to review." in html
     assert "Built around the live trading stack." in html
+    assert "Public site" in html
+    assert "Authenticated operator console" in html
+    assert "Operational data, account controls, readiness checks, and execution controls stay inside authenticated dashboard access." in html
     assert "Private operator access." in html
     assert "Operator Dashboard" in html
     assert "No public account access, advisory service, or investment product is offered" in html
@@ -76,6 +79,34 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "Copier Settings" not in html
     assert "Launch Readiness" not in html
     assert "Emergency Stop" not in html
+
+
+def test_public_homepage_does_not_include_private_dashboard_implementation_details():
+    html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
+    private_details = [
+        "<script",
+        "fetch(",
+        "api('/",
+        "data-tab=",
+        "/copier",
+        "/pnl",
+        "/launch",
+        "/reports/eod/ai",
+        "COWORK_OPERATOR",
+        "WEBULL_",
+        "POLYGON_API_KEY",
+        "SLACK_BOT_TOKEN",
+        "WEBULL_MASTER",
+        "WEBULL_PERSONAL",
+        "Enable Kill Switch",
+        "Disable Kill Switch",
+        "Save Copy Settings",
+        "Refresh Readiness",
+        "Refresh From Webull",
+    ]
+
+    for detail in private_details:
+        assert detail not in html
 
 
 def test_public_homepage_avoids_promissory_trading_marketing_language():
