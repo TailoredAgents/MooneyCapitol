@@ -216,6 +216,7 @@ def test_public_robots_and_sitemap_expose_only_public_pages(monkeypatch):
     assert sitemap.headers["content-type"].startswith("application/xml")
     assert "<loc>https://mooneytrading.com/</loc>" in sitemap.text
     assert "<loc>https://mooneytrading.com/platform</loc>" in sitemap.text
+    assert "<loc>https://mooneytrading.com/faq</loc>" in sitemap.text
     assert "<loc>https://mooneytrading.com/risk-disclosure</loc>" in sitemap.text
     assert "<loc>https://mooneytrading.com/privacy</loc>" in sitemap.text
     assert "/dashboard" not in sitemap.text
@@ -238,6 +239,26 @@ def test_public_platform_page_is_available_without_login(monkeypatch):
     assert "Learning and review" in resp.text
     assert "Launch boundaries" in resp.text
     assert "does not provide public account access, public trading signals, or investor onboarding" in resp.text
+    assert "Operator Dashboard" in resp.text
+    assert "Copier Settings" not in resp.text
+    assert "WEBULL_MASTER" not in resp.text
+
+
+def test_public_faq_page_is_available_without_login(monkeypatch):
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")
+    monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
+
+    client = TestClient(_build_app_with_auth_routes())
+    resp = client.get("/faq")
+
+    assert resp.status_code == 200
+    assert "FAQ" in resp.text
+    assert "Is Mooney Trading open to the public?" in resp.text
+    assert "What does the platform do?" in resp.text
+    assert "Does the system trade by itself?" in resp.text
+    assert "What would need to happen before a public product?" in resp.text
+    assert "does not provide account access, signup, public trading signals, or investor onboarding" in resp.text
     assert "Operator Dashboard" in resp.text
     assert "Copier Settings" not in resp.text
     assert "WEBULL_MASTER" not in resp.text

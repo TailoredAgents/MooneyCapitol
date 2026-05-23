@@ -85,6 +85,7 @@ def sitemap_xml():
     urls = [
         f"{PUBLIC_SITE_URL}/",
         f"{PUBLIC_SITE_URL}/platform",
+        f"{PUBLIC_SITE_URL}/faq",
         f"{PUBLIC_SITE_URL}/risk-disclosure",
         f"{PUBLIC_SITE_URL}/privacy",
     ]
@@ -150,6 +151,58 @@ def platform_overview():
                     "Before real-money operation, brokerage credentials, market data, Slack, Sentry, OpenAI, database, and deployment settings must be configured and validated.",
                     "Live trading requires account-level validation, read-only checks, working equity snapshots, copier readiness, risk monitoring, and operator review.",
                     "Any future public-facing product would require separate legal, regulatory, brokerage, privacy, and operational review.",
+                ],
+            },
+        ],
+    )
+
+
+@router.get("/faq", response_class=HTMLResponse)
+def public_faq():
+    return _render_public_policy(
+        title="FAQ",
+        description="Common questions about the Mooney Trading private trading operations platform.",
+        eyebrow="Common questions",
+        updated="May 23, 2026",
+        sections=[
+            {
+                "heading": "Is Mooney Trading open to the public?",
+                "items": [
+                    "No. Mooney Trading is currently a private trading operations platform for authorized internal users.",
+                    "The public site is informational and does not provide account access, signup, public trading signals, or investor onboarding.",
+                    "The operator dashboard remains behind authenticated access.",
+                ],
+            },
+            {
+                "heading": "What does the platform do?",
+                "items": [
+                    "The platform supports a trading workflow with live market scouting, account monitoring, copied-order oversight, latency tracking, and review reports.",
+                    "It is built to help operators see the state of the trading system, account snapshots, copied executions, and post-trade review context in one place.",
+                    "It is not presented as a public advisory service or a public investment product.",
+                ],
+            },
+            {
+                "heading": "Does the system trade by itself?",
+                "items": [
+                    "The current design keeps the human trader responsible for master-account decisions.",
+                    "Copy execution is controlled by operator settings, launch-readiness gates, account validation, and risk monitoring.",
+                    "AI features are read-only helpers for explanation, research context, trade journals, recaps, and learning summaries.",
+                ],
+            },
+            {
+                "heading": "Why does the public site mention risk?",
+                "items": [
+                    "Trading involves real financial risk, including possible loss of principal.",
+                    "Software, brokers, market data, external APIs, and network connections can fail or behave unexpectedly.",
+                    "The risk and privacy pages are included so public visitors understand the boundaries before any future product direction is considered.",
+                ],
+            },
+            {
+                "heading": "What would need to happen before a public product?",
+                "items": [
+                    "A public product would require separate legal, regulatory, brokerage, privacy, security, support, and operational review.",
+                    "Customer onboarding, billing, account permissions, disclosures, agreements, and data handling would need to be designed before launch.",
+                    "Nothing on the current public site should be treated as an offer to manage money, provide advice, or give public access to trading activity.",
                 ],
             },
         ],
