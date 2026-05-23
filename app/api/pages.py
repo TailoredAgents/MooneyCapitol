@@ -84,6 +84,7 @@ def robots_txt():
 def sitemap_xml():
     urls = [
         f"{PUBLIC_SITE_URL}/",
+        f"{PUBLIC_SITE_URL}/platform",
         f"{PUBLIC_SITE_URL}/risk-disclosure",
         f"{PUBLIC_SITE_URL}/privacy",
     ]
@@ -101,6 +102,58 @@ def sitemap_xml():
 </urlset>
 """
     return Response(content=body, media_type="application/xml")
+
+
+@router.get("/platform", response_class=HTMLResponse)
+def platform_overview():
+    return _render_public_policy(
+        title="Platform Overview",
+        description="A plain-language overview of the Mooney Trading private trading operations platform.",
+        eyebrow="Platform overview",
+        updated="May 23, 2026",
+        sections=[
+            {
+                "heading": "What Mooney Trading is",
+                "items": [
+                    "Mooney Trading is a private trading operations platform built around a human trader, monitored account data, and internal operator controls.",
+                    "The system combines a live scout, copy execution oversight, account monitoring, latency tracking, and review reports in one authenticated dashboard.",
+                    "The public site explains the platform at a high level and does not provide public account access, public trading signals, or investor onboarding.",
+                ],
+            },
+            {
+                "heading": "Trader workflow",
+                "items": [
+                    "The scout organizes potential setups into readiness lanes so the trader can review market context faster.",
+                    "The trader remains responsible for decisions on the master account.",
+                    "Configured copy accounts are intended to mirror exposure by account percentage when copying is enabled and live-trading gates are satisfied.",
+                ],
+            },
+            {
+                "heading": "Operator workflow",
+                "items": [
+                    "The dashboard separates trader-facing views from developer and launch-readiness controls.",
+                    "Operators can monitor account value, positions, fills, copied order status, latency, slippage, and system readiness.",
+                    "Operational controls, credentials, account identifiers, readiness checks, and execution settings stay inside authenticated access.",
+                ],
+            },
+            {
+                "heading": "Learning and review",
+                "items": [
+                    "The learning layer uses alerts, setups, trades, fills, and outcomes to support explainable review.",
+                    "AI summaries are read-only helpers for explanations, research context, trade journals, daily recaps, and learning summaries.",
+                    "Model outputs support human review and should not be treated as financial advice, guarantees, or autonomous public recommendations.",
+                ],
+            },
+            {
+                "heading": "Launch boundaries",
+                "items": [
+                    "Before real-money operation, brokerage credentials, market data, Slack, Sentry, OpenAI, database, and deployment settings must be configured and validated.",
+                    "Live trading requires account-level validation, read-only checks, working equity snapshots, copier readiness, risk monitoring, and operator review.",
+                    "Any future public-facing product would require separate legal, regulatory, brokerage, privacy, and operational review.",
+                ],
+            },
+        ],
+    )
 
 
 @router.get("/risk-disclosure", response_class=HTMLResponse)

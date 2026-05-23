@@ -215,10 +215,32 @@ def test_public_robots_and_sitemap_expose_only_public_pages(monkeypatch):
     assert sitemap.status_code == 200
     assert sitemap.headers["content-type"].startswith("application/xml")
     assert "<loc>https://mooneytrading.com/</loc>" in sitemap.text
+    assert "<loc>https://mooneytrading.com/platform</loc>" in sitemap.text
     assert "<loc>https://mooneytrading.com/risk-disclosure</loc>" in sitemap.text
     assert "<loc>https://mooneytrading.com/privacy</loc>" in sitemap.text
     assert "/dashboard" not in sitemap.text
     assert "/copier" not in sitemap.text
+
+
+def test_public_platform_page_is_available_without_login(monkeypatch):
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")
+    monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
+
+    client = TestClient(_build_app_with_auth_routes())
+    resp = client.get("/platform")
+
+    assert resp.status_code == 200
+    assert "Platform Overview" in resp.text
+    assert "What Mooney Trading is" in resp.text
+    assert "Trader workflow" in resp.text
+    assert "Operator workflow" in resp.text
+    assert "Learning and review" in resp.text
+    assert "Launch boundaries" in resp.text
+    assert "does not provide public account access, public trading signals, or investor onboarding" in resp.text
+    assert "Operator Dashboard" in resp.text
+    assert "Copier Settings" not in resp.text
+    assert "WEBULL_MASTER" not in resp.text
 
 
 def test_public_risk_and_privacy_pages_are_available_without_login(monkeypatch):

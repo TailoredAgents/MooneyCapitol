@@ -82,8 +82,10 @@ def test_public_homepage_has_share_and_search_metadata():
 def test_public_homepage_links_to_risk_and_privacy_pages():
     html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
 
+    assert 'href="/platform"' in html
     assert 'href="/risk-disclosure"' in html
     assert 'href="/privacy"' in html
+    assert "Platform Overview" in html
     assert "Risk Disclosure" in html
     assert "Privacy" in html
 
@@ -94,6 +96,7 @@ def test_public_policy_template_keeps_policy_pages_static_and_public_safe():
     assert "{{ title }} | Mooney Trading" in html
     assert "Last updated:" in html
     assert "Mooney Trading public information pages." in html
+    assert 'href="/platform"' in html
     assert 'href="/dashboard"' in html
     assert "<script" not in html
     assert "fetch(" not in html
