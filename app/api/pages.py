@@ -45,6 +45,7 @@ def _render_public_policy(
             eyebrow=eyebrow,
             updated=updated,
             canonical_url=canonical_url,
+            active_path=path,
             sections=sections,
         )
     )

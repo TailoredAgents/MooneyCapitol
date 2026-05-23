@@ -58,6 +58,28 @@
         line-height: 1.5;
       }
       a { color: inherit; text-decoration: none; }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 3px solid rgba(37, 99, 235, 0.45);
+        outline-offset: 3px;
+      }
+      .skip-link {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 100;
+        transform: translateY(-140%);
+        border-radius: 8px;
+        background: #0f172a;
+        color: #fff;
+        padding: 10px 12px;
+        font-size: 14px;
+        font-weight: 900;
+        transition: transform 140ms ease;
+      }
+      .skip-link:focus {
+        transform: translateY(0);
+      }
 
       .site-header {
         position: sticky;
@@ -112,6 +134,10 @@
       }
       .nav-links a:hover {
         background: rgba(37, 99, 235, 0.08);
+        color: var(--blue-strong);
+      }
+      .nav-links a[aria-current="page"] {
+        background: rgba(37, 99, 235, 0.1);
         color: var(--blue-strong);
       }
       .button {
@@ -607,9 +633,24 @@
           padding: 18px;
         }
       }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.001ms !important;
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+        }
+        .button:hover,
+        .feature:hover {
+          transform: none;
+        }
+      }
     </style>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
       <nav class="nav" aria-label="Main navigation">
         <a class="brand" href="/">
@@ -617,7 +658,7 @@
           <span>Mooney Trading</span>
         </a>
         <div class="nav-links">
-          <a href="#platform">Platform</a>
+          <a href="#platform" aria-current="page">Platform</a>
           <a href="#workflow">Workflow</a>
           <a href="#technology">Technology</a>
           <a href="#access">Access</a>
@@ -625,7 +666,7 @@
       </nav>
     </header>
 
-    <main>
+    <main id="main-content" tabindex="-1">
       <section class="hero">
         <div class="hero-inner">
           <div>

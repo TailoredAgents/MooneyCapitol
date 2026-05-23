@@ -114,6 +114,10 @@ def test_public_policy_template_keeps_policy_pages_static_and_public_safe():
     assert 'href="{{ canonical_url }}"' in html
     assert 'content="{{ canonical_url }}"' in html
     assert "brand-mark" in html
+    assert "skip-link" in html
+    assert 'id="main-content"' in html
+    assert "prefers-reduced-motion" in html
+    assert "aria-current=\"page\"" in html
     assert '<img src="/static/favicon-32.png"' not in html
     assert "Last updated:" in html
     assert "Mooney Trading public information pages." in html
@@ -147,6 +151,8 @@ def test_public_policy_pages_render_page_specific_metadata():
     assert '<meta property="og:url" content="https://mooneytrading.com/platform" />' in response.text
     assert '<meta property="og:title" content="Platform Overview | Mooney Trading" />' in response.text
     assert '<span class="brand-mark" aria-hidden="true">MT</span>' in response.text
+    assert '<a class="skip-link" href="#main-content">Skip to content</a>' in response.text
+    assert '<a href="/platform" aria-current="page">Platform</a>' in response.text
     assert 'href="/dashboard"' not in response.text
 
 
@@ -159,6 +165,10 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "hero-proof" in html
     assert "visual-meta" in html
     assert "brand-mark" in html
+    assert "skip-link" in html
+    assert 'id="main-content"' in html
+    assert "prefers-reduced-motion" in html
+    assert 'href="#platform" aria-current="page"' in html
     assert '<img src="/static/favicon-32.png"' not in html
     assert "Internal access" in html
     assert "Readiness gates" in html
