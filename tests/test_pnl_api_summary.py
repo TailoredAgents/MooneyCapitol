@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
-from app.api.routes.pnl import _summary_bucket
+from app.api.routes.pnl import _snapshot_response, _summary_bucket
+from app.core.config import CopierConfig, CopyTargetAccountConfig
 from app.db.models import AccountSnapshot, PnlAlert
 
 
@@ -24,9 +25,15 @@ def _snapshot(
         total_value=total_value,
         total_pnl_today=total_pnl_today,
         cash_balance=cash_balance,
+        equity_value=total_value,
         buying_power=buying_power,
+        unrealized_pnl=0.0,
+        realized_pnl_today=0.0,
+        max_drawdown_today=0.0,
+        max_profit_today=0.0,
         total_exposure=total_exposure,
         position_count=position_count,
+        risk_level="normal",
     )
 
 
@@ -75,3 +82,34 @@ def test_pnl_summary_bucket_totals_accounts_and_alerts():
     assert bucket["position_count"] == 3
     assert bucket["active_alerts"] == 1
     assert bucket["last_refresh"] == "2026-05-23T00:00:00+00:00"
+
+
+def test_snapshot_response_uses_configured_copy_account_display_name(monkeypatch):
+    from app.api.routes import pnl
+
+    original = pnl.CONFIG.copier
+    try:
+        pnl.CONFIG.copier = CopierConfig(
+            targets=[
+                CopyTargetAccountConfig(
+                    name="personal",
+                    display_name="Austin Dugger's Account",
+                    endpoint_env="WEBULL_PERSONAL_API_ENDPOINT",
+                    api_key_env="WEBULL_PERSONAL_APP_KEY",
+                    api_secret_env="WEBULL_PERSONAL_APP_SECRET",
+                    account_id_env="WEBULL_PERSONAL_ACCOUNT_ID",
+                )
+            ]
+        )
+        row = _snapshot(
+            account_ref="IEG8KBJUE5TU4K637T57ADR7C8",
+            account_name="personal",
+            account_type="copy",
+            total_value=165.27,
+        )
+
+        response = _snapshot_response(row)
+
+        assert response.account_name == "Austin Dugger's Account"
+    finally:
+        pnl.CONFIG.copier = original

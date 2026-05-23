@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,9 +9,10 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.api.auth import require_operator
+from app.core.config_store import CONFIG
 from app.db.models import AccountSnapshot, PnlAlert, PositionSnapshot, TradingSession
 from app.db.session import get_session
-from app.services.pnl_monitor import get_pnl_monitor, latest_account_snapshots, latest_position_snapshots
+from app.services.pnl_monitor import get_pnl_monitor, latest_account_snapshots, latest_position_snapshots, target_display_name
 
 
 router = APIRouter(prefix="/pnl", tags=["pnl"], dependencies=[Depends(require_operator)])
@@ -183,7 +185,7 @@ def _status_response(status) -> AccountStatusResponse:
 def _snapshot_response(row: AccountSnapshot) -> AccountStatusResponse:
     return AccountStatusResponse(
         account_ref=row.account_ref,
-        account_name=row.account_name,
+        account_name=_friendly_account_name(row.account_ref, row.account_name, row.account_type),
         account_type=row.account_type,
         timestamp=row.snapshot_time,
         cash_balance=row.cash_balance,
@@ -205,7 +207,7 @@ def _snapshot_response(row: AccountSnapshot) -> AccountStatusResponse:
 def _position_response(row: PositionSnapshot) -> dict:
     return {
         "account_ref": row.account_ref,
-        "account_name": row.account_name,
+        "account_name": _friendly_account_name(row.account_ref, row.account_name, row.account_type),
         "symbol": row.symbol,
         "snapshot_time": row.snapshot_time,
         "qty": row.qty,
@@ -223,7 +225,7 @@ def _alert_response(row: PnlAlert) -> dict:
     return {
         "id": row.id,
         "account_ref": row.account_ref,
-        "account_name": row.account_name,
+        "account_name": _friendly_account_name(row.account_ref, row.account_name),
         "alert_time": row.alert_time,
         "alert_type": row.alert_type,
         "severity": row.severity,
@@ -234,11 +236,21 @@ def _alert_response(row: PnlAlert) -> dict:
     }
 
 
+def _friendly_account_name(account_ref: str, stored_name: str | None, account_type: str | None = None) -> str:
+    if account_type == "master":
+        return stored_name or "master"
+    for target in CONFIG.copier.targets:
+        target_ref = target.account_ref or os.getenv(target.account_id_env)
+        if account_ref == target_ref or stored_name == target.name:
+            return target_display_name(target)
+    return stored_name or account_ref
+
+
 def _session_response(row: TradingSession) -> dict:
     return {
         "id": row.id,
         "account_ref": row.account_ref,
-        "account_name": row.account_name,
+        "account_name": _friendly_account_name(row.account_ref, row.account_name),
         "trade_date": row.trade_date,
         "active": row.active,
         "starting_value": row.starting_value,
