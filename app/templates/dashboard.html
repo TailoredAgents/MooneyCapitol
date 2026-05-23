@@ -704,6 +704,7 @@
         max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
       }
       .check-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .check {
@@ -752,8 +753,7 @@
           min-height: auto;
         }
         .sidebar {
-          position: sticky;
-          top: 57px;
+          position: static;
           z-index: 40;
           padding: 10px 12px 12px;
           background: rgba(255, 255, 255, 0.96);
@@ -772,19 +772,26 @@
           font-size: 10px;
         }
         .tabs {
-          display: flex;
+          display: grid;
           gap: 8px;
-          overflow-x: auto;
-          padding: 1px 1px 8px;
-          scroll-snap-type: x proximity;
-          -webkit-overflow-scrolling: touch;
+          overflow: visible;
+          padding: 0;
+        }
+        .nav-group:first-of-type .tabs {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .nav-group:last-of-type .tabs {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .tab-button {
-          flex: 0 0 190px;
-          min-height: 56px;
-          scroll-snap-align: start;
-          padding: 10px 11px;
+          grid-template-columns: minmax(0, 1fr);
+          min-height: 46px;
+          padding: 10px 8px;
+          text-align: center;
+          justify-items: center;
         }
+        .tab-button::before { display: none; }
+        .nav-title { font-size: 12px; }
         .nav-subtitle {
           display: none;
         }
@@ -804,6 +811,7 @@
         .scout-status-grid,
         .monitor-grid,
         .readiness-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 10px;
           margin-bottom: 14px;
         }
@@ -818,6 +826,7 @@
         .grid,
         .grid.two,
         .check-list {
+          grid-template-columns: 1fr;
           gap: 12px;
         }
         .lane,
@@ -850,17 +859,19 @@
           font-size: 16px;
         }
         table {
-          min-width: 760px;
+          min-width: 700px;
         }
         th,
         td {
-          padding: 9px;
+          padding: 8px;
           white-space: nowrap;
+          font-size: 12px;
         }
         .scroll {
           border: 1px solid var(--line);
           border-radius: 10px;
           background: #fff;
+          box-shadow: inset -16px 0 16px -18px rgba(15, 23, 42, 0.45);
         }
         .scroll table {
           border: 0;
@@ -878,12 +889,13 @@
         }
         h1 { font-size: 17px; }
         .sidebar {
-          top: 53px;
           padding-inline: 10px;
         }
         .tab-button {
-          flex-basis: 168px;
+          min-height: 42px;
+          padding-inline: 6px;
         }
+        .nav-title { font-size: 11px; }
         main.content {
           padding: 16px 10px 28px;
         }
@@ -894,6 +906,35 @@
         .readiness-summary-card .value,
         .stat .value {
           font-size: 16px;
+        }
+        .scout-status-grid,
+        .monitor-grid,
+        .readiness-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .scout-status-card .status-value,
+        .monitor-card .value {
+          font-size: 15px;
+          word-break: break-word;
+        }
+      }
+      @media (max-width: 340px) {
+        .nav-group:first-of-type .tabs,
+        .nav-group:last-of-type .tabs,
+        .scout-status-grid,
+        .monitor-grid,
+        .readiness-summary-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (hover: none) {
+        .card:hover,
+        .lane:hover,
+        .panel:hover,
+        .tab-button:hover,
+        button.primary:hover,
+        button.danger:hover {
+          transform: none;
         }
       }
     </style>

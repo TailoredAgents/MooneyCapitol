@@ -142,3 +142,15 @@ def test_reports_api_exposes_ai_daily_recap_route():
 
     assert "/reports/eod/ai" in source
     assert "ai_recap" in source
+
+
+def test_dashboard_has_mobile_friendly_navigation_and_summary_grids():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert "@media (max-width: 720px)" in html
+    assert ".nav-group:first-of-type .tabs" in html
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in html
+    assert ".nav-group:last-of-type .tabs" in html
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in html
+    assert "@media (hover: none)" in html
+    assert "box-shadow: inset -16px 0 16px -18px" in html
