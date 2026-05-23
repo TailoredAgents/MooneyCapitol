@@ -130,6 +130,8 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "Mooney Trading organizes scout signals, copied execution oversight, account activity, latency, and post-trade review" in html
     assert "hero-proof" in html
     assert "visual-meta" in html
+    assert "brand-mark" in html
+    assert '<img src="/static/favicon-32.png"' not in html
     assert "Internal access" in html
     assert "Readiness gates" in html
     assert "Audit trail" in html
