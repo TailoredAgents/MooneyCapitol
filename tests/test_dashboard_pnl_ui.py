@@ -143,6 +143,13 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "Emergency Stop" not in html
 
 
+def test_public_homepage_does_not_use_face_asset_as_hero_background():
+    html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
+
+    assert 'url("/static/favicon.png")' not in html
+    assert "padding: 130px 0 46px;" not in html
+
+
 def test_public_homepage_does_not_include_private_dashboard_implementation_details():
     html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
     private_details = [
