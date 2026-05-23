@@ -176,6 +176,20 @@ def test_dashboard_route_redirects_to_login_when_configured(monkeypatch):
     assert "www-authenticate" not in resp.headers
 
 
+def test_public_homepage_is_available_without_login_when_dashboard_auth_configured(monkeypatch):
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")
+    monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
+
+    client = TestClient(_build_app_with_auth_routes())
+    resp = client.get("/")
+
+    assert resp.status_code == 200
+    assert "Mooney Trading" in resp.text
+    assert 'href="/dashboard"' in resp.text
+    assert "Copier Settings" not in resp.text
+
+
 def test_login_page_renders_when_configured(monkeypatch):
     _clear_auth_env(monkeypatch)
     monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")

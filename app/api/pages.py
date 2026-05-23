@@ -26,6 +26,12 @@ def _render_login(error: str | None = None, status_code: int = 200) -> HTMLRespo
     return HTMLResponse(template.render(error=error), status_code=status_code)
 
 
+@router.get("/", response_class=HTMLResponse)
+def public_home():
+    template = env.get_template("public_home.html")
+    return template.render()
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     if is_dashboard_authenticated(request):
