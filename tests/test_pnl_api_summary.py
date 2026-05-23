@@ -113,3 +113,33 @@ def test_snapshot_response_uses_configured_copy_account_display_name(monkeypatch
         assert response.account_name == "Austin Dugger's Account"
     finally:
         pnl.CONFIG.copier = original
+
+
+def test_snapshot_response_uses_default_display_name_for_stale_personal_config(monkeypatch):
+    from app.api.routes import pnl
+
+    original = pnl.CONFIG.copier
+    try:
+        pnl.CONFIG.copier = CopierConfig(
+            targets=[
+                CopyTargetAccountConfig(
+                    name="personal",
+                    endpoint_env="WEBULL_PERSONAL_API_ENDPOINT",
+                    api_key_env="WEBULL_PERSONAL_APP_KEY",
+                    api_secret_env="WEBULL_PERSONAL_APP_SECRET",
+                    account_id_env="WEBULL_PERSONAL_ACCOUNT_ID",
+                )
+            ]
+        )
+        row = _snapshot(
+            account_ref="IEG8KBJUE5TU4K637T57ADR7C8",
+            account_name="personal",
+            account_type="copy",
+            total_value=165.27,
+        )
+
+        response = _snapshot_response(row)
+
+        assert response.account_name == "Austin Dugger's Account"
+    finally:
+        pnl.CONFIG.copier = original

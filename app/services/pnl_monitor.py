@@ -10,7 +10,7 @@ from sqlalchemy import and_, desc, select
 
 from app.copier.reconciliation import normalize_positions
 from app.copier.webull_client import WebullTradingClient
-from app.core.config import CopierConfig, CopyTargetAccountConfig
+from app.core.config import CopierConfig, CopyTargetAccountConfig, default_config
 from app.core.config_store import CONFIG
 from app.db.models import AccountSnapshot, PnlAlert, PositionSnapshot, TradingSession
 from app.db.session import get_session
@@ -251,6 +251,9 @@ def target_display_name(target: CopyTargetAccountConfig) -> str:
             return value.strip()
     if target.display_name and target.display_name.strip():
         return target.display_name.strip()
+    for default_target in default_config().copier.targets:
+        if default_target.name == target.name and default_target.display_name and default_target.display_name.strip():
+            return default_target.display_name.strip()
     return target.name
 
 

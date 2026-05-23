@@ -1895,7 +1895,7 @@
         document.getElementById('pnl-last-refresh').textContent = latestAccountTime(accounts);
         pnlAccountsBody.innerHTML = accounts.length ? accounts.map((account) => `
           <tr>
-            <td><strong>${escapeHtml(account.account_name || account.account_ref)}</strong><div class="muted">${escapeHtml(account.account_type || '')} ${escapeHtml(account.account_ref || '')}</div></td>
+            <td><strong>${escapeHtml(account.account_name || account.account_ref)}</strong><div class="muted">${escapeHtml(accountTypeLabel(account.account_type))}</div></td>
             <td><span class="pill risk-${escapeHtml(account.risk_level || 'normal')}">${escapeHtml(account.risk_level || 'normal')}</span></td>
             <td>${formatMoney(account.total_value)}</td>
             <td>${formatMoney(account.cash_balance)}</td>
@@ -1927,6 +1927,12 @@
         if (today) today.innerHTML = moneySpan(bucket?.total_pnl_today);
         const alerts = document.getElementById(`pnl-${prefix}-alerts`);
         if (alerts) alerts.textContent = String(bucket?.active_alerts ?? 0);
+      }
+
+      function accountTypeLabel(type) {
+        if (type === 'master') return 'Master account';
+        if (type === 'copy') return 'Copy account';
+        return type || 'Account';
       }
 
       function renderPnlPositions(items) {

@@ -23,6 +23,10 @@ def test_dashboard_exposes_pnl_tab_and_existing_pnl_api_calls():
     assert 'id="pnl-copy-equity"' in html
     assert 'id="pnl-last-refresh"' in html
     assert "renderPnlSummaryBucket('master'" in html
+    assert "accountTypeLabel(account.account_type)" in html
+    assert "Master account" in html
+    assert "Copy account" in html
+    assert "${escapeHtml(account.account_type || '')} ${escapeHtml(account.account_ref || '')}" not in html
     assert "No account snapshots yet" in html
     assert "No active risk alerts" in html
 

@@ -118,6 +118,18 @@ def test_target_display_name_prefers_env_then_config(monkeypatch):
     assert target_display_name(target) == "Austin Live Account"
 
 
+def test_target_display_name_uses_default_display_name_for_stale_personal_config():
+    target = CopyTargetAccountConfig(
+        name="personal",
+        endpoint_env="WEBULL_PERSONAL_API_ENDPOINT",
+        api_key_env="WEBULL_PERSONAL_APP_KEY",
+        api_secret_env="WEBULL_PERSONAL_APP_SECRET",
+        account_id_env="WEBULL_PERSONAL_ACCOUNT_ID",
+    )
+
+    assert target_display_name(target) == "Austin Dugger's Account"
+
+
 def test_assess_risk_flags_loss_limit():
     level, alerts = assess_risk(
         total_pnl_today=-1200,
