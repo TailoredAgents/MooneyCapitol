@@ -222,7 +222,7 @@ def build_monitored_accounts(config: CopierConfig) -> list[MonitoredAccount]:
             logger.warning("pnl_monitor.master_client_unavailable", err=str(exc))
     for target in config.targets:
         account_ref = target.account_ref or os.getenv(target.account_id_env)
-        if not target.enabled or not account_ref:
+        if not account_ref:
             continue
         try:
             accounts.append(
@@ -245,23 +245,51 @@ def build_monitored_accounts(config: CopierConfig) -> list[MonitoredAccount]:
 
 
 def normalize_account_balance(payload: dict[str, Any]) -> NormalizedBalance:
-    data = _payload_data(payload)
+    data = _balance_data(payload)
     total_value = _first_float(
         data,
         [
             "total_value",
             "totalValue",
+            "total_net_liquidation_value",
+            "totalNetLiquidationValue",
             "net_liquidation",
             "netLiquidation",
+            "net_liquidation_value",
+            "netLiquidationValue",
+            "net_account_value",
+            "netAccountValue",
             "account_value",
             "accountValue",
             "equity",
             "equity_value",
             "equityValue",
+            "total_equity",
+            "totalEquity",
         ],
     )
-    equity_value = _first_float(data, ["equity_value", "equityValue", "equity", "net_liquidation", "netLiquidation"])
-    cash_balance = _first_float(data, ["cash_balance", "cashBalance", "cash", "cashAvailable"])
+    equity_value = _first_float(
+        data,
+        [
+            "equity_value",
+            "equityValue",
+            "equity",
+            "total_equity",
+            "totalEquity",
+            "total_net_liquidation_value",
+            "totalNetLiquidationValue",
+            "net_liquidation",
+            "netLiquidation",
+            "net_liquidation_value",
+            "netLiquidationValue",
+            "net_account_value",
+            "netAccountValue",
+        ],
+    )
+    cash_balance = _first_float(
+        data,
+        ["cash_balance", "cashBalance", "total_cash_balance", "totalCashBalance", "cash", "cashAvailable"],
+    )
     buying_power = _first_float(data, ["buying_power", "buyingPower", "dayTradingBuyingPower", "overnightBuyingPower"])
     if total_value is None:
         total_value = equity_value if equity_value is not None else cash_balance
@@ -508,6 +536,18 @@ def _payload_data(payload: dict[str, Any]) -> dict[str, Any]:
                 return {**data, **child}
         return data
     return payload
+
+
+def _balance_data(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _payload_data(payload)
+    currency_assets = data.get("account_currency_assets") or data.get("accountCurrencyAssets")
+    if isinstance(currency_assets, list):
+        asset = next((item for item in currency_assets if isinstance(item, dict) and item.get("currency") == "USD"), None)
+        if asset is None:
+            asset = next((item for item in currency_assets if isinstance(item, dict)), None)
+        if isinstance(asset, dict):
+            return {**asset, **data}
+    return data
 
 
 def _first_float(payload: dict[str, Any], keys: list[str]) -> float | None:

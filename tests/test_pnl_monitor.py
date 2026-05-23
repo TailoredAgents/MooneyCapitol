@@ -75,6 +75,29 @@ def test_normalize_account_balance_accepts_webull_aliases():
     assert balance.buying_power == 40000
 
 
+def test_normalize_account_balance_accepts_webull_openapi_balance_shape():
+    balance = normalize_account_balance(
+        {
+            "total_asset_currency": "USD",
+            "total_net_liquidation_value": "165.27",
+            "total_cash_balance": "165.27",
+            "account_currency_assets": [
+                {
+                    "currency": "USD",
+                    "cash_balance": "165.27",
+                    "buying_power": "661.08",
+                    "maintenance_margin": "0.00",
+                }
+            ],
+        }
+    )
+
+    assert balance.total_value == 165.27
+    assert balance.equity_value == 165.27
+    assert balance.cash_balance == 165.27
+    assert balance.buying_power == 661.08
+
+
 def test_assess_risk_flags_loss_limit():
     level, alerts = assess_risk(
         total_pnl_today=-1200,
