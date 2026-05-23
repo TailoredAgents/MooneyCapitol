@@ -51,14 +51,18 @@ def test_pages_include_png_favicon_link():
     dashboard = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
     login = Path("app/templates/login.html").read_text(encoding="utf-8")
     public_home = Path("app/templates/public_home.html").read_text(encoding="utf-8")
+    public_policy = Path("app/templates/public_policy.html").read_text(encoding="utf-8")
 
     assert 'href="/static/favicon-32.png"' in dashboard
     assert 'href="/static/favicon-32.png"' in login
     assert 'href="/static/favicon-32.png"' in public_home
+    assert 'href="/static/favicon-32.png"' in public_policy
     assert 'href="/static/favicon.png"' in dashboard
     assert 'href="/static/favicon.png"' in public_home
+    assert 'href="/static/favicon.png"' in public_policy
     assert 'href="/static/apple-touch-icon.png"' in login
     assert 'href="/static/apple-touch-icon.png"' in public_home
+    assert 'href="/static/apple-touch-icon.png"' in public_policy
 
 
 def test_public_homepage_has_share_and_search_metadata():
@@ -73,6 +77,38 @@ def test_public_homepage_has_share_and_search_metadata():
     assert '<meta property="og:image" content="https://mooneytrading.com/static/favicon.png" />' in html
     assert '<meta name="twitter:card" content="summary_large_image" />' in html
     assert '<meta name="twitter:image" content="https://mooneytrading.com/static/favicon.png" />' in html
+
+
+def test_public_homepage_links_to_risk_and_privacy_pages():
+    html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
+
+    assert 'href="/risk-disclosure"' in html
+    assert 'href="/privacy"' in html
+    assert "Risk Disclosure" in html
+    assert "Privacy" in html
+
+
+def test_public_policy_template_keeps_policy_pages_static_and_public_safe():
+    html = Path("app/templates/public_policy.html").read_text(encoding="utf-8")
+
+    assert "{{ title }} | Mooney Trading" in html
+    assert "Last updated:" in html
+    assert "Mooney Trading public information pages." in html
+    assert 'href="/dashboard"' in html
+    assert "<script" not in html
+    assert "fetch(" not in html
+    assert "api('/" not in html
+    assert "data-tab=" not in html
+    assert "/copier" not in html
+    assert "/pnl" not in html
+    assert "/launch" not in html
+    assert "COWORK_OPERATOR" not in html
+    assert "WEBULL_" not in html
+    assert "POLYGON_API_KEY" not in html
+    assert "SLACK_BOT_TOKEN" not in html
+    assert "Emergency Stop" not in html
+    assert "Copier Settings" not in html
+    assert "Launch Readiness" not in html
 
 
 def test_public_homepage_has_customer_facing_sections_without_private_controls():

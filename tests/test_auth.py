@@ -195,7 +195,7 @@ def test_public_homepage_is_available_without_login_when_dashboard_auth_configur
     assert "Copier Settings" not in resp.text
 
 
-def test_public_robots_and_sitemap_expose_only_customer_homepage(monkeypatch):
+def test_public_robots_and_sitemap_expose_only_public_pages(monkeypatch):
     _clear_auth_env(monkeypatch)
     monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")
     monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
@@ -215,8 +215,37 @@ def test_public_robots_and_sitemap_expose_only_customer_homepage(monkeypatch):
     assert sitemap.status_code == 200
     assert sitemap.headers["content-type"].startswith("application/xml")
     assert "<loc>https://mooneytrading.com/</loc>" in sitemap.text
+    assert "<loc>https://mooneytrading.com/risk-disclosure</loc>" in sitemap.text
+    assert "<loc>https://mooneytrading.com/privacy</loc>" in sitemap.text
     assert "/dashboard" not in sitemap.text
     assert "/copier" not in sitemap.text
+
+
+def test_public_risk_and_privacy_pages_are_available_without_login(monkeypatch):
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")
+    monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
+
+    client = TestClient(_build_app_with_auth_routes())
+    risk = client.get("/risk-disclosure")
+    privacy = client.get("/privacy")
+
+    assert risk.status_code == 200
+    assert "Risk Disclosure" in risk.text
+    assert "No financial advice" in risk.text
+    assert "No public copy-trading offer" in risk.text
+    assert "Technology limitations" in risk.text
+    assert "Operator Dashboard" in risk.text
+    assert "Copier Settings" not in risk.text
+    assert "WEBULL_MASTER" not in risk.text
+
+    assert privacy.status_code == 200
+    assert "Privacy Notice" in privacy.text
+    assert "Public site" in privacy.text
+    assert "Operator dashboard" in privacy.text
+    assert "Service providers" in privacy.text
+    assert "Copier Settings" not in privacy.text
+    assert "WEBULL_PERSONAL" not in privacy.text
 
 
 def test_login_page_renders_when_configured(monkeypatch):

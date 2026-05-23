@@ -403,9 +403,18 @@
       .footer-inner {
         width: min(1180px, calc(100% - 32px));
         margin: 0 auto;
+        display: grid;
+        gap: 12px;
         color: var(--muted);
         font-size: 13px;
         font-weight: 650;
+      }
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        color: #334155;
+        font-weight: 850;
       }
 
       @media (max-width: 980px) {
@@ -617,7 +626,14 @@
 
     <footer class="site-footer">
       <div class="footer-inner">
-        Trading involves risk, including the possible loss of principal. This site is informational and does not provide financial advice, investment recommendations, performance projections, or guaranteed outcomes. Nothing on this page is an offer to buy or sell securities, an offer to manage assets, or a public invitation to open a copy-trading account.
+        <div class="footer-links">
+          <a href="/risk-disclosure">Risk Disclosure</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/dashboard">Operator Dashboard</a>
+        </div>
+        <div>
+          Trading involves risk, including the possible loss of principal. This site is informational and does not provide financial advice, investment recommendations, performance projections, or guaranteed outcomes. Nothing on this page is an offer to buy or sell securities, an offer to manage assets, or a public invitation to open a copy-trading account.
+        </div>
       </div>
     </footer>
   </body>
