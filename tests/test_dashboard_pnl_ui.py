@@ -186,7 +186,12 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "Public site" in html
     assert "Private internal console" in html
     assert "Operational data, account controls, readiness checks, and execution controls stay inside authenticated internal access." in html
-    assert "Public information only." in html
+    assert "Private operations platform." in html
+    assert "Trading activity, account controls, readiness checks, and execution workflows remain inside authenticated internal access." in html
+    assert "cta-meta" in html
+    assert "footer-risk" in html
+    assert "primary-preview" in html
+    assert "feature-primary" in html
     assert 'href="/dashboard"' not in html
     assert "Operator Dashboard" not in html
     assert "No public account access, advisory service, or investment product is offered" in html
