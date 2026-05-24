@@ -22,6 +22,7 @@ from app.services.kv_store import get_store_mode, get_updated_at
 from app.services.learning import get_learning_service
 from app.services.paper_trader import paper_promotion_readiness_from_session
 from app.services.runtime import get_worker_tick
+from app.services.webull_paper import webull_paper_readiness
 
 
 router = APIRouter(prefix="/launch", tags=["launch"], dependencies=[Depends(require_operator)])
@@ -157,6 +158,24 @@ def launch_readiness(session: Session = Depends(db_session)):
             item.get("label", ""),
             {"actual": item.get("actual"), "required": item.get("required")},
         )
+    paper_webull_readiness = webull_paper_readiness(skip_network=True)
+    for item in paper_webull_readiness.get("checks", []):
+        add(
+            "AI Paper",
+            item.get("key", "webull_paper_check"),
+            item.get("ok", False),
+            item.get("severity", "warning"),
+            item.get("label", ""),
+            item.get("context") or {},
+        )
+    add(
+        "AI Paper",
+        "live_ai_trading_blocked",
+        os.getenv("AI_LIVE_TRADING_ENABLED", "0").lower() not in {"1", "true", "yes", "on"},
+        "blocker",
+        "Live autonomous AI trading is disabled",
+        {"AI_LIVE_TRADING_ENABLED": os.getenv("AI_LIVE_TRADING_ENABLED", "0")},
+    )
 
     open_reconciliations = session.execute(select(func.count(CopyReconciliation.id)).where(CopyReconciliation.status == "open")).scalar() or 0
     recent_audit = session.execute(select(CopierAuditEvent).order_by(desc(CopierAuditEvent.created_at)).limit(10)).scalars().all()
@@ -184,6 +203,7 @@ def launch_readiness(session: Session = Depends(db_session)):
             "learning_report": learning_report,
             "learning_translation": learning_translation,
             "paper_promotion": paper_readiness,
+            "paper_webull": paper_webull_readiness,
             "kv_updated_at": {
                 "app_config": _updated_at_iso("app_config"),
                 "worker_tick": _updated_at_iso("worker_tick"),

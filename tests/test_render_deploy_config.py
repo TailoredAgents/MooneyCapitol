@@ -19,6 +19,10 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count("OPENAI_DAILY_REQUEST_LIMIT") == 2
     assert text.count("OPENAI_RESEARCH_DAILY_REQUEST_LIMIT") == 2
     assert text.count("WEBULL_PERSONAL_DISPLAY_NAME") == 2
+    assert text.count("PAPER_TRADER_BROKER_MODE") == 2
+    assert text.count("WEBULL_AI_PAPER_API_ENDPOINT") == 2
+    assert text.count("WEBULL_AI_PAPER_ACCOUNT_ID") == 2
+    assert text.count("AI_LIVE_TRADING_ENABLED") == 2
     assert text.count('value: "0"') >= 6
     assert text.count("SLACK_SIGNING_SECRET") == 2
     assert "WEBULL_MASTER_ACCOUNT_EQUITY" not in text

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.auth import require_operator
 from app.services.paper_trader import list_paper_trades, paper_promotion_readiness
+from app.services.webull_paper import webull_paper_readiness
 
 
 router = APIRouter(prefix="/paper", tags=["paper"], dependencies=[Depends(require_operator)])
@@ -17,3 +18,8 @@ def get_paper_trades(limit: int = Query(default=100, ge=1, le=250)):
 @router.get("/readiness")
 def get_paper_readiness():
     return paper_promotion_readiness()
+
+
+@router.get("/webull/readiness")
+def get_webull_paper_readiness(skip_network: bool = Query(default=True)):
+    return webull_paper_readiness(skip_network=skip_network)

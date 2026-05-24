@@ -1355,7 +1355,7 @@
           <div class="account-refresh-bar">
             <button class="primary" id="refresh-paper">Refresh Paper Trades</button>
             <div class="account-refresh-meta">
-              <div><span class="muted">Mode</span> <strong>Internal simulation</strong></div>
+              <div><span class="muted">Mode</span> <strong id="paper-broker-mode">Internal simulation</strong></div>
               <div id="paper-status" class="status-line">Loading...</div>
             </div>
           </div>
@@ -1364,6 +1364,12 @@
         <div class="section panel">
           <h2>Promotion Gates</h2>
           <div id="paper-readiness-list" class="check-list">Loading...</div>
+        </div>
+
+        <div class="section panel">
+          <h2>Webull Paper Account</h2>
+          <p class="muted">Read-only account checks for the future Webull paper connection. Internal paper mode remains broker-disconnected until this is explicitly enabled.</p>
+          <div id="paper-webull-list" class="check-list">Loading...</div>
         </div>
 
         <div class="section">
@@ -1757,6 +1763,7 @@
       const shadowDecisionsBody = document.getElementById('shadow-decisions-body');
       const paperTradesBody = document.getElementById('paper-trades-body');
       const paperReadinessList = document.getElementById('paper-readiness-list');
+      const paperWebullList = document.getElementById('paper-webull-list');
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -1939,11 +1946,12 @@
 
       async function loadPaper() {
         try {
-          const [payload, readiness] = await Promise.all([
+          const [payload, readiness, webullPaper] = await Promise.all([
             api('/paper/trades?limit=100'),
             api('/paper/readiness'),
+            api('/paper/webull/readiness?skip_network=true'),
           ]);
-          renderPaper(payload, readiness);
+          renderPaper(payload, readiness, webullPaper);
           setStatus('paper-status', readiness.ready ? 'Promotion gates passed for observation.' : `${payload.count || 0} paper trade${payload.count === 1 ? '' : 's'} loaded. Still observing.`, !readiness.ready);
         } catch (err) {
           setStatus('paper-status', err.message, true);
@@ -2067,7 +2075,7 @@
           </tr>`;
       }
 
-      function renderPaper(payload, readiness = null) {
+      function renderPaper(payload, readiness = null, webullPaper = null) {
         const summary = payload.summary || {};
         setText('paper-open', String(summary.open ?? 0));
         setText('paper-closed', String(summary.closed ?? 0));
@@ -2116,6 +2124,32 @@
             </div>
           `).join('') : '<div class="muted">Promotion gates will appear after the paper readiness endpoint is available.</div>';
         }
+        renderWebullPaper(webullPaper);
+      }
+
+      function renderWebullPaper(payload) {
+        if (!paperWebullList) return;
+        const config = payload?.config || {};
+        const modeLabel = payload?.status === 'internal'
+          ? 'Internal simulation'
+          : `${config.broker_mode || 'webull_paper'} ${payload?.network_checked ? '(validated)' : '(configured)'}`;
+        setText('paper-broker-mode', modeLabel);
+        const checks = payload?.checks || [];
+        const details = [
+          `<div class="check ok">
+            <span class="mark">Mode</span>
+            <span>${escapeHtml(payload?.message || 'No Webull paper status available.')}</span>
+            <div class="muted">Account ${escapeHtml(config.display_name || 'AI Paper Account')} ${config.masked_account_id ? `| ${escapeHtml(config.masked_account_id)}` : ''}</div>
+          </div>`,
+          ...checks.map((check) => `
+            <div class="check ${check.ok ? 'ok' : 'bad'}">
+              <span class="mark">${check.ok ? 'OK' : '!'}</span>
+              <span>${escapeHtml(check.label || check.key)}</span>
+              <div class="muted">${escapeHtml(check.severity || 'info')}</div>
+            </div>
+          `)
+        ];
+        paperWebullList.innerHTML = details.join('');
       }
 
       function renderTrades(items) {

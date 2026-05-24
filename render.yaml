@@ -123,6 +123,8 @@ services:
         value: "0.05"
       - key: PAPER_TRADER_ENABLED
         value: "1"
+      - key: PAPER_TRADER_BROKER_MODE
+        value: internal
       - key: PAPER_TRADER_ACCOUNT_EQUITY
         value: "10000"
       - key: PAPER_TRADER_SIZE_PCT
@@ -137,6 +139,20 @@ services:
         value: "0.20"
       - key: PAPER_PROMOTION_MAX_DRAWDOWN_PCT
         value: "0.10"
+      - key: WEBULL_AI_PAPER_API_ENDPOINT
+        sync: false
+      - key: WEBULL_AI_PAPER_EVENTS_ENDPOINT
+        sync: false
+      - key: WEBULL_AI_PAPER_APP_KEY
+        sync: false
+      - key: WEBULL_AI_PAPER_APP_SECRET
+        sync: false
+      - key: WEBULL_AI_PAPER_ACCOUNT_ID
+        sync: false
+      - key: WEBULL_AI_PAPER_DISPLAY_NAME
+        value: Austin Webull Paper Account
+      - key: AI_LIVE_TRADING_ENABLED
+        value: "0"
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
@@ -263,6 +279,8 @@ services:
         value: "0.05"
       - key: PAPER_TRADER_ENABLED
         value: "1"
+      - key: PAPER_TRADER_BROKER_MODE
+        value: internal
       - key: PAPER_TRADER_ACCOUNT_EQUITY
         value: "10000"
       - key: PAPER_TRADER_SIZE_PCT
@@ -277,6 +295,20 @@ services:
         value: "0.20"
       - key: PAPER_PROMOTION_MAX_DRAWDOWN_PCT
         value: "0.10"
+      - key: WEBULL_AI_PAPER_API_ENDPOINT
+        sync: false
+      - key: WEBULL_AI_PAPER_EVENTS_ENDPOINT
+        sync: false
+      - key: WEBULL_AI_PAPER_APP_KEY
+        sync: false
+      - key: WEBULL_AI_PAPER_APP_SECRET
+        sync: false
+      - key: WEBULL_AI_PAPER_ACCOUNT_ID
+        sync: false
+      - key: WEBULL_AI_PAPER_DISPLAY_NAME
+        value: Austin Webull Paper Account
+      - key: AI_LIVE_TRADING_ENABLED
+        value: "0"
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD

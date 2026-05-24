@@ -342,9 +342,11 @@ Learning and fill matching defaults:
 - `LEARNING_MATCH_MIN_CONFIDENCE=likely` means weak matches stay separate instead of being counted as taken scout alerts.
 - `TRADE_MATCH_MIN_CONFIDENCE=likely` stores the same confidence-gated setup link when broker fills are ingested.
 - `SHADOW_TRADER_ENABLED=1` records read-only AI decisions on scout alerts. It never places orders; it only stores what the model would have done for later review.
-- `PAPER_TRADER_ENABLED=1` lets shadow `would_take` decisions open internal paper trades. This is still broker-disconnected and does not submit Webull orders.
+- `PAPER_TRADER_ENABLED=1` lets shadow `would_take` decisions open internal paper trades.
+- `PAPER_TRADER_BROKER_MODE=internal` keeps AI paper trading broker-disconnected by default. Later, set it to `webull_paper` only after `WEBULL_AI_PAPER_*` credentials are configured and validated.
 - `LEARNING_PAPER_SAMPLE_WEIGHT=0.25` lets closed AI paper trades influence nightly learning at low weight while real Connor trades remain the highest-trust signal.
 - `PAPER_PROMOTION_*` env vars define read-only promotion gates for the AI paper trader. Passing them reports readiness only; it does not enable live autonomous trading.
+- `AI_LIVE_TRADING_ENABLED=0` is an explicit launch-readiness gate. The current autonomous AI work is observation/paper only.
 
 Set these during the first Render Blueprint deploy:
 
@@ -368,11 +370,17 @@ Leave these blank until accounts/subscriptions are ready:
 - `WEBULL_PERSONAL_APP_KEY`
 - `WEBULL_PERSONAL_APP_SECRET`
 - `WEBULL_PERSONAL_ACCOUNT_ID`
+- `WEBULL_AI_PAPER_API_ENDPOINT`
+- `WEBULL_AI_PAPER_EVENTS_ENDPOINT`
+- `WEBULL_AI_PAPER_APP_KEY`
+- `WEBULL_AI_PAPER_APP_SECRET`
+- `WEBULL_AI_PAPER_ACCOUNT_ID`
 
 Before live validation:
 
 - Add the Polygon Advanced key for real-time broad scanning.
 - Add Webull OpenAPI credentials, account IDs, HTTP endpoint, and events endpoint.
+- Keep `PAPER_TRADER_BROKER_MODE=internal` until the Paper Trader tab shows the Webull paper account settings are present. After the Webull paper account exists under the copy-account login, set `PAPER_TRADER_BROKER_MODE=webull_paper` and run the read-only Webull paper validation before any future paper-order integration is enabled.
 - Let the P&L monitor pull live Webull account equity before enabling copy trading. `WEBULL_MASTER_ACCOUNT_EQUITY` and `WEBULL_PERSONAL_ACCOUNT_EQUITY` remain optional emergency fallback env vars, but they are not required for the normal launch path.
 - Keep `COPIER_GLOBAL_KILL_SWITCH=1` until read-only validation passes.
 - Use the Launch tab to confirm remaining blockers are expected credential/data blockers.
