@@ -22,6 +22,7 @@ from app.api.routes.reports import router as reports_router
 from app.api.routes.learning import router as learning_router
 from app.api.routes.copier import router as copier_router
 from app.api.routes.launch import router as launch_router
+from app.api.routes.paper import router as paper_router
 from app.api.routes.pnl import router as pnl_router
 from app.api.routes.shadow import router as shadow_router
 from app.api.routes.slash import router as slash_router
@@ -70,6 +71,7 @@ app.include_router(reports_router)
 app.include_router(learning_router)
 app.include_router(copier_router)
 app.include_router(launch_router)
+app.include_router(paper_router)
 app.include_router(pnl_router)
 app.include_router(shadow_router)
 app.include_router(slash_router)

@@ -1169,6 +1169,9 @@
             <button class="tab-button" data-tab="shadow">
               <span><span class="nav-title">Shadow Trader</span><span class="nav-subtitle">Read-only AI trade decisions</span></span>
             </button>
+            <button class="tab-button" data-tab="paper">
+              <span><span class="nav-title">Paper Trader</span><span class="nav-subtitle">Internal AI paper performance</span></span>
+            </button>
             <button class="tab-button" data-tab="copier">
               <span><span class="nav-title">Copier Settings</span><span class="nav-subtitle">Modes, kill switch, and copy accounts</span></span>
             </button>
@@ -1308,6 +1311,76 @@
                 </tr>
               </thead>
               <tbody id="shadow-decisions-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-paper" class="tab-panel owner-panel">
+        <div class="page-heading">
+          <div>
+            <h2>Paper Trader</h2>
+            <p>Internal paper trades opened from high-confidence shadow decisions. No broker orders are submitted from this page.</p>
+          </div>
+          <span class="page-badge admin">Developer Setup</span>
+        </div>
+        <div class="grid">
+          <div class="stat">
+            <div class="muted">Open</div>
+            <div id="paper-open" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Closed</div>
+            <div id="paper-closed" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Win Rate</div>
+            <div id="paper-win-rate" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Realized P&L</div>
+            <div id="paper-realized" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Open P&L</div>
+            <div id="paper-unrealized" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Avg R</div>
+            <div id="paper-avg-r" class="value">-</div>
+          </div>
+        </div>
+
+        <div class="section panel">
+          <div class="account-refresh-bar">
+            <button class="primary" id="refresh-paper">Refresh Paper Trades</button>
+            <div class="account-refresh-meta">
+              <div><span class="muted">Mode</span> <strong>Internal simulation</strong></div>
+              <div id="paper-status" class="status-line">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>AI Paper Trades</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Opened</th>
+                  <th>Symbol</th>
+                  <th>Status</th>
+                  <th>Entry</th>
+                  <th>Stop</th>
+                  <th>Target</th>
+                  <th>Last/Exit</th>
+                  <th>Size</th>
+                  <th>P&L</th>
+                  <th>R</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="paper-trades-body"></tbody>
             </table>
           </div>
         </div>
@@ -1677,6 +1750,7 @@
       const launchSummaryList = document.getElementById('launch-summary-list');
       const launchReadonlyBody = document.getElementById('launch-readonly-body');
       const shadowDecisionsBody = document.getElementById('shadow-decisions-body');
+      const paperTradesBody = document.getElementById('paper-trades-body');
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -1723,6 +1797,7 @@
           button.classList.add('active');
           document.getElementById(`tab-${button.dataset.tab}`).classList.add('active');
           if (button.dataset.tab === 'shadow') loadShadow();
+          if (button.dataset.tab === 'paper') loadPaper();
           if (button.dataset.tab === 'launch') loadLaunchReadiness();
           if (button.dataset.tab === 'copier') loadCopier();
           if (button.dataset.tab === 'trades') loadTrades();
@@ -1856,6 +1931,16 @@
         }
       }
 
+      async function loadPaper() {
+        try {
+          const payload = await api('/paper/trades?limit=100');
+          renderPaper(payload);
+          setStatus('paper-status', `${payload.count || 0} paper trade${payload.count === 1 ? '' : 's'} loaded.`, false);
+        } catch (err) {
+          setStatus('paper-status', err.message, true);
+        }
+      }
+
       async function loadTrades() {
         try {
           const [trades, recap] = await Promise.all([
@@ -1968,6 +2053,47 @@
               <div class="empty-state">
                 <div class="title">No shadow decisions yet</div>
                 <div class="muted">When scout alerts fire, the model will record what it would have done here without placing orders.</div>
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      function renderPaper(payload) {
+        const summary = payload.summary || {};
+        setText('paper-open', String(summary.open ?? 0));
+        setText('paper-closed', String(summary.closed ?? 0));
+        setText('paper-win-rate', formatPct(summary.win_rate));
+        const realized = document.getElementById('paper-realized');
+        if (realized) realized.innerHTML = moneySpan(summary.realized_pnl);
+        const unrealized = document.getElementById('paper-unrealized');
+        if (unrealized) unrealized.innerHTML = moneySpan(summary.open_unrealized_pnl);
+        setText('paper-avg-r', formatDecimal(summary.avg_r, 2));
+        const items = payload.items || [];
+        paperTradesBody.innerHTML = items.length ? items.map((item) => {
+          const pnlValue = item.status === 'closed' ? item.realized_pnl : item.unrealized_pnl;
+          const lastOrExit = item.status === 'closed'
+            ? `${formatMoney(item.exit_price)} ${item.exit_reason ? `(${escapeHtml(item.exit_reason)})` : ''}`
+            : formatMoney(item.last_price);
+          return `
+            <tr>
+              <td>${formatTime(item.opened_at)}</td>
+              <td><strong>${escapeHtml(item.symbol || '')}</strong><div class="muted">${escapeHtml(item.direction || '')}</div></td>
+              <td>${statusChip(item.status)}</td>
+              <td>${formatMoney(item.entry_price)}</td>
+              <td>${formatMoney(item.stop_price)}</td>
+              <td>${formatMoney(item.target_price)}</td>
+              <td>${lastOrExit}</td>
+              <td>${formatPct(item.size_pct)}<div class="muted">${formatQty(item.qty)} sh</div></td>
+              <td>${moneySpan(pnlValue)}</td>
+              <td>${formatDecimal(item.realized_r, 2)}</td>
+              <td><div class="muted">${escapeHtml(item.reason || '')}</div></td>
+            </tr>`;
+        }).join('') : `
+          <tr>
+            <td colspan="11">
+              <div class="empty-state">
+                <div class="title">No AI paper trades yet</div>
+                <div class="muted">When the shadow trader records a high-confidence would-take decision, a broker-disconnected paper trade will appear here.</div>
               </div>
             </td>
           </tr>`;
@@ -2415,6 +2541,7 @@
       document.getElementById('save-global').addEventListener('click', saveGlobal);
       document.getElementById('refresh-launch').addEventListener('click', loadLaunchReadiness);
       document.getElementById('refresh-shadow').addEventListener('click', loadShadow);
+      document.getElementById('refresh-paper').addEventListener('click', loadPaper);
       document.getElementById('enable-kill').addEventListener('click', () => setKillSwitch(true));
       document.getElementById('disable-kill').addEventListener('click', () => setKillSwitch(false));
       document.getElementById('refresh-pnl').addEventListener('click', refreshPnl);

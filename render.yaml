@@ -119,6 +119,12 @@ services:
         value: "2.00"
       - key: SHADOW_TRADER_SIZE_PCT
         value: "0.05"
+      - key: PAPER_TRADER_ENABLED
+        value: "1"
+      - key: PAPER_TRADER_ACCOUNT_EQUITY
+        value: "10000"
+      - key: PAPER_TRADER_SIZE_PCT
+        value: "0.05"
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
@@ -240,6 +246,12 @@ services:
       - key: SHADOW_TRADER_MIN_RR
         value: "2.00"
       - key: SHADOW_TRADER_SIZE_PCT
+        value: "0.05"
+      - key: PAPER_TRADER_ENABLED
+        value: "1"
+      - key: PAPER_TRADER_ACCOUNT_EQUITY
+        value: "10000"
+      - key: PAPER_TRADER_SIZE_PCT
         value: "0.05"
       - key: COWORK_OPERATOR_USERNAME
         sync: false

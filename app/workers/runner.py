@@ -46,6 +46,7 @@ from app.services.levels import find_gap_edges, find_htf_levels, nearest_target
 from app.services.live_state import set_lanes
 from app.services.live_state import ensure_lanes_initialized
 from app.services.pnl_monitor import PnlMonitor
+from app.services.paper_trader import maybe_open_paper_trade_from_shadow_decision, update_open_paper_trades
 from app.services.runtime import ensure_worker_tick_initialized, update_worker_tick
 from app.services.scout_explanations import generate_scout_alert_explanation
 from app.services.shadow_trader import record_shadow_decision
@@ -376,7 +377,7 @@ def record_shadow_alert_decision(
     payload: dict,
 ) -> None:
     try:
-        record_shadow_decision(
+        shadow_id = record_shadow_decision(
             alert_id=alert_id,
             setup_id=setup_id,
             symbol=symbol,
@@ -384,6 +385,7 @@ def record_shadow_alert_decision(
             alert_type=alert_type,
             payload=payload,
         )
+        maybe_open_paper_trade_from_shadow_decision(shadow_id)
     except Exception as exc:
         logger.warning("shadow.decision.failed", symbol=symbol, alert_id=alert_id, err=str(exc))
 
@@ -818,6 +820,8 @@ async def scan_consolidations(ctx: WorkerContext):
         candles_2m = _to_candles(candles_2m_raw)
         if not candles_1m:
             continue
+        latest = candles_1m[-1]
+        update_open_paper_trades(symbol, high=latest.h, low=latest.l, close=latest.c, mark_at=now_et())
 
         box = find_consolidation_box(candles_1m, candles_2m, cfg)
         if not box:

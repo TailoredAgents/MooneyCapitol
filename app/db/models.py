@@ -367,6 +367,41 @@ class ShadowDecision(Base):
     )
 
 
+class PaperTrade(Base):
+    __tablename__ = "paper_trades"
+    id = Column(BigInteger, primary_key=True)
+    shadow_decision_id = Column(BigInteger, ForeignKey("shadow_decisions.id"), nullable=True, unique=True, index=True)
+    alert_id = Column(BigInteger, ForeignKey("alerts.id"), nullable=True, index=True)
+    setup_id = Column(BigInteger, ForeignKey("setups.id"), nullable=True, index=True)
+    symbol = Column(String(16), nullable=False, index=True)
+    direction = Column(String(8), nullable=False)
+    status = Column(String(16), nullable=False, default="open", index=True)
+    opened_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    closed_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    entry_price = Column(Float, nullable=False)
+    stop_price = Column(Float, nullable=True)
+    target_price = Column(Float, nullable=True)
+    exit_price = Column(Float, nullable=True)
+    exit_reason = Column(String(32), nullable=True)
+    size_pct = Column(Float, nullable=False, default=0.0)
+    account_equity = Column(Float, nullable=False, default=0.0)
+    notional = Column(Float, nullable=False, default=0.0)
+    qty = Column(Float, nullable=False, default=0.0)
+    unrealized_pnl = Column(Float, nullable=False, default=0.0)
+    realized_pnl = Column(Float, nullable=True)
+    realized_r = Column(Float, nullable=True)
+    last_price = Column(Float, nullable=True)
+    last_mark_at = Column(DateTime(timezone=True), nullable=True)
+    model_version = Column(String(64), nullable=False, default="paper-v1")
+    reason = Column(Text, nullable=True)
+    raw_context = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    __table_args__ = (
+        Index("idx_paper_trade_symbol_status", "symbol", "status"),
+        Index("idx_paper_trade_status_opened", "status", "opened_at"),
+    )
+
+
 class TradingSession(Base):
     __tablename__ = "trading_sessions"
     id = Column(BigInteger, primary_key=True)
