@@ -1361,6 +1361,11 @@
           </div>
         </div>
 
+        <div class="section panel">
+          <h2>Promotion Gates</h2>
+          <div id="paper-readiness-list" class="check-list">Loading...</div>
+        </div>
+
         <div class="section">
           <h2>AI Paper Trades</h2>
           <div class="scroll">
@@ -1751,6 +1756,7 @@
       const launchReadonlyBody = document.getElementById('launch-readonly-body');
       const shadowDecisionsBody = document.getElementById('shadow-decisions-body');
       const paperTradesBody = document.getElementById('paper-trades-body');
+      const paperReadinessList = document.getElementById('paper-readiness-list');
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -1933,9 +1939,12 @@
 
       async function loadPaper() {
         try {
-          const payload = await api('/paper/trades?limit=100');
-          renderPaper(payload);
-          setStatus('paper-status', `${payload.count || 0} paper trade${payload.count === 1 ? '' : 's'} loaded.`, false);
+          const [payload, readiness] = await Promise.all([
+            api('/paper/trades?limit=100'),
+            api('/paper/readiness'),
+          ]);
+          renderPaper(payload, readiness);
+          setStatus('paper-status', readiness.ready ? 'Promotion gates passed for observation.' : `${payload.count || 0} paper trade${payload.count === 1 ? '' : 's'} loaded. Still observing.`, !readiness.ready);
         } catch (err) {
           setStatus('paper-status', err.message, true);
         }
@@ -2058,7 +2067,7 @@
           </tr>`;
       }
 
-      function renderPaper(payload) {
+      function renderPaper(payload, readiness = null) {
         const summary = payload.summary || {};
         setText('paper-open', String(summary.open ?? 0));
         setText('paper-closed', String(summary.closed ?? 0));
@@ -2097,6 +2106,16 @@
               </div>
             </td>
           </tr>`;
+        if (paperReadinessList) {
+          const checks = readiness?.checks || [];
+          paperReadinessList.innerHTML = checks.length ? checks.map((check) => `
+            <div class="check ${check.ok ? 'ok' : 'bad'}">
+              <span class="mark">${check.ok ? 'OK' : '!'}</span>
+              <span>${escapeHtml(check.label || check.key)}</span>
+              <div class="muted">actual ${formatGateValue(check.actual)} / required ${formatGateValue(check.required)}</div>
+            </div>
+          `).join('') : '<div class="muted">Promotion gates will appear after the paper readiness endpoint is available.</div>';
+        }
       }
 
       function renderTrades(items) {
@@ -2521,6 +2540,12 @@
       function formatDecimal(value, digits = 2) {
         const number = Number(value);
         return Number.isFinite(number) ? number.toFixed(digits) : '-';
+      }
+      function formatGateValue(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return value == null ? '-' : escapeHtml(value);
+        if (number >= 0 && number <= 1) return formatPct(number);
+        return Number.isInteger(number) ? String(number) : number.toFixed(2);
       }
       function formatTime(value) {
         if (!value) return '-';

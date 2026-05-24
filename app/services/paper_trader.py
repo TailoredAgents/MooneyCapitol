@@ -148,8 +148,83 @@ def list_paper_trades(limit: int = 100) -> dict[str, Any]:
         return {"items": [_serialize(row) for row in trades], "count": len(trades), "summary": paper_summary_from_session(session)}
 
 
+def paper_promotion_readiness() -> dict[str, Any]:
+    with get_session() as session:
+        return paper_promotion_readiness_from_session(session)
+
+
+def paper_promotion_readiness_from_session(session) -> dict[str, Any]:
+    rows = list(session.execute(select(PaperTrade)).scalars())
+    closed = sorted(
+        [row for row in rows if row.status == "closed"],
+        key=lambda row: row.closed_at or row.opened_at or datetime.min.replace(tzinfo=timezone.utc),
+    )
+    summary = _paper_summary_from_rows(rows)
+    min_closed = int(os.getenv("PAPER_PROMOTION_MIN_CLOSED_TRADES", "50"))
+    min_days = int(os.getenv("PAPER_PROMOTION_MIN_TRADING_DAYS", "3"))
+    min_win_rate = float(os.getenv("PAPER_PROMOTION_MIN_WIN_RATE", "0.55"))
+    min_avg_r = float(os.getenv("PAPER_PROMOTION_MIN_AVG_R", "0.20"))
+    max_drawdown_pct_limit = float(os.getenv("PAPER_PROMOTION_MAX_DRAWDOWN_PCT", "0.10"))
+
+    trading_days = {
+        (row.closed_at or row.opened_at).date().isoformat()
+        for row in closed
+        if (row.closed_at or row.opened_at) is not None
+    }
+    drawdown = _max_realized_drawdown(closed)
+    checks = [
+        {
+            "key": "min_closed_trades",
+            "ok": len(closed) >= min_closed,
+            "label": f"At least {min_closed} closed AI paper trades",
+            "actual": len(closed),
+            "required": min_closed,
+        },
+        {
+            "key": "min_trading_days",
+            "ok": len(trading_days) >= min_days,
+            "label": f"At least {min_days} trading days covered",
+            "actual": len(trading_days),
+            "required": min_days,
+        },
+        {
+            "key": "min_win_rate",
+            "ok": summary["win_rate"] is not None and summary["win_rate"] >= min_win_rate,
+            "label": f"Win rate is at least {min_win_rate:.0%}",
+            "actual": summary["win_rate"],
+            "required": min_win_rate,
+        },
+        {
+            "key": "min_avg_r",
+            "ok": summary["avg_r"] is not None and summary["avg_r"] >= min_avg_r,
+            "label": f"Average R is at least {min_avg_r:.2f}",
+            "actual": summary["avg_r"],
+            "required": min_avg_r,
+        },
+        {
+            "key": "max_drawdown",
+            "ok": drawdown["max_drawdown_pct"] is not None and drawdown["max_drawdown_pct"] <= max_drawdown_pct_limit,
+            "label": f"Realized drawdown stays under {max_drawdown_pct_limit:.0%}",
+            "actual": drawdown["max_drawdown_pct"],
+            "required": max_drawdown_pct_limit,
+        },
+    ]
+    ready = bool(checks) and all(check["ok"] for check in checks)
+    return {
+        "ready": ready,
+        "status": "passed" if ready else "observing",
+        "message": "AI paper trader has met promotion rules." if ready else "AI paper trader is still being observed.",
+        "checks": checks,
+        "summary": summary | drawdown | {"trading_days": len(trading_days)},
+    }
+
+
 def paper_summary_from_session(session) -> dict[str, Any]:
     rows = list(session.execute(select(PaperTrade)).scalars())
+    return _paper_summary_from_rows(rows)
+
+
+def _paper_summary_from_rows(rows: list[PaperTrade]) -> dict[str, Any]:
     closed = [row for row in rows if row.status == "closed"]
     wins = [row for row in closed if (row.realized_pnl or 0.0) > 0]
     total_realized = sum(float(row.realized_pnl or 0.0) for row in closed)
@@ -164,6 +239,23 @@ def paper_summary_from_session(session) -> dict[str, Any]:
         "realized_pnl": round(total_realized, 2),
         "open_unrealized_pnl": round(open_unrealized, 2),
         "avg_r": round(avg_r, 4) if avg_r is not None else None,
+    }
+
+
+def _max_realized_drawdown(closed: list[PaperTrade]) -> dict[str, float | None]:
+    if not closed:
+        return {"max_drawdown": None, "max_drawdown_pct": None}
+    equity = float(closed[0].account_equity or _account_equity() or 0.0)
+    cumulative = 0.0
+    peak = 0.0
+    max_drawdown = 0.0
+    for row in closed:
+        cumulative += float(row.realized_pnl or 0.0)
+        peak = max(peak, cumulative)
+        max_drawdown = max(max_drawdown, peak - cumulative)
+    return {
+        "max_drawdown": round(max_drawdown, 2),
+        "max_drawdown_pct": round(max_drawdown / equity, 6) if equity > 0 else None,
     }
 
 

@@ -121,10 +121,79 @@ def test_paper_trade_closes_at_stop_conservatively(monkeypatch):
     assert trade.realized_r == -1
 
 
+def test_paper_promotion_readiness_passes_when_rules_are_met(monkeypatch):
+    base = datetime(2026, 5, 24, 14, 0, tzinfo=timezone.utc)
+    trades = []
+    for idx, pnl in enumerate([120, 90, -40, 110]):
+        trades.append(
+            PaperTrade(
+                id=idx + 10,
+                symbol=f"T{idx}",
+                direction="long",
+                status="closed",
+                opened_at=base,
+                closed_at=base.replace(day=24 + (idx % 2)),
+                entry_price=4.0,
+                stop_price=3.8,
+                target_price=4.6,
+                size_pct=0.05,
+                account_equity=10000,
+                notional=500,
+                qty=125,
+                realized_pnl=pnl,
+                realized_r=1.0 if pnl > 0 else -1.0,
+            )
+        )
+    session = FakeSession(trades=trades)
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_CLOSED_TRADES", "4")
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_TRADING_DAYS", "2")
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_WIN_RATE", "0.50")
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_AVG_R", "0.20")
+    monkeypatch.setenv("PAPER_PROMOTION_MAX_DRAWDOWN_PCT", "0.05")
+
+    readiness = paper_trader.paper_promotion_readiness_from_session(session)
+
+    assert readiness["ready"] is True
+    assert readiness["summary"]["closed"] == 4
+    assert readiness["summary"]["win_rate"] == 0.75
+    assert readiness["summary"]["max_drawdown_pct"] == 0.004
+
+
+def test_paper_promotion_readiness_blocks_too_few_trades(monkeypatch):
+    trade = PaperTrade(
+        id=31,
+        symbol="MNY",
+        direction="long",
+        status="closed",
+        opened_at=datetime(2026, 5, 24, 14, 0, tzinfo=timezone.utc),
+        closed_at=datetime(2026, 5, 24, 14, 10, tzinfo=timezone.utc),
+        entry_price=4.0,
+        size_pct=0.05,
+        account_equity=10000,
+        notional=500,
+        qty=125,
+        realized_pnl=100,
+        realized_r=1.0,
+    )
+    session = FakeSession(trades=[trade])
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_CLOSED_TRADES", "2")
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_TRADING_DAYS", "1")
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_WIN_RATE", "0.50")
+    monkeypatch.setenv("PAPER_PROMOTION_MIN_AVG_R", "0.20")
+    monkeypatch.setenv("PAPER_PROMOTION_MAX_DRAWDOWN_PCT", "0.10")
+
+    readiness = paper_trader.paper_promotion_readiness_from_session(session)
+
+    assert readiness["ready"] is False
+    assert readiness["checks"][0]["key"] == "min_closed_trades"
+    assert readiness["checks"][0]["ok"] is False
+
+
 def test_paper_trades_route_is_registered():
     paths = {route.path for route in paper.router.routes}
 
     assert "/paper/trades" in paths
+    assert "/paper/readiness" in paths
 
 
 def test_paper_route_returns_service_payload(monkeypatch):
@@ -138,3 +207,15 @@ def test_paper_route_returns_service_payload(monkeypatch):
 
     assert payload["count"] == 0
     assert payload["limit"] == 17
+
+
+def test_paper_readiness_route_returns_service_payload(monkeypatch):
+    monkeypatch.setattr(
+        paper,
+        "paper_promotion_readiness",
+        lambda: {"ready": False, "checks": [], "summary": {}},
+    )
+
+    payload = paper.get_paper_readiness()
+
+    assert payload["ready"] is False

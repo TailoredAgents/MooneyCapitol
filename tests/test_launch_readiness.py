@@ -125,3 +125,9 @@ def test_learning_translation_ignores_missing_or_unfinished_artifact(monkeypatch
     monkeypatch.setattr("app.api.routes.launch.latest_ai_artifact", lambda *args, **kwargs: None)
 
     assert _learning_translation(FakeSession()) is None
+
+
+def test_launch_readiness_imports_paper_promotion_gate():
+    import app.api.routes.launch as launch
+
+    assert callable(launch.paper_promotion_readiness_from_session)

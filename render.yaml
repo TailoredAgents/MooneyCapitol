@@ -127,6 +127,16 @@ services:
         value: "10000"
       - key: PAPER_TRADER_SIZE_PCT
         value: "0.05"
+      - key: PAPER_PROMOTION_MIN_CLOSED_TRADES
+        value: "50"
+      - key: PAPER_PROMOTION_MIN_TRADING_DAYS
+        value: "3"
+      - key: PAPER_PROMOTION_MIN_WIN_RATE
+        value: "0.55"
+      - key: PAPER_PROMOTION_MIN_AVG_R
+        value: "0.20"
+      - key: PAPER_PROMOTION_MAX_DRAWDOWN_PCT
+        value: "0.10"
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
@@ -257,6 +267,16 @@ services:
         value: "10000"
       - key: PAPER_TRADER_SIZE_PCT
         value: "0.05"
+      - key: PAPER_PROMOTION_MIN_CLOSED_TRADES
+        value: "50"
+      - key: PAPER_PROMOTION_MIN_TRADING_DAYS
+        value: "3"
+      - key: PAPER_PROMOTION_MIN_WIN_RATE
+        value: "0.55"
+      - key: PAPER_PROMOTION_MIN_AVG_R
+        value: "0.20"
+      - key: PAPER_PROMOTION_MAX_DRAWDOWN_PCT
+        value: "0.10"
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
