@@ -292,6 +292,9 @@ def _paper_summary_from_rows(
             "connor_also_took_winners": sum(1 for row in matched_master if float(row.realized_pnl or 0.0) > 0),
             "connor_also_took_losers": sum(1 for row in matched_master if float(row.realized_pnl or 0.0) < 0),
         },
+        "period_breakdown": _period_breakdown(rows),
+        "symbol_stats": _symbol_stats(rows),
+        "exit_reason_stats": _exit_reason_stats(rows),
         "closed": len(closed),
         "wins": len(wins),
         "losses": len(losses),
@@ -300,6 +303,88 @@ def _paper_summary_from_rows(
         "open_unrealized_pnl": round(open_unrealized, 2),
         "avg_r": round(avg_r, 4) if avg_r is not None else None,
     }
+
+
+def _avg_hold_seconds(rows: list[PaperTrade]) -> int | None:
+    holds = [
+        int((_as_utc(row.closed_at) - _as_utc(row.opened_at)).total_seconds())
+        for row in rows
+        if row.opened_at and row.closed_at
+    ]
+    return int(sum(holds) / len(holds)) if holds else None
+
+
+def _period_stats(rows: list[PaperTrade], *, start: datetime | None = None) -> dict[str, Any]:
+    closed = [row for row in rows if row.status == "closed"]
+    if start is not None:
+        closed = [row for row in closed if row.closed_at is not None and _as_utc(row.closed_at) >= start]
+    wins = [row for row in closed if (row.realized_pnl or 0.0) > 0]
+    losses = [row for row in closed if (row.realized_pnl or 0.0) < 0]
+    realized_pnl = sum(float(row.realized_pnl or 0.0) for row in closed)
+    avg_r_val = sum(float(row.realized_r or 0.0) for row in closed) / len(closed) if closed else None
+    return {
+        "trades": len(closed),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(len(wins) / len(closed), 4) if closed else None,
+        "realized_pnl": round(realized_pnl, 2),
+        "avg_r": round(avg_r_val, 4) if avg_r_val is not None else None,
+        "avg_hold_seconds": _avg_hold_seconds(closed),
+    }
+
+
+def _period_breakdown(rows: list[PaperTrade]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+    week_start = today_start - timedelta(days=today_start.weekday())
+    last_30_start = today_start - timedelta(days=30)
+    return {
+        "today": _period_stats(rows, start=today_start),
+        "this_week": _period_stats(rows, start=week_start),
+        "last_30_days": _period_stats(rows, start=last_30_start),
+        "all_time": _period_stats(rows),
+    }
+
+
+def _symbol_stats(rows: list[PaperTrade], *, top_n: int = 10) -> list[dict[str, Any]]:
+    closed = [row for row in rows if row.status == "closed"]
+    by_symbol: dict[str, list[PaperTrade]] = {}
+    for row in closed:
+        sym = str(row.symbol or "").upper()
+        by_symbol.setdefault(sym, []).append(row)
+    result = []
+    for sym, sym_rows in by_symbol.items():
+        wins = [r for r in sym_rows if (r.realized_pnl or 0.0) > 0]
+        realized_pnl = sum(float(r.realized_pnl or 0.0) for r in sym_rows)
+        avg_r_val = sum(float(r.realized_r or 0.0) for r in sym_rows) / len(sym_rows)
+        result.append({
+            "symbol": sym,
+            "trades": len(sym_rows),
+            "wins": len(wins),
+            "win_rate": round(len(wins) / len(sym_rows), 4),
+            "realized_pnl": round(realized_pnl, 2),
+            "avg_r": round(avg_r_val, 4),
+        })
+    result.sort(key=lambda item: item["realized_pnl"], reverse=True)
+    return result[:top_n]
+
+
+def _exit_reason_stats(rows: list[PaperTrade]) -> dict[str, Any]:
+    closed = [row for row in rows if row.status == "closed"]
+    by_reason: dict[str, list[float]] = {}
+    for row in closed:
+        reason = str(row.exit_reason or "other").lower()
+        by_reason.setdefault(reason, []).append(float(row.realized_pnl or 0.0))
+    result = {}
+    for reason, pnls in by_reason.items():
+        wins = sum(1 for p in pnls if p > 0)
+        result[reason] = {
+            "trades": len(pnls),
+            "wins": wins,
+            "win_rate": round(wins / len(pnls), 4) if pnls else None,
+            "realized_pnl": round(sum(pnls), 2),
+        }
+    return result
 
 
 def _shadow_decision_map(session, rows: list[PaperTrade]) -> dict[int, ShadowDecision]:

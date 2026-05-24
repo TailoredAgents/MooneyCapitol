@@ -1374,6 +1374,36 @@
         </div>
 
         <div class="section panel">
+          <h2>Performance Periods</h2>
+          <div class="grid">
+            <div class="stat">
+              <div class="muted">Today</div>
+              <div id="paper-period-today-trades" class="value">-</div>
+              <div id="paper-period-today-pnl" class="muted">-</div>
+              <div id="paper-period-today-wr" class="muted">-</div>
+            </div>
+            <div class="stat">
+              <div class="muted">This Week</div>
+              <div id="paper-period-week-trades" class="value">-</div>
+              <div id="paper-period-week-pnl" class="muted">-</div>
+              <div id="paper-period-week-wr" class="muted">-</div>
+            </div>
+            <div class="stat">
+              <div class="muted">Last 30 Days</div>
+              <div id="paper-period-30d-trades" class="value">-</div>
+              <div id="paper-period-30d-pnl" class="muted">-</div>
+              <div id="paper-period-30d-wr" class="muted">-</div>
+            </div>
+            <div class="stat">
+              <div class="muted">All Time</div>
+              <div id="paper-period-alltime-trades" class="value">-</div>
+              <div id="paper-period-alltime-pnl" class="muted">-</div>
+              <div id="paper-period-alltime-wr" class="muted">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section panel">
           <h2>Promotion Gates</h2>
           <div id="paper-readiness-list" class="check-list">Loading...</div>
         </div>
@@ -1456,6 +1486,30 @@
               </thead>
               <tbody id="paper-recent-closed-body"></tbody>
             </table>
+          </div>
+        </div>
+
+        <div class="grid two section">
+          <div class="panel">
+            <h2>By Symbol</h2>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Trades</th>
+                    <th>Win Rate</th>
+                    <th>P&L</th>
+                    <th>Avg R</th>
+                  </tr>
+                </thead>
+                <tbody id="paper-symbol-stats-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Exit Breakdown</h2>
+            <div id="paper-exit-stats" class="check-list">Loading...</div>
           </div>
         </div>
 
@@ -2187,6 +2241,9 @@
         renderRecentClosedTrades(summary.recent_closed || []);
         renderRankedTrades(paperBestTrades, summary.best_trades || [], 'No closed winning trades yet');
         renderRankedTrades(paperWorstTrades, summary.worst_trades || [], 'No closed losing trades yet');
+        renderPeriodBreakdown(summary.period_breakdown || {});
+        renderSymbolStats(summary.symbol_stats || []);
+        renderExitReasonStats(summary.exit_reason_stats || {});
         const items = payload.items || [];
         paperTradesBody.innerHTML = items.length ? items.map((item) => {
           const pnlValue = item.status === 'closed' ? item.realized_pnl : item.unrealized_pnl;
@@ -2260,6 +2317,57 @@
         setText('paper-connor-match-rate', formatPct(summary.match_rate));
         setText('paper-connor-matched', `${summary.matched_connor ?? 0} / ${summary.lab_trades ?? 0}`);
         setText('paper-lab-closed', String(summary.closed_lab_trades ?? 0));
+      }
+
+      function renderPeriodBreakdown(periods) {
+        function setPeriod(prefix, data) {
+          const d = data || {};
+          const trades = d.trades ?? 0;
+          const wr = d.win_rate != null ? formatPct(d.win_rate) : '-';
+          const pnl = d.realized_pnl != null ? moneySpan(d.realized_pnl) : '-';
+          const avgR = d.avg_r != null ? `avg R ${d.avg_r.toFixed(2)}` : '';
+          const el = document.getElementById(`paper-period-${prefix}-trades`);
+          if (el) el.textContent = `${trades} trade${trades === 1 ? '' : 's'}`;
+          const pnlEl = document.getElementById(`paper-period-${prefix}-pnl`);
+          if (pnlEl) pnlEl.innerHTML = pnl;
+          const wrEl = document.getElementById(`paper-period-${prefix}-wr`);
+          if (wrEl) wrEl.textContent = trades > 0 ? `${wr} win rate${avgR ? ' · ' + avgR : ''}` : 'No closed trades';
+        }
+        setPeriod('today', periods.today);
+        setPeriod('week', periods.this_week);
+        setPeriod('30d', periods.last_30_days);
+        setPeriod('alltime', periods.all_time);
+      }
+
+      function renderSymbolStats(items) {
+        const body = document.getElementById('paper-symbol-stats-body');
+        if (!body) return;
+        body.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td><strong>${escapeHtml(item.symbol || '')}</strong></td>
+            <td>${item.trades} <span class="muted">${item.wins}W / ${item.losses ?? item.trades - item.wins}L</span></td>
+            <td>${formatPct(item.win_rate)}</td>
+            <td>${moneySpan(item.realized_pnl)}</td>
+            <td>${item.avg_r != null ? item.avg_r.toFixed(2) : '-'}</td>
+          </tr>
+        `).join('') : `<tr><td colspan="5"><div class="muted">No closed trades yet.</div></td></tr>`;
+      }
+
+      function renderExitReasonStats(stats) {
+        const el = document.getElementById('paper-exit-stats');
+        if (!el) return;
+        const entries = Object.entries(stats);
+        if (!entries.length) {
+          el.innerHTML = '<div class="muted">No closed trades yet.</div>';
+          return;
+        }
+        el.innerHTML = entries.map(([reason, data]) => `
+          <div class="check ${data.win_rate != null && data.win_rate >= 0.5 ? 'ok' : 'neutral'}">
+            <span class="mark">${escapeHtml(reason)}</span>
+            <span>${data.trades} trade${data.trades === 1 ? '' : 's'} · ${formatPct(data.win_rate)} win rate</span>
+            <div class="muted">${moneySpan(data.realized_pnl)} P&L</div>
+          </div>
+        `).join('');
       }
 
       function renderRecentClosedTrades(items) {

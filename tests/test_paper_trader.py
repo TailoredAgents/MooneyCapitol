@@ -311,3 +311,140 @@ def test_paper_readiness_route_returns_service_payload(monkeypatch):
     payload = paper.get_paper_readiness()
 
     assert payload["ready"] is False
+
+
+def test_period_breakdown_includes_all_slices():
+    now = datetime.now(timezone.utc)
+    trades = [
+        PaperTrade(
+            id=50,
+            symbol="AAPL",
+            direction="long",
+            status="closed",
+            opened_at=now,
+            closed_at=now,
+            entry_price=10.0,
+            size_pct=0.05,
+            account_equity=100000,
+            notional=5000,
+            qty=500,
+            realized_pnl=200,
+            realized_r=1.0,
+        ),
+        PaperTrade(
+            id=51,
+            symbol="TSLA",
+            direction="long",
+            status="closed",
+            opened_at=now,
+            closed_at=now,
+            entry_price=20.0,
+            size_pct=0.05,
+            account_equity=100000,
+            notional=5000,
+            qty=250,
+            realized_pnl=-100,
+            realized_r=-1.0,
+        ),
+    ]
+
+    breakdown = paper_trader._period_breakdown(trades)
+
+    assert set(breakdown.keys()) == {"today", "this_week", "last_30_days", "all_time"}
+    all_time = breakdown["all_time"]
+    assert all_time["trades"] == 2
+    assert all_time["wins"] == 1
+    assert all_time["losses"] == 1
+    assert all_time["win_rate"] == 0.5
+    assert all_time["realized_pnl"] == 100
+    # trades happened now so they should appear in every period
+    for period in breakdown.values():
+        assert period["trades"] == 2
+
+
+def test_symbol_stats_ranks_by_pnl():
+    now = datetime.now(timezone.utc)
+    trades = [
+        PaperTrade(
+            id=60, symbol="AAPL", direction="long", status="closed",
+            opened_at=now, closed_at=now, entry_price=10.0,
+            size_pct=0.05, account_equity=100000, notional=5000, qty=500,
+            realized_pnl=500, realized_r=2.0,
+        ),
+        PaperTrade(
+            id=61, symbol="TSLA", direction="long", status="closed",
+            opened_at=now, closed_at=now, entry_price=20.0,
+            size_pct=0.05, account_equity=100000, notional=5000, qty=250,
+            realized_pnl=-200, realized_r=-1.0,
+        ),
+        PaperTrade(
+            id=62, symbol="AAPL", direction="long", status="closed",
+            opened_at=now, closed_at=now, entry_price=11.0,
+            size_pct=0.05, account_equity=100000, notional=5000, qty=454,
+            realized_pnl=300, realized_r=1.5,
+        ),
+    ]
+
+    stats = paper_trader._symbol_stats(trades)
+
+    assert stats[0]["symbol"] == "AAPL"
+    assert stats[0]["trades"] == 2
+    assert stats[0]["wins"] == 2
+    assert stats[0]["realized_pnl"] == 800
+    assert stats[1]["symbol"] == "TSLA"
+    assert stats[1]["realized_pnl"] == -200
+
+
+def test_exit_reason_stats_groups_by_reason():
+    now = datetime.now(timezone.utc)
+    trades = [
+        PaperTrade(
+            id=70, symbol="X", direction="long", status="closed",
+            opened_at=now, closed_at=now, entry_price=5.0,
+            size_pct=0.05, account_equity=10000, notional=500, qty=100,
+            realized_pnl=100, realized_r=1.0, exit_reason="target",
+        ),
+        PaperTrade(
+            id=71, symbol="Y", direction="long", status="closed",
+            opened_at=now, closed_at=now, entry_price=5.0,
+            size_pct=0.05, account_equity=10000, notional=500, qty=100,
+            realized_pnl=-50, realized_r=-1.0, exit_reason="stop",
+        ),
+        PaperTrade(
+            id=72, symbol="Z", direction="long", status="closed",
+            opened_at=now, closed_at=now, entry_price=5.0,
+            size_pct=0.05, account_equity=10000, notional=500, qty=100,
+            realized_pnl=80, realized_r=0.8, exit_reason="target",
+        ),
+    ]
+
+    stats = paper_trader._exit_reason_stats(trades)
+
+    assert "target" in stats
+    assert "stop" in stats
+    assert stats["target"]["trades"] == 2
+    assert stats["target"]["wins"] == 2
+    assert stats["target"]["win_rate"] == 1.0
+    assert stats["stop"]["trades"] == 1
+    assert stats["stop"]["wins"] == 0
+    assert stats["stop"]["win_rate"] == 0.0
+
+
+def test_summary_includes_period_breakdown_and_symbol_stats(monkeypatch):
+    monkeypatch.setenv("AI_LAB_STARTING_EQUITY", "100000")
+    now = datetime.now(timezone.utc)
+    trade = PaperTrade(
+        id=80, symbol="MNY", direction="long", status="closed",
+        opened_at=now, closed_at=now, entry_price=4.0,
+        size_pct=0.05, account_equity=100000, notional=5000, qty=1250,
+        realized_pnl=250, realized_r=1.0, exit_reason="target",
+    )
+
+    summary = paper_trader._paper_summary_from_rows([trade])
+
+    assert "period_breakdown" in summary
+    assert "symbol_stats" in summary
+    assert "exit_reason_stats" in summary
+    assert summary["period_breakdown"]["all_time"]["trades"] == 1
+    assert summary["symbol_stats"][0]["symbol"] == "MNY"
+    assert "target" in summary["exit_reason_stats"]
