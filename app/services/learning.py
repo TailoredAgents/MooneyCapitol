@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 
 from sqlalchemy import select
 
-from app.db.models import Alert, Fill, PaperTrade, Setup, ShadowDecision, Trade
+from app.db.models import AccountSnapshot, Alert, Fill, PaperTrade, Setup, ShadowDecision, Trade
 from app.db.session import get_session
 from app.observability.logging import get_logger
 from app.services.kv_store import get_bytes, get_json, set_bytes, set_json
@@ -294,6 +294,28 @@ def bucket_time(ts: datetime | None) -> str:
 
 
 def _master_equity() -> float | None:
+    account_ref = os.getenv("WEBULL_MASTER_ACCOUNT_ID")
+    if account_ref:
+        try:
+            from sqlalchemy import desc
+            with get_session() as session:
+                row = (
+                    session.execute(
+                        select(AccountSnapshot)
+                        .where(AccountSnapshot.account_ref == account_ref)
+                        .order_by(desc(AccountSnapshot.snapshot_time))
+                        .limit(1)
+                    )
+                    .scalars()
+                    .first()
+                )
+            if row is not None:
+                value = row.equity_value if row.equity_value is not None else row.total_value
+                if value and float(value) > 0:
+                    return float(value)
+        except Exception:
+            pass
+    # Fallback to static env var (useful before the live account is connected)
     val = os.getenv("WEBULL_MASTER_ACCOUNT_EQUITY")
     if not val:
         return None
