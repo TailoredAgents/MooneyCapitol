@@ -1403,17 +1403,6 @@
           </div>
         </div>
 
-        <div class="section panel">
-          <h2>Promotion Gates</h2>
-          <div id="paper-readiness-list" class="check-list">Loading...</div>
-        </div>
-
-        <div class="section panel">
-          <h2>Webull Paper Account</h2>
-          <p class="muted">Optional future broker test connection. The AI Trading Lab remains internal and broker-disconnected unless this is explicitly enabled.</p>
-          <div id="paper-webull-list" class="check-list">Loading...</div>
-        </div>
-
         <div class="section">
           <h2>Open Positions</h2>
           <div class="scroll">
@@ -1435,24 +1424,6 @@
               </thead>
               <tbody id="paper-positions-body"></tbody>
             </table>
-          </div>
-        </div>
-
-        <div class="section panel">
-          <h2>AI vs Connor</h2>
-          <div class="readiness-summary-grid">
-            <div class="readiness-summary-card passing">
-              <div class="label">Match Rate</div>
-              <div id="paper-connor-match-rate" class="value">-</div>
-            </div>
-            <div class="readiness-summary-card">
-              <div class="label">Matched Connor</div>
-              <div id="paper-connor-matched" class="value">-</div>
-            </div>
-            <div class="readiness-summary-card">
-              <div class="label">Closed Lab Trades</div>
-              <div id="paper-lab-closed" class="value">-</div>
-            </div>
           </div>
         </div>
 
@@ -1536,6 +1507,14 @@
             </table>
           </div>
         </div>
+
+        <details class="section panel">
+          <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:0.5rem;">
+            <h2 style="margin:0;">Promotion Gates</h2>
+            <span class="muted" style="font-size:0.85em;">(click to expand)</span>
+          </summary>
+          <div id="paper-readiness-list" class="check-list" style="margin-top:0.75rem;">Loading...</div>
+        </details>
       </section>
 
       <section id="tab-launch" class="tab-panel owner-panel">
@@ -1908,7 +1887,6 @@
       const paperBestTrades = document.getElementById('paper-best-trades');
       const paperWorstTrades = document.getElementById('paper-worst-trades');
       const paperReadinessList = document.getElementById('paper-readiness-list');
-      const paperWebullList = document.getElementById('paper-webull-list');
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -2091,12 +2069,11 @@
 
       async function loadPaper() {
         try {
-          const [payload, readiness, webullPaper] = await Promise.all([
+          const [payload, readiness] = await Promise.all([
             api('/paper/trades?limit=100'),
             api('/paper/readiness'),
-            api('/paper/webull/readiness?skip_network=true'),
           ]);
-          renderPaper(payload, readiness, webullPaper);
+          renderPaper(payload, readiness);
           setStatus('paper-status', readiness.ready ? 'Promotion gates passed for observation.' : `${payload.count || 0} AI lab trade${payload.count === 1 ? '' : 's'} loaded. Still observing.`, !readiness.ready);
         } catch (err) {
           setStatus('paper-status', err.message, true);
@@ -2220,7 +2197,7 @@
           </tr>`;
       }
 
-      function renderPaper(payload, readiness = null, webullPaper = null) {
+      function renderPaper(payload, readiness = null) {
         const summary = payload.summary || {};
         setText('paper-account-value', formatMoney(summary.account_value));
         const totalPnl = document.getElementById('paper-total-pnl');
@@ -2236,7 +2213,6 @@
         setText('paper-win-rate', formatPct(summary.win_rate));
         const maxDrawdown = document.getElementById('paper-max-drawdown');
         if (maxDrawdown) maxDrawdown.innerHTML = `${formatMoney(summary.max_drawdown)} <span class="muted">${formatPct(summary.max_drawdown_pct)}</span>`;
-        renderAiVsConnor(summary.ai_vs_connor || {});
         renderPaperPositions(summary.positions || []);
         renderRecentClosedTrades(summary.recent_closed || []);
         renderRankedTrades(paperBestTrades, summary.best_trades || [], 'No closed winning trades yet');
@@ -2283,7 +2259,6 @@
             </div>
           `).join('') : '<div class="muted">Promotion gates will appear after the paper readiness endpoint is available.</div>';
         }
-        renderWebullPaper(webullPaper);
       }
 
       function renderPaperPositions(items) {
@@ -2311,12 +2286,6 @@
               </div>
             </td>
           </tr>`;
-      }
-
-      function renderAiVsConnor(summary) {
-        setText('paper-connor-match-rate', formatPct(summary.match_rate));
-        setText('paper-connor-matched', `${summary.matched_connor ?? 0} / ${summary.lab_trades ?? 0}`);
-        setText('paper-lab-closed', String(summary.closed_lab_trades ?? 0));
       }
 
       function renderPeriodBreakdown(periods) {
@@ -2404,31 +2373,6 @@
             <div class="muted">${formatTime(item.closed_at)} | ${item.master_taken ? 'Connor also took it' : 'not matched to Connor'}</div>
           </div>
         `).join('') : `<div class="empty-state"><div class="title">${escapeHtml(emptyText)}</div><div class="muted">Closed AI lab trades will populate this list.</div></div>`;
-      }
-
-      function renderWebullPaper(payload) {
-        if (!paperWebullList) return;
-        const config = payload?.config || {};
-        const modeLabel = payload?.status === 'internal'
-          ? 'Internal AI lab'
-          : `${config.broker_mode || 'webull_paper'} ${payload?.network_checked ? '(validated)' : '(configured)'}`;
-        setText('paper-broker-mode', modeLabel);
-        const checks = payload?.checks || [];
-        const details = [
-          `<div class="check ok">
-            <span class="mark">Mode</span>
-            <span>${escapeHtml(payload?.message || 'No Webull paper status available.')}</span>
-            <div class="muted">Account ${escapeHtml(config.display_name || 'AI Paper Account')} ${config.masked_account_id ? `| ${escapeHtml(config.masked_account_id)}` : ''}</div>
-          </div>`,
-          ...checks.map((check) => `
-            <div class="check ${check.ok ? 'ok' : 'bad'}">
-              <span class="mark">${check.ok ? 'OK' : '!'}</span>
-              <span>${escapeHtml(check.label || check.key)}</span>
-              <div class="muted">${escapeHtml(check.severity || 'info')}</div>
-            </div>
-          `)
-        ];
-        paperWebullList.innerHTML = details.join('');
       }
 
       function renderTrades(items) {
@@ -2786,15 +2730,15 @@
         const value = parseFloat(input.value);
         return Number.isFinite(value) ? value : null;
       }
+      const _moneyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
       function formatMoney(value) {
         const number = Number(value);
-        return Number.isFinite(number) ? `$${number.toFixed(2)}` : '-';
+        return Number.isFinite(number) ? _moneyFmt.format(number) : '-';
       }
       function formatMoneySigned(value) {
         const number = Number(value);
         if (!Number.isFinite(number)) return '-';
-        const sign = number > 0 ? '+' : (number < 0 ? '-' : '');
-        return `${sign}$${Math.abs(number).toFixed(2)}`;
+        return (number > 0 ? '+' : '') + _moneyFmt.format(number);
       }
       function moneyClass(value) {
         const number = Number(value);
@@ -2836,7 +2780,7 @@
       function formatQty(value) {
         const number = Number(value);
         if (!Number.isFinite(number)) return '-';
-        return Number.isInteger(number) ? String(number) : number.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+        return Number.isInteger(number) ? number.toLocaleString('en-US') : number.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
       }
       function formatMs(value) {
         const number = Number(value);
