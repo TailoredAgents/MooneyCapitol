@@ -1364,18 +1364,6 @@
         </div>
 
         <div class="section panel">
-          <div class="account-refresh-bar">
-            <button class="primary" id="refresh-paper">Refresh Now</button>
-            <div class="account-refresh-meta">
-              <div><span class="muted">Mode</span> <strong id="paper-broker-mode">Internal AI lab</strong></div>
-              <div><span class="muted">Auto refresh</span> <strong>Every 10s while open</strong></div>
-              <div><span class="muted">Last updated</span> <strong id="paper-last-updated">-</strong></div>
-              <div id="paper-status" class="status-line">Loading...</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section panel">
           <h2>Performance Periods</h2>
           <div class="grid">
             <div class="stat">
@@ -2781,6 +2769,7 @@
       }
       function setStatus(id, text, isError) {
         const el = document.getElementById(id);
+        if (!el) return;
         el.textContent = text;
         el.className = `status-line ${isError ? 'error' : 'ok'}`;
       }
@@ -2793,7 +2782,6 @@
       document.getElementById('save-global').addEventListener('click', saveGlobal);
       document.getElementById('refresh-launch').addEventListener('click', loadLaunchReadiness);
       document.getElementById('refresh-shadow').addEventListener('click', loadShadow);
-      document.getElementById('refresh-paper').addEventListener('click', loadPaper);
       document.getElementById('enable-kill').addEventListener('click', () => setKillSwitch(true));
       document.getElementById('disable-kill').addEventListener('click', () => setKillSwitch(false));
       document.getElementById('refresh-pnl').addEventListener('click', refreshPnl);
