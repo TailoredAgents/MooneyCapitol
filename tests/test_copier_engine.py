@@ -111,9 +111,7 @@ def test_percent_equity_sizing_matches_master_account_percentage():
 
 def test_sizing_truncation_to_zero_logs_warning(caplog):
     import logging
-    # _master(): qty=10, price=25 → master_notional=$250
-    # Connor's account: $75_000 → 0.33% of account
-    # Tiny target account: $75 → target_notional=$0.25 → 0.01 shares → truncates to 0
+    # qty=10, price=25 → notional=$250; tiny target → 0.01 shares → truncates to 0
     master = _master()
     with caplog.at_level(logging.WARNING, logger="copier.sizing"):
         result = size_child_order(
@@ -128,9 +126,7 @@ def test_sizing_truncation_to_zero_logs_warning(caplog):
 
 def test_sizing_truncation_drift_logs_warning_above_threshold(caplog):
     import logging
-    # _master(): qty=10, price=25 → master_notional=$250
-    # Connor's account: $75_000, small target: $13_500
-    # → target_notional=$45 → 1.8 shares → truncates to 1 (44% lost, > 5% threshold)
+    # qty=10, price=25 → notional=$250; target notional=$45 → 1.8 shares → truncates to 1 (44% lost)
     master = _master()
     with caplog.at_level(logging.WARNING, logger="copier.sizing"):
         result = size_child_order(
@@ -145,9 +141,7 @@ def test_sizing_truncation_drift_logs_warning_above_threshold(caplog):
 
 def test_sizing_minor_truncation_does_not_warn(caplog):
     import logging
-    # _master(): qty=10, price=25 → master_notional=$250
-    # Connor's account: $75_000, target: $664_500
-    # → target_notional=$2215 → 88.6 shares → truncates to 88 (0.68% lost, under threshold)
+    # qty=10, price=25 → notional=$250; target notional=$2215 → 88.6 shares → truncates to 88 (0.68% lost)
     master = _master()
     with caplog.at_level(logging.WARNING, logger="copier.sizing"):
         result = size_child_order(
