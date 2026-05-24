@@ -547,6 +547,28 @@ def test_predict_connor_size_pct_returns_none_without_model(monkeypatch):
     assert result is None
 
 
+def test_predict_connor_size_pct_caps_model_output(monkeypatch):
+    import app.services.learning as learning_module
+
+    class FakeModel:
+        def predict(self, vector):
+            return [0.42]
+
+    class FakeService:
+        def load_connor_sizer(self):
+            return FakeModel()
+
+        def _feature_matrix(self, df):
+            return df
+
+    monkeypatch.setattr(learning_module, "get_learning_service", lambda: FakeService())
+    monkeypatch.setenv("LEARNING_CONNOR_SIZER_MAX_PCT", "0.10")
+
+    result = predict_connor_size_pct({"rvol_break": 2.0, "l2_mean": 0.75})
+
+    assert result == 0.10
+
+
 def test_connor_sizer_trains_on_taken_rows_only(monkeypatch):
     pytest.importorskip("xgboost")
     service = LearningService()

@@ -73,8 +73,6 @@ services:
         sync: false
       - key: WEBULL_MASTER_ACCOUNT_ID
         sync: false
-      - key: WEBULL_MASTER_ACCOUNT_EQUITY
-        sync: false
       - key: WEBULL_PERSONAL_API_ENDPOINT
         sync: false
       - key: WEBULL_PERSONAL_APP_KEY
@@ -109,6 +107,8 @@ services:
         value: "0.15"
       - key: LEARNING_PAPER_SAMPLE_WEIGHT
         value: "0.25"
+      - key: LEARNING_CONNOR_SIZER_MAX_PCT
+        value: "0.10"
       - key: TRADE_MATCH_WINDOW_SECONDS
         value: "1800"
       - key: TRADE_MATCH_PRE_ALERT_SECONDS
@@ -123,6 +123,8 @@ services:
         value: "2.00"
       - key: SHADOW_TRADER_SIZE_PCT
         value: "0.05"
+      - key: SHADOW_TRADER_MAX_SIZE_PCT
+        value: "0.10"
       - key: AI_LAB_ENABLED
         value: "1"
       - key: AI_LAB_STARTING_EQUITY
@@ -245,8 +247,6 @@ services:
         sync: false
       - key: WEBULL_MASTER_ACCOUNT_ID
         sync: false
-      - key: WEBULL_MASTER_ACCOUNT_EQUITY
-        sync: false
       - key: WEBULL_PERSONAL_API_ENDPOINT
         sync: false
       - key: WEBULL_PERSONAL_APP_KEY
@@ -281,6 +281,8 @@ services:
         value: "0.15"
       - key: LEARNING_PAPER_SAMPLE_WEIGHT
         value: "0.25"
+      - key: LEARNING_CONNOR_SIZER_MAX_PCT
+        value: "0.10"
       - key: TRADE_MATCH_WINDOW_SECONDS
         value: "1800"
       - key: TRADE_MATCH_PRE_ALERT_SECONDS
@@ -295,6 +297,8 @@ services:
         value: "2.00"
       - key: SHADOW_TRADER_SIZE_PCT
         value: "0.05"
+      - key: SHADOW_TRADER_MAX_SIZE_PCT
+        value: "0.10"
       - key: AI_LAB_ENABLED
         value: "1"
       - key: AI_LAB_STARTING_EQUITY

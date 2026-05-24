@@ -1442,6 +1442,7 @@ def predict_connor_size_pct(features: dict[str, float]) -> float | None:
         model = svc.load_connor_sizer()
         vector = svc._feature_matrix(pd.DataFrame([features]))
         prediction = float(model.predict(vector)[0])
-        return max(0.0, prediction)
+        max_size = float(os.getenv("LEARNING_CONNOR_SIZER_MAX_PCT", "0.10"))
+        return min(max(0.0, prediction), max(0.0, max_size))
     except Exception:
         return None

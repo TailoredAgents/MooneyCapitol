@@ -46,6 +46,12 @@ def _predict_size(features: dict) -> float | None:
         return None
 
 
+def _bounded_size_pct(value: float | None, fallback: float) -> float:
+    size = fallback if value is None else float(value)
+    max_size = float(os.getenv("SHADOW_TRADER_MAX_SIZE_PCT", "0.10"))
+    return min(max(0.0, size), max(0.0, max_size))
+
+
 def evaluate_shadow_decision(payload: dict[str, Any], alert_type: str) -> dict[str, Any]:
     min_p2r = float(os.getenv("SHADOW_TRADER_MIN_P2R", "0.70"))
     min_rr = float(os.getenv("SHADOW_TRADER_MIN_RR", "2.00"))
@@ -87,7 +93,7 @@ def evaluate_shadow_decision(payload: dict[str, Any], alert_type: str) -> dict[s
 
     if would_take:
         predicted_size = _predict_size(payload.get("features") or {})
-        suggested_size_pct = predicted_size if predicted_size is not None else size_pct
+        suggested_size_pct = _bounded_size_pct(predicted_size, size_pct)
     else:
         suggested_size_pct = None
 

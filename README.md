@@ -349,6 +349,7 @@ Learning and fill matching defaults:
 - `AI_LAB_MAX_OPEN_POSITIONS=5` limits how many AI Lab trades can be open at the same time. New entries are skipped when the limit is reached.
 - `AI_LAB_NO_DUPLICATE_SYMBOLS=1` blocks a second AI Lab trade in the same symbol while one is already open.
 - `AI_LAB_MAX_HOLD_MINUTES=390` closes any AI Lab trade that has been open longer than this many minutes at the current price with reason `timeout`. Set to `0` to disable time-decay exits.
+- `LEARNING_CONNOR_SIZER_MAX_PCT=0.10` and `SHADOW_TRADER_MAX_SIZE_PCT=0.10` cap learned AI Lab sizing so a model prediction cannot oversize a practice trade.
 - The AI Trading Lab summary tracks fake account value, cash, open exposure, total P&L, today P&L, weekly P&L, win rate, and drawdown from internal lab trades.
 - The AI Trading Lab dashboard includes open positions with quantity, entry, latest mark, market value, unrealized P&L, stop, target, and time open.
 - The AI Trading Lab performance view also shows AI vs Connor match rate, recent closed lab trades, and best/worst closed lab trades.
