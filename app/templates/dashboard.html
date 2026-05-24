@@ -1408,6 +1408,57 @@
           </div>
         </div>
 
+        <div class="section panel">
+          <h2>AI vs Connor</h2>
+          <div class="readiness-summary-grid">
+            <div class="readiness-summary-card passing">
+              <div class="label">Match Rate</div>
+              <div id="paper-connor-match-rate" class="value">-</div>
+            </div>
+            <div class="readiness-summary-card">
+              <div class="label">Matched Connor</div>
+              <div id="paper-connor-matched" class="value">-</div>
+            </div>
+            <div class="readiness-summary-card">
+              <div class="label">Closed Lab Trades</div>
+              <div id="paper-lab-closed" class="value">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid two section">
+          <div class="panel">
+            <h2>Best Trades</h2>
+            <div id="paper-best-trades" class="check-list">Loading...</div>
+          </div>
+          <div class="panel">
+            <h2>Worst Trades</h2>
+            <div id="paper-worst-trades" class="check-list">Loading...</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Recent Closed Trades</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Closed</th>
+                  <th>Symbol</th>
+                  <th>Direction</th>
+                  <th>Entry</th>
+                  <th>Exit</th>
+                  <th>P&L</th>
+                  <th>R</th>
+                  <th>Connor</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="paper-recent-closed-body"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="section">
           <h2>AI Lab Trades</h2>
           <div class="scroll">
@@ -1799,6 +1850,9 @@
       const shadowDecisionsBody = document.getElementById('shadow-decisions-body');
       const paperTradesBody = document.getElementById('paper-trades-body');
       const paperPositionsBody = document.getElementById('paper-positions-body');
+      const paperRecentClosedBody = document.getElementById('paper-recent-closed-body');
+      const paperBestTrades = document.getElementById('paper-best-trades');
+      const paperWorstTrades = document.getElementById('paper-worst-trades');
       const paperReadinessList = document.getElementById('paper-readiness-list');
       const paperWebullList = document.getElementById('paper-webull-list');
       const targetsBody = document.getElementById('targets-body');
@@ -2128,7 +2182,11 @@
         setText('paper-win-rate', formatPct(summary.win_rate));
         const maxDrawdown = document.getElementById('paper-max-drawdown');
         if (maxDrawdown) maxDrawdown.innerHTML = `${formatMoney(summary.max_drawdown)} <span class="muted">${formatPct(summary.max_drawdown_pct)}</span>`;
+        renderAiVsConnor(summary.ai_vs_connor || {});
         renderPaperPositions(summary.positions || []);
+        renderRecentClosedTrades(summary.recent_closed || []);
+        renderRankedTrades(paperBestTrades, summary.best_trades || [], 'No closed winning trades yet');
+        renderRankedTrades(paperWorstTrades, summary.worst_trades || [], 'No closed losing trades yet');
         const items = payload.items || [];
         paperTradesBody.innerHTML = items.length ? items.map((item) => {
           const pnlValue = item.status === 'closed' ? item.realized_pnl : item.unrealized_pnl;
@@ -2196,6 +2254,48 @@
               </div>
             </td>
           </tr>`;
+      }
+
+      function renderAiVsConnor(summary) {
+        setText('paper-connor-match-rate', formatPct(summary.match_rate));
+        setText('paper-connor-matched', `${summary.matched_connor ?? 0} / ${summary.lab_trades ?? 0}`);
+        setText('paper-lab-closed', String(summary.closed_lab_trades ?? 0));
+      }
+
+      function renderRecentClosedTrades(items) {
+        if (!paperRecentClosedBody) return;
+        paperRecentClosedBody.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td>${formatTime(item.closed_at)}</td>
+            <td><strong>${escapeHtml(item.symbol || '')}</strong></td>
+            <td>${escapeHtml(item.direction || '')}</td>
+            <td>${formatMoney(item.entry_price)}</td>
+            <td>${formatMoney(item.exit_price)} ${item.exit_reason ? `<div class="muted">${escapeHtml(item.exit_reason)}</div>` : ''}</td>
+            <td>${moneySpan(item.realized_pnl)}</td>
+            <td>${formatDecimal(item.realized_r, 2)}</td>
+            <td>${item.master_taken ? '<span class="status-chip ok">also took</span>' : '<span class="status-chip neutral">not matched</span>'}</td>
+            <td><div class="muted">${escapeHtml(item.reason || '')}</div></td>
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="9">
+              <div class="empty-state">
+                <div class="title">No closed AI lab trades yet</div>
+                <div class="muted">Closed practice trades will appear here with their P&L and Connor match status.</div>
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      function renderRankedTrades(container, items, emptyText) {
+        if (!container) return;
+        container.innerHTML = items.length ? items.map((item) => `
+          <div class="check ${Number(item.realized_pnl || 0) >= 0 ? 'ok' : 'bad'}">
+            <span class="mark">${escapeHtml(item.symbol || '')}</span>
+            <span>${moneySpan(item.realized_pnl)} <span class="muted">R ${formatDecimal(item.realized_r, 2)}</span></span>
+            <div class="muted">${formatTime(item.closed_at)} | ${item.master_taken ? 'Connor also took it' : 'not matched to Connor'}</div>
+          </div>
+        `).join('') : `<div class="empty-state"><div class="title">${escapeHtml(emptyText)}</div><div class="muted">Closed AI lab trades will populate this list.</div></div>`;
       }
 
       function renderWebullPaper(payload) {

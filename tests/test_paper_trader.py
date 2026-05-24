@@ -192,6 +192,7 @@ def test_ai_lab_summary_tracks_portfolio_value_cash_and_period_pnl(monkeypatch):
     trades = [
         PaperTrade(
             id=41,
+            shadow_decision_id=99,
             symbol="WIN",
             direction="long",
             status="closed",
@@ -238,6 +239,16 @@ def test_ai_lab_summary_tracks_portfolio_value_cash_and_period_pnl(monkeypatch):
     assert position["market_value"] == 5250
     assert position["unrealized_pnl_pct"] == 0.05
     assert position["seconds_open"] is not None
+    matched = paper_trader._paper_summary_from_rows(
+        trades,
+        shadow_map={99: SimpleNamespace(setup_id=123)},
+        taken_map={123: True},
+    )
+    assert matched["ai_vs_connor"]["matched_connor"] == 1
+    assert matched["ai_vs_connor"]["match_rate"] == 0.5
+    assert matched["recent_closed"][0]["symbol"] == "WIN"
+    assert matched["recent_closed"][0]["master_taken"] is True
+    assert matched["best_trades"][0]["symbol"] == "WIN"
 
 
 def test_paper_promotion_readiness_blocks_too_few_trades(monkeypatch):

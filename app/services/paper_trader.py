@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from app.db.models import PaperTrade, ShadowDecision
+from app.db.models import Fill, PaperTrade, ShadowDecision
 from app.db.session import get_session
 from app.observability.logging import get_logger
 
@@ -223,13 +223,24 @@ def paper_promotion_readiness_from_session(session) -> dict[str, Any]:
 
 def paper_summary_from_session(session) -> dict[str, Any]:
     rows = list(session.execute(select(PaperTrade)).scalars())
-    return _paper_summary_from_rows(rows)
+    shadow_map = _shadow_decision_map(session, rows)
+    taken_map = _master_taken_map(session, shadow_map.values())
+    return _paper_summary_from_rows(rows, shadow_map=shadow_map, taken_map=taken_map)
 
 
-def _paper_summary_from_rows(rows: list[PaperTrade]) -> dict[str, Any]:
+def _paper_summary_from_rows(
+    rows: list[PaperTrade],
+    *,
+    shadow_map: dict[int, ShadowDecision] | None = None,
+    taken_map: dict[int, bool] | None = None,
+) -> dict[str, Any]:
+    shadow_map = shadow_map or {}
+    taken_map = taken_map or {}
     closed = [row for row in rows if row.status == "closed"]
     open_rows = [row for row in rows if row.status == "open"]
     wins = [row for row in closed if (row.realized_pnl or 0.0) > 0]
+    losses = [row for row in closed if (row.realized_pnl or 0.0) < 0]
+    matched_master = [row for row in rows if _master_taken_for_trade(row, shadow_map, taken_map)]
     starting_equity = _account_equity()
     total_realized = sum(float(row.realized_pnl or 0.0) for row in closed)
     open_unrealized = sum(float(row.unrealized_pnl or 0.0) for row in open_rows)
@@ -261,13 +272,59 @@ def _paper_summary_from_rows(rows: list[PaperTrade]) -> dict[str, Any]:
         "total": len(rows),
         "open": len(open_rows),
         "positions": [_position_from_trade(row, now=now) for row in sorted(open_rows, key=lambda item: item.opened_at or now, reverse=True)],
+        "recent_closed": [
+            _performance_trade(row, shadow_map, taken_map)
+            for row in sorted(closed, key=lambda item: item.closed_at or item.opened_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:10]
+        ],
+        "best_trades": [
+            _performance_trade(row, shadow_map, taken_map)
+            for row in sorted(closed, key=lambda item: float(item.realized_pnl or 0.0), reverse=True)[:5]
+        ],
+        "worst_trades": [
+            _performance_trade(row, shadow_map, taken_map)
+            for row in sorted(closed, key=lambda item: float(item.realized_pnl or 0.0))[:5]
+        ],
+        "ai_vs_connor": {
+            "lab_trades": len(rows),
+            "closed_lab_trades": len(closed),
+            "matched_connor": len(matched_master),
+            "match_rate": round(len(matched_master) / len(rows), 4) if rows else None,
+            "connor_also_took_winners": sum(1 for row in matched_master if float(row.realized_pnl or 0.0) > 0),
+            "connor_also_took_losers": sum(1 for row in matched_master if float(row.realized_pnl or 0.0) < 0),
+        },
         "closed": len(closed),
         "wins": len(wins),
+        "losses": len(losses),
         "win_rate": round(len(wins) / len(closed), 4) if closed else None,
         "realized_pnl": round(total_realized, 2),
         "open_unrealized_pnl": round(open_unrealized, 2),
         "avg_r": round(avg_r, 4) if avg_r is not None else None,
     }
+
+
+def _shadow_decision_map(session, rows: list[PaperTrade]) -> dict[int, ShadowDecision]:
+    ids = [int(row.shadow_decision_id) for row in rows if row.shadow_decision_id is not None]
+    if not ids:
+        return {}
+    decisions = list(session.execute(select(ShadowDecision).where(ShadowDecision.id.in_(ids))).scalars())
+    return {int(row.id): row for row in decisions if row.id is not None}
+
+
+def _master_taken_map(session, decisions) -> dict[int, bool]:
+    setup_ids = [int(row.setup_id) for row in decisions if row.setup_id is not None]
+    if not setup_ids:
+        return {}
+    rows = session.execute(
+        select(Fill.setup_id).where(Fill.setup_id.in_(setup_ids)).group_by(Fill.setup_id)
+    ).all()
+    return {int(setup_id): True for setup_id, in rows if setup_id is not None}
+
+
+def _master_taken_for_trade(row: PaperTrade, shadow_map: dict[int, ShadowDecision], taken_map: dict[int, bool]) -> bool:
+    if row.shadow_decision_id is None:
+        return False
+    decision = shadow_map.get(int(row.shadow_decision_id))
+    return bool(decision and decision.setup_id is not None and taken_map.get(int(decision.setup_id), False))
 
 
 def _realized_since(closed: list[PaperTrade], start: datetime) -> float:
@@ -322,6 +379,13 @@ def _position_from_trade(row: PaperTrade, *, now: datetime | None = None) -> dic
         "unrealized_pnl_pct": round(float(row.unrealized_pnl or 0.0) / float(row.notional or 0.0), 6) if row.notional else None,
         "size_pct": row.size_pct,
         "reason": row.reason,
+    }
+
+
+def _performance_trade(row: PaperTrade, shadow_map: dict[int, ShadowDecision], taken_map: dict[int, bool]) -> dict[str, Any]:
+    return _serialize(row) | {
+        "master_taken": _master_taken_for_trade(row, shadow_map, taken_map),
+        "pnl": row.realized_pnl if row.status == "closed" else row.unrealized_pnl,
     }
 
 
