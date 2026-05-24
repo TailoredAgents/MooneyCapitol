@@ -341,6 +341,7 @@ Learning and fill matching defaults:
 - `LEARNING_MANUAL_MATCH_WINDOW_MINUTES=30` lets the nightly learner treat a delayed manual fill as a scout take when the symbol, direction, timing, and entry price match.
 - `LEARNING_MATCH_MIN_CONFIDENCE=likely` means weak matches stay separate instead of being counted as taken scout alerts.
 - `TRADE_MATCH_MIN_CONFIDENCE=likely` stores the same confidence-gated setup link when broker fills are ingested.
+- `SHADOW_TRADER_ENABLED=1` records read-only AI decisions on scout alerts. It never places orders; it only stores what the model would have done for later review.
 
 Set these during the first Render Blueprint deploy:
 

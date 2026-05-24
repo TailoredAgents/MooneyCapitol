@@ -337,6 +337,36 @@ class PnlAlert(Base):
     )
 
 
+class ShadowDecision(Base):
+    __tablename__ = "shadow_decisions"
+    id = Column(BigInteger, primary_key=True)
+    alert_id = Column(BigInteger, ForeignKey("alerts.id"), nullable=True, unique=True, index=True)
+    setup_id = Column(BigInteger, ForeignKey("setups.id"), nullable=True, index=True)
+    symbol = Column(String(16), nullable=False, index=True)
+    direction = Column(String(8), nullable=True)
+    alert_type = Column(String(16), nullable=False, default="trigger")
+    observed_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    model_version = Column(String(64), nullable=False, default="shadow-v1")
+    p2r = Column(Float, nullable=True)
+    rr = Column(Float, nullable=True)
+    entry_price = Column(Float, nullable=True)
+    stop_price = Column(Float, nullable=True)
+    target_price = Column(Float, nullable=True)
+    suggested_size_pct = Column(Float, nullable=True)
+    would_take = Column(Boolean, nullable=False, default=False, index=True)
+    decision = Column(String(16), nullable=False, default="skip", index=True)
+    confidence = Column(String(16), nullable=False, default="low", index=True)
+    reason = Column(Text, nullable=True)
+    reason_json = Column(JSONB, nullable=True)
+    payload_json = Column(JSONB, nullable=True)
+    status = Column(String(32), nullable=False, default="observed", index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    __table_args__ = (
+        Index("idx_shadow_decision_symbol_time", "symbol", "observed_at"),
+        Index("idx_shadow_decision_setup_time", "setup_id", "observed_at"),
+    )
+
+
 class TradingSession(Base):
     __tablename__ = "trading_sessions"
     id = Column(BigInteger, primary_key=True)

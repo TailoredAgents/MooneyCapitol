@@ -48,6 +48,7 @@ from app.services.live_state import ensure_lanes_initialized
 from app.services.pnl_monitor import PnlMonitor
 from app.services.runtime import ensure_worker_tick_initialized, update_worker_tick
 from app.services.scout_explanations import generate_scout_alert_explanation
+from app.services.shadow_trader import record_shadow_decision
 from app.services.ticker_research import generate_ticker_research_for_alert
 from app.services.trade_journals import generate_pending_trade_journals
 from app.services.watchlist import (
@@ -363,6 +364,28 @@ def record_alert(
         session.add(alert)
         session.flush()
         return alert.id
+
+
+def record_shadow_alert_decision(
+    *,
+    alert_id: int | None,
+    setup_id: int | None,
+    alert_type: str,
+    symbol: str,
+    direction: str | None,
+    payload: dict,
+) -> None:
+    try:
+        record_shadow_decision(
+            alert_id=alert_id,
+            setup_id=setup_id,
+            symbol=symbol,
+            direction=direction,
+            alert_type=alert_type,
+            payload=payload,
+        )
+    except Exception as exc:
+        logger.warning("shadow.decision.failed", symbol=symbol, alert_id=alert_id, err=str(exc))
 
 
 def fetch_alert_status(alert_id: int) -> dict | None:
@@ -987,6 +1010,17 @@ async def scan_consolidations(ctx: WorkerContext):
                         dstate.primed_pinged = True
                         dstate.last_alert_ts = primed_ts
                         dstate.alert_type = "primed"
+                        alert_payload = {
+                            "entry": primed_payload.get("entry"),
+                            "stop": primed_payload.get("stop"),
+                            "target": primed_payload.get("target"),
+                            "rr": primed_payload.get("rr"),
+                            "l2": primed_payload.get("l2"),
+                            "spread": primed_payload.get("spread"),
+                            "p2r": primed_payload.get("p2r"),
+                            "features": dstate.features,
+                            "note": dstate.gating_note or "",
+                        }
                         dstate.last_alert_id = record_alert(
                             setup_id=None,
                             alert_type="primed",
@@ -995,16 +1029,15 @@ async def scan_consolidations(ctx: WorkerContext):
                             message_ts=primed_ts,
                             symbol=symbol,
                             direction=direction,
-                            payload={
-                                "entry": primed_payload.get("entry"),
-                                "stop": primed_payload.get("stop"),
-                                "target": primed_payload.get("target"),
-                                "rr": primed_payload.get("rr"),
-                                "l2": primed_payload.get("l2"),
-                                "spread": primed_payload.get("spread"),
-                                "p2r": primed_payload.get("p2r"),
-                                "features": dstate.features,
-                            },
+                            payload=alert_payload,
+                        )
+                        record_shadow_alert_decision(
+                            alert_id=dstate.last_alert_id,
+                            setup_id=None,
+                            alert_type="primed",
+                            symbol=symbol,
+                            direction=direction,
+                            payload=alert_payload,
                         )
                         schedule_scout_explanation(
                             ctx,
@@ -1012,16 +1045,7 @@ async def scan_consolidations(ctx: WorkerContext):
                             alert_type="primed",
                             symbol=symbol,
                             direction=direction,
-                            payload={
-                                "entry": primed_payload.get("entry"),
-                                "stop": primed_payload.get("stop"),
-                                "target": primed_payload.get("target"),
-                                "rr": primed_payload.get("rr"),
-                                "l2": primed_payload.get("l2"),
-                                "spread": primed_payload.get("spread"),
-                                "p2r": primed_payload.get("p2r"),
-                                "features": dstate.features,
-                            },
+                            payload=alert_payload,
                         )
                         schedule_ticker_research(
                             ctx,
@@ -1157,6 +1181,14 @@ async def scan_consolidations(ctx: WorkerContext):
                         channel=CONFIG.alerts.slack_channel,
                         thread_ts=state.slack_thread_ts,
                         message_ts=trigger_ts,
+                        symbol=symbol,
+                        direction=trigger.direction,
+                        payload=payload,
+                    )
+                    record_shadow_alert_decision(
+                        alert_id=direction_state.last_alert_id,
+                        setup_id=setup_id,
+                        alert_type="trigger",
                         symbol=symbol,
                         direction=trigger.direction,
                         payload=payload,

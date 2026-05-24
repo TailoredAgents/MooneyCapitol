@@ -1166,6 +1166,9 @@
         <div class="nav-group developer-nav">
           <div class="nav-label admin">Developer Setup</div>
           <nav class="tabs" aria-label="Developer setup">
+            <button class="tab-button" data-tab="shadow">
+              <span><span class="nav-title">Shadow Trader</span><span class="nav-subtitle">Read-only AI trade decisions</span></span>
+            </button>
             <button class="tab-button" data-tab="copier">
               <span><span class="nav-title">Copier Settings</span><span class="nav-subtitle">Modes, kill switch, and copy accounts</span></span>
             </button>
@@ -1245,6 +1248,68 @@
               </div>
             </div>
           </aside>
+        </div>
+      </section>
+
+      <section id="tab-shadow" class="tab-panel owner-panel">
+        <div class="page-heading">
+          <div>
+            <h2>Shadow Trader</h2>
+            <p>Read-only AI trade decisions. This page tracks what the model would have done without submitting orders.</p>
+          </div>
+          <span class="page-badge admin">Developer Setup</span>
+        </div>
+        <div class="grid">
+          <div class="stat">
+            <div class="muted">Decisions 24h</div>
+            <div id="shadow-total" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Would Take</div>
+            <div id="shadow-would-take" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Matched Connor</div>
+            <div id="shadow-matched" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Match Rate</div>
+            <div id="shadow-match-rate" class="value">-</div>
+          </div>
+        </div>
+
+        <div class="section panel">
+          <div class="account-refresh-bar">
+            <button class="primary" id="refresh-shadow">Refresh Shadow Decisions</button>
+            <div class="account-refresh-meta">
+              <div><span class="muted">Mode</span> <strong>Read-only observation</strong></div>
+              <div id="shadow-status" class="status-line">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Recent AI Decisions</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Symbol</th>
+                  <th>Decision</th>
+                  <th>p2R</th>
+                  <th>RR</th>
+                  <th>Entry</th>
+                  <th>Stop</th>
+                  <th>Target</th>
+                  <th>Size</th>
+                  <th>Connor</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="shadow-decisions-body"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -1611,6 +1676,7 @@
       const launchChecksList = document.getElementById('launch-checks-list');
       const launchSummaryList = document.getElementById('launch-summary-list');
       const launchReadonlyBody = document.getElementById('launch-readonly-body');
+      const shadowDecisionsBody = document.getElementById('shadow-decisions-body');
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -1656,6 +1722,7 @@
           document.querySelectorAll('.tab-panel').forEach((item) => item.classList.remove('active'));
           button.classList.add('active');
           document.getElementById(`tab-${button.dataset.tab}`).classList.add('active');
+          if (button.dataset.tab === 'shadow') loadShadow();
           if (button.dataset.tab === 'launch') loadLaunchReadiness();
           if (button.dataset.tab === 'copier') loadCopier();
           if (button.dataset.tab === 'trades') loadTrades();
@@ -1779,6 +1846,16 @@
         }
       }
 
+      async function loadShadow() {
+        try {
+          const payload = await api('/shadow/decisions?limit=100');
+          renderShadow(payload);
+          setStatus('shadow-status', `${payload.count || 0} shadow decision${payload.count === 1 ? '' : 's'} loaded.`, false);
+        } catch (err) {
+          setStatus('shadow-status', err.message, true);
+        }
+      }
+
       async function loadTrades() {
         try {
           const [trades, recap] = await Promise.all([
@@ -1862,6 +1939,38 @@
             <div class="muted">${escapeHtml(item.status || '')}</div>
           </div>
         `).join('') : '<div class="muted">No open reconciliation issues.</div>';
+      }
+
+      function renderShadow(payload) {
+        const summary = payload.summary || {};
+        setText('shadow-total', String(summary.total ?? 0));
+        setText('shadow-would-take', String(summary.would_take ?? 0));
+        setText('shadow-matched', String(summary.matched_master ?? 0));
+        setText('shadow-match-rate', formatPct(summary.match_rate));
+        const items = payload.items || [];
+        shadowDecisionsBody.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td>${formatTime(item.observed_at)}</td>
+            <td><strong>${escapeHtml(item.symbol || '')}</strong><div class="muted">${escapeHtml(item.alert_type || '')} ${escapeHtml(item.direction || '')}</div></td>
+            <td>${statusChip(item.decision)}<div class="muted">${escapeHtml(item.confidence || '')}</div></td>
+            <td>${formatDecimal(item.p2r, 2)}</td>
+            <td>${formatDecimal(item.rr, 2)}</td>
+            <td>${formatMoney(item.entry_price)}</td>
+            <td>${formatMoney(item.stop_price)}</td>
+            <td>${formatMoney(item.target_price)}</td>
+            <td>${item.suggested_size_pct ? formatPct(item.suggested_size_pct) : '-'}</td>
+            <td>${item.master_taken ? '<span class="status-chip ok">took</span>' : '<span class="status-chip neutral">unknown</span>'}</td>
+            <td><div class="muted">${escapeHtml(item.reason || '')}</div></td>
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="11">
+              <div class="empty-state">
+                <div class="title">No shadow decisions yet</div>
+                <div class="muted">When scout alerts fire, the model will record what it would have done here without placing orders.</div>
+              </div>
+            </td>
+          </tr>`;
       }
 
       function renderTrades(items) {
@@ -2283,6 +2392,10 @@
         const number = Number(value);
         return Number.isFinite(number) ? `${(number * 100).toFixed(1)}%` : '-';
       }
+      function formatDecimal(value, digits = 2) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toFixed(digits) : '-';
+      }
       function formatTime(value) {
         if (!value) return '-';
         const date = new Date(value);
@@ -2301,6 +2414,7 @@
 
       document.getElementById('save-global').addEventListener('click', saveGlobal);
       document.getElementById('refresh-launch').addEventListener('click', loadLaunchReadiness);
+      document.getElementById('refresh-shadow').addEventListener('click', loadShadow);
       document.getElementById('enable-kill').addEventListener('click', () => setKillSwitch(true));
       document.getElementById('disable-kill').addEventListener('click', () => setKillSwitch(false));
       document.getElementById('refresh-pnl').addEventListener('click', refreshPnl);
