@@ -275,6 +275,19 @@ def test_dashboard_v3_separates_trader_and_owner_navigation():
     assert "Emergency Stop" in html
 
 
+def test_dashboard_has_persistent_dark_mode_toggle():
+    html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
+
+    assert 'id="theme-toggle"' in html
+    assert "Dark mode" in html
+    assert "Light mode" in html
+    assert "mooney-dashboard-theme" in html
+    assert 'document.documentElement.dataset.theme' in html
+    assert ':root[data-theme="dark"]' in html
+    assert "prefers-color-scheme: dark" in html
+    assert "aria-pressed" in html
+
+
 def test_copier_settings_uses_control_console_layout():
     html = Path("app/templates/dashboard.html").read_text(encoding="utf-8")
 

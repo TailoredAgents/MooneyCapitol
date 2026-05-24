@@ -7,6 +7,17 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/static/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem('mooney-dashboard-theme');
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.dataset.theme = saved || (prefersDark ? 'dark' : 'light');
+        } catch (_) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
     <style>
       :root {
         color-scheme: light;
@@ -41,6 +52,39 @@
         --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.08);
         --shadow-lg: 0 22px 55px rgba(15, 23, 42, 0.12);
       }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #090f1c;
+        --shell: #0d1628;
+        --panel: #111c2f;
+        --panel-hover: #17243a;
+        --line: #25334a;
+        --line-strong: #3b4d68;
+        --line-light: #1a273c;
+        --text: #e5eefb;
+        --text-muted: #9fb0c8;
+        --text-light: #6f819c;
+        --accent: #60a5fa;
+        --accent-light: #17345b;
+        --accent-dark: #93c5fd;
+        --success: #34d399;
+        --success-light: #123829;
+        --warning: #fbbf24;
+        --warning-light: #3b2d11;
+        --danger: #fb7185;
+        --danger-light: #421923;
+        --info: #22d3ee;
+        --info-light: #143744;
+        --armed: #a78bfa;
+        --armed-light: #2d214b;
+        --primed: #fb923c;
+        --primed-light: #3f2512;
+        --active: #fb7185;
+        --active-light: #421923;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.34);
+        --shadow-md: 0 14px 34px rgba(0, 0, 0, 0.34);
+        --shadow-lg: 0 26px 68px rgba(0, 0, 0, 0.42);
+      }
       * { box-sizing: border-box; }
       body {
         margin: 0;
@@ -52,6 +96,11 @@
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+      }
+      :root[data-theme="dark"] body {
+        background:
+          radial-gradient(circle at 24% -10%, rgba(37, 99, 235, 0.18), transparent 34%),
+          linear-gradient(180deg, #090f1c 0%, var(--shell) 300px, #070b13 100%);
       }
       header {
         display: grid;
@@ -66,6 +115,9 @@
         position: sticky;
         top: 0;
         z-index: 50;
+      }
+      :root[data-theme="dark"] header {
+        background: rgba(9, 15, 28, 0.9);
       }
       .header-left {
         display: flex;
@@ -101,6 +153,21 @@
       }
       .header-kill-spacer { min-width: 0; }
       .logout-form { margin: 0; }
+      .theme-toggle {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text-muted);
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        min-width: 104px;
+      }
+      .theme-toggle:hover {
+        background: var(--panel-hover);
+        color: var(--text);
+      }
       .logout-button {
         border: 1px solid var(--line);
         background: var(--panel);
@@ -137,6 +204,9 @@
         top: 65px;
         height: calc(100vh - 65px);
         overflow-y: auto;
+      }
+      :root[data-theme="dark"] .sidebar {
+        background: linear-gradient(180deg, rgba(17, 28, 47, 0.96) 0%, rgba(13, 22, 40, 0.96) 100%);
       }
       .sidebar-kicker {
         color: var(--text-muted);
@@ -179,6 +249,9 @@
         padding: 12px 13px;
         background: rgba(255, 255, 255, 0.78);
       }
+      :root[data-theme="dark"] .tab-button {
+        background: rgba(17, 28, 47, 0.76);
+      }
       .tab-button::before {
         content: "";
         width: 9px;
@@ -210,6 +283,9 @@
         transform: translateY(-1px);
         box-shadow: var(--shadow-sm);
       }
+      :root[data-theme="dark"] .tab-button:hover {
+        background: var(--panel-hover);
+      }
       .tab-button.active {
         background: #fff;
         border-color: var(--accent);
@@ -217,7 +293,12 @@
         font-weight: 600;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10), var(--shadow-sm);
       }
+      :root[data-theme="dark"] .tab-button.active {
+        background: #17243a;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16), var(--shadow-sm);
+      }
       .tab-button.active .nav-subtitle { color: #1e40af; }
+      :root[data-theme="dark"] .tab-button.active .nav-subtitle { color: #bfdbfe; }
       button.primary { 
         background: var(--accent); 
         border-color: var(--accent); 
@@ -281,6 +362,14 @@
         background: #fff7f7;
         color: #991b1b;
       }
+      :root[data-theme="dark"] .page-badge {
+        background: var(--panel);
+      }
+      :root[data-theme="dark"] .page-badge.admin {
+        border-color: rgba(251, 113, 133, 0.38);
+        background: var(--danger-light);
+        color: var(--danger);
+      }
       .scout-status-grid {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -294,6 +383,18 @@
         padding: 12px 14px;
         min-height: 70px;
         box-shadow: var(--shadow-sm);
+      }
+      :root[data-theme="dark"] .scout-status-card,
+      :root[data-theme="dark"] .monitor-card,
+      :root[data-theme="dark"] .pnl-summary-card,
+      :root[data-theme="dark"] .risk-alert-card,
+      :root[data-theme="dark"] .readiness-summary-card,
+      :root[data-theme="dark"] .check,
+      :root[data-theme="dark"] .fix-item,
+      :root[data-theme="dark"] .empty-state,
+      :root[data-theme="dark"] .ai-panel-note,
+      :root[data-theme="dark"] .ai-explanation {
+        background: var(--panel);
       }
       .scout-status-card .label {
         color: var(--text-muted);
@@ -430,6 +531,15 @@
       .risk-alert-card.warning { border-color: #fed7aa; background: #fffaf0; }
       .risk-alert-card.critical,
       .risk-alert-card.emergency { border-color: #fecaca; background: #fff7f7; }
+      :root[data-theme="dark"] .risk-alert-card.warning {
+        border-color: rgba(251, 191, 36, 0.35);
+        background: var(--warning-light);
+      }
+      :root[data-theme="dark"] .risk-alert-card.critical,
+      :root[data-theme="dark"] .risk-alert-card.emergency {
+        border-color: rgba(251, 113, 133, 0.38);
+        background: var(--danger-light);
+      }
       .owner-panel .panel,
       .owner-panel .stat,
       .owner-panel table {
@@ -481,6 +591,9 @@
         background: #fff7f7;
         padding: 10px 12px;
       }
+      :root[data-theme="dark"] .fix-item {
+        border-color: rgba(251, 113, 133, 0.38);
+      }
       .fix-item .title {
         font-size: 13px;
         margin-bottom: 2px;
@@ -489,6 +602,10 @@
       .check.ok {
         border-color: var(--line);
         background: #fbfefc;
+      }
+      :root[data-theme="dark"] .check.bad,
+      :root[data-theme="dark"] .check.ok {
+        background: var(--panel);
       }
       .check.ok .mark { color: var(--success); }
       .check.bad .mark { color: var(--danger); }
@@ -574,6 +691,9 @@
         background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
         padding: 20px 16px;
         min-height: 86px;
+      }
+      :root[data-theme="dark"] .empty-state {
+        background: linear-gradient(180deg, var(--panel) 0%, #0d1628 100%);
       }
       .empty-state .title {
         font-size: 14px;
@@ -727,6 +847,9 @@
         font-weight: 800;
         text-transform: uppercase;
       }
+      :root[data-theme="dark"] th {
+        background: #0d1628;
+      }
       tr:last-child td { border-bottom: 0; }
       input, select {
         width: 100%;
@@ -736,6 +859,11 @@
         padding: 9px 10px;
         font: inherit;
         background: #fff;
+        color: var(--text);
+      }
+      :root[data-theme="dark"] input,
+      :root[data-theme="dark"] select {
+        background: #0d1628;
       }
       input:focus-visible,
       select:focus-visible,
@@ -765,6 +893,8 @@
       .check.ok { border-color: #a6d8bd; }
       .check.bad { border-color: #f3b5ae; }
       .check .mark { font-weight: 800; margin-right: 6px; }
+      :root[data-theme="dark"] .check.ok { border-color: rgba(52, 211, 153, 0.35); }
+      :root[data-theme="dark"] .check.bad { border-color: rgba(251, 113, 133, 0.38); }
       @media (max-width: 1000px) {
         .layout, .grid, .grid.two, .check-list, .scout-status-grid, .monitor-grid, .readiness-summary-grid, .ai-panel-grid { grid-template-columns: 1fr; }
         .account-refresh-bar { align-items: flex-start; flex-direction: column; }
@@ -785,6 +915,9 @@
         body {
           font-size: 13px;
           background: #f6f8fb;
+        }
+        :root[data-theme="dark"] body {
+          background: #070b13;
         }
         header {
           grid-template-columns: minmax(0, 1fr) auto;
@@ -808,6 +941,9 @@
           background: rgba(255, 255, 255, 0.96);
           backdrop-filter: blur(12px);
           box-shadow: var(--shadow-sm);
+        }
+        :root[data-theme="dark"] .sidebar {
+          background: rgba(13, 22, 40, 0.96);
         }
         .sidebar-kicker {
           margin: 0 2px 8px;
@@ -925,6 +1061,10 @@
           background: #fff;
           box-shadow: inset -16px 0 16px -18px rgba(15, 23, 42, 0.45);
         }
+        :root[data-theme="dark"] .scroll {
+          background: var(--panel);
+          box-shadow: inset -16px 0 16px -18px rgba(0, 0, 0, 0.8);
+        }
         .scroll table {
           border: 0;
           border-radius: 0;
@@ -999,6 +1139,7 @@
         <h1>Mooney Capital</h1>
       </div>
       <div class="header-right">
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">Dark mode</button>
         <form class="logout-form" action="/logout" method="post">
           <button class="logout-button" type="submit">Log out</button>
         </form>
@@ -1475,12 +1616,39 @@
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
       const pnlPositionsBody = document.getElementById('pnl-positions-body');
       const pnlAlertsList = document.getElementById('pnl-alerts-list');
+      const themeToggle = document.getElementById('theme-toggle');
       const laneCountIds = { armed: 'armed-count', primed: 'primed-count', active: 'active-count' };
       const scoutStatusMap = {
         'ws-status': { id: 'scout-ws-status', labels: { connected: 'Live', warning: 'Unstable', disconnected: 'Offline' } },
         'api-status': { id: 'scout-data-mode', labels: { connected: 'Online', warning: 'Degraded', disconnected: 'Offline' } },
         'worker-status': { id: 'scout-scanner-status', labels: { connected: 'Scanning', warning: 'Waiting', disconnected: 'Offline' } },
       };
+
+      function currentTheme() {
+        return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+      }
+
+      function applyTheme(theme) {
+        const nextTheme = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = nextTheme;
+        if (themeToggle) {
+          const isDark = nextTheme === 'dark';
+          themeToggle.textContent = isDark ? 'Light mode' : 'Dark mode';
+          themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+          themeToggle.setAttribute('aria-pressed', String(isDark));
+        }
+      }
+
+      applyTheme(currentTheme());
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const nextTheme = currentTheme() === 'dark' ? 'light' : 'dark';
+          try {
+            localStorage.setItem('mooney-dashboard-theme', nextTheme);
+          } catch (_) {}
+          applyTheme(nextTheme);
+        });
+      }
 
       document.querySelectorAll('.tab-button').forEach((button) => {
         button.addEventListener('click', () => {
