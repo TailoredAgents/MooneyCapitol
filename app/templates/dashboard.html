@@ -1365,9 +1365,11 @@
 
         <div class="section panel">
           <div class="account-refresh-bar">
-            <button class="primary" id="refresh-paper">Refresh AI Lab</button>
+            <button class="primary" id="refresh-paper">Refresh Now</button>
             <div class="account-refresh-meta">
               <div><span class="muted">Mode</span> <strong id="paper-broker-mode">Internal AI lab</strong></div>
+              <div><span class="muted">Auto refresh</span> <strong>Every 10s while open</strong></div>
+              <div><span class="muted">Last updated</span> <strong id="paper-last-updated">-</strong></div>
               <div id="paper-status" class="status-line">Loading...</div>
             </div>
           </div>
@@ -1862,6 +1864,8 @@
       const paperBestTrades = document.getElementById('paper-best-trades');
       const paperWorstTrades = document.getElementById('paper-worst-trades');
       const paperReadinessList = document.getElementById('paper-readiness-list');
+      const paperAutoRefreshMs = 10000;
+      let paperLoading = false;
       const targetsBody = document.getElementById('targets-body');
       const tradesBody = document.getElementById('trades-body');
       const pnlAccountsBody = document.getElementById('pnl-accounts-body');
@@ -1915,6 +1919,10 @@
           if (button.dataset.tab === 'pnl') loadPnl();
         });
       });
+
+      function activeTabName() {
+        return document.querySelector('.tab-button.active')?.dataset.tab || 'scout';
+      }
 
       function setText(id, value) {
         const el = document.getElementById(id);
@@ -2043,6 +2051,8 @@
       }
 
       async function loadPaper() {
+        if (paperLoading) return;
+        paperLoading = true;
         try {
           const [payload, readiness] = await Promise.all([
             api('/paper/trades?limit=100'),
@@ -2050,8 +2060,11 @@
           ]);
           renderPaper(payload, readiness);
           setStatus('paper-status', readiness.ready ? 'Promotion gates passed for observation.' : `${payload.count || 0} AI lab trade${payload.count === 1 ? '' : 's'} loaded. Still observing.`, !readiness.ready);
+          setText('paper-last-updated', new Date().toLocaleTimeString());
         } catch (err) {
           setStatus('paper-status', err.message, true);
+        } finally {
+          paperLoading = false;
         }
       }
 
@@ -2912,9 +2925,15 @@
         }
       }
 
+      function refreshActivePaperTab() {
+        if (document.hidden || activeTabName() !== 'paper') return;
+        loadPaper();
+      }
+
       // Periodic health checks
       refreshScoutHealth();
       setInterval(refreshScoutHealth, 10000);
+      setInterval(refreshActivePaperTab, paperAutoRefreshMs);
     </script>
   </body>
 </html>
