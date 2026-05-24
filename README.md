@@ -342,10 +342,13 @@ Learning and fill matching defaults:
 - `LEARNING_MATCH_MIN_CONFIDENCE=likely` means weak matches stay separate instead of being counted as taken scout alerts.
 - `TRADE_MATCH_MIN_CONFIDENCE=likely` stores the same confidence-gated setup link when broker fills are ingested.
 - `SHADOW_TRADER_ENABLED=1` records read-only AI decisions on scout alerts. It never places orders; it only stores what the model would have done for later review.
-- `PAPER_TRADER_ENABLED=1` lets shadow `would_take` decisions open internal paper trades.
-- `PAPER_TRADER_BROKER_MODE=internal` keeps AI paper trading broker-disconnected by default. Later, set it to `webull_paper` only after `WEBULL_AI_PAPER_*` credentials are configured and validated.
+- `AI_LAB_ENABLED=1` lets shadow `would_take` decisions open broker-disconnected AI Trading Lab practice trades.
+- `AI_LAB_STARTING_EQUITY=100000` sets the fake starting account value for AI Lab sizing and future portfolio reporting.
+- `AI_LAB_SIZE_PCT=0.05` is the default practice-trade size when the shadow decision does not provide one.
+- `PAPER_TRADER_*` env vars remain supported as legacy aliases for the existing internal paper-trade code.
+- `PAPER_TRADER_BROKER_MODE=internal` keeps the AI Trading Lab broker-disconnected by default. Later, set it to `webull_paper` only after `WEBULL_AI_PAPER_*` credentials are configured and validated.
 - `LEARNING_PAPER_SAMPLE_WEIGHT=0.25` lets closed AI paper trades influence nightly learning at low weight while real Connor trades remain the highest-trust signal.
-- `PAPER_PROMOTION_*` env vars define read-only promotion gates for the AI paper trader. Passing them reports readiness only; it does not enable live autonomous trading.
+- `PAPER_PROMOTION_*` env vars define read-only promotion gates for the AI Trading Lab. Passing them reports readiness only; it does not enable live autonomous trading.
 - `AI_LIVE_TRADING_ENABLED=0` is an explicit launch-readiness gate. The current autonomous AI work is observation/paper only.
 
 Set these during the first Render Blueprint deploy:
@@ -380,7 +383,7 @@ Before live validation:
 
 - Add the Polygon Advanced key for real-time broad scanning.
 - Add Webull OpenAPI credentials, account IDs, HTTP endpoint, and events endpoint.
-- Keep `PAPER_TRADER_BROKER_MODE=internal` until the Paper Trader tab shows the Webull paper account settings are present. After the Webull paper account exists under the copy-account login, set `PAPER_TRADER_BROKER_MODE=webull_paper` and run the read-only Webull paper validation before any future paper-order integration is enabled.
+- Keep `PAPER_TRADER_BROKER_MODE=internal` while the AI Trading Lab is used for autonomous practice. After a dedicated Webull OpenAPI test/UAT account exists, set `PAPER_TRADER_BROKER_MODE=webull_paper` and run the read-only Webull paper validation before any future paper-order integration is enabled.
 - Let the P&L monitor pull live Webull account equity before enabling copy trading. `WEBULL_MASTER_ACCOUNT_EQUITY` and `WEBULL_PERSONAL_ACCOUNT_EQUITY` remain optional emergency fallback env vars, but they are not required for the normal launch path.
 - Keep `COPIER_GLOBAL_KILL_SWITCH=1` until read-only validation passes.
 - Use the Launch tab to confirm remaining blockers are expected credential/data blockers.

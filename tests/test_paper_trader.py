@@ -81,7 +81,7 @@ def test_paper_trade_opens_from_would_take_shadow_decision(monkeypatch):
         reason="p2R and RR met thresholds",
     )
     session = FakeSession(decision=decision)
-    monkeypatch.setenv("PAPER_TRADER_ACCOUNT_EQUITY", "10000")
+    monkeypatch.setenv("AI_LAB_STARTING_EQUITY", "100000")
     monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
 
     paper_id = paper_trader.maybe_open_paper_trade_from_shadow_decision(7)
@@ -89,9 +89,37 @@ def test_paper_trade_opens_from_would_take_shadow_decision(monkeypatch):
     assert paper_id == 1
     trade = session.added[0]
     assert trade.symbol == "MNY"
-    assert trade.notional == 500
-    assert trade.qty == 125
+    assert trade.notional == 5000
+    assert trade.qty == 1250
     assert trade.status == "open"
+
+
+def test_paper_trade_keeps_legacy_equity_alias(monkeypatch):
+    monkeypatch.delenv("AI_LAB_STARTING_EQUITY", raising=False)
+    decision = SimpleNamespace(
+        id=8,
+        would_take=True,
+        entry_price=5.0,
+        stop_price=4.8,
+        target_price=5.6,
+        suggested_size_pct=None,
+        alert_id=21,
+        setup_id=22,
+        symbol="LAB",
+        direction="long",
+        p2r=0.82,
+        rr=3.0,
+        confidence="medium",
+        reason="legacy config",
+    )
+    session = FakeSession(decision=decision)
+    monkeypatch.setenv("PAPER_TRADER_ACCOUNT_EQUITY", "10000")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    paper_id = paper_trader.maybe_open_paper_trade_from_shadow_decision(8)
+
+    assert paper_id == 1
+    assert session.added[0].notional == 500
 
 
 def test_paper_trade_closes_at_stop_conservatively(monkeypatch):

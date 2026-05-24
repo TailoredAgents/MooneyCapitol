@@ -16,11 +16,13 @@ MODEL_VERSION = "paper-v1"
 
 
 def _enabled() -> bool:
-    return os.getenv("PAPER_TRADER_ENABLED", "1").lower() in {"1", "true", "yes", "on"}
+    value = os.getenv("AI_LAB_ENABLED", os.getenv("PAPER_TRADER_ENABLED", "1"))
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 def _account_equity() -> float:
-    return max(0.0, float(os.getenv("PAPER_TRADER_ACCOUNT_EQUITY", "10000")))
+    value = os.getenv("AI_LAB_STARTING_EQUITY", os.getenv("PAPER_TRADER_ACCOUNT_EQUITY", "100000"))
+    return max(0.0, float(value))
 
 
 def _risk_per_share(direction: str, entry: float, stop: float | None) -> float | None:
@@ -50,7 +52,7 @@ def maybe_open_paper_trade_from_shadow_decision(shadow_decision_id: int | None) 
             return None
 
         equity = _account_equity()
-        size_pct = float(decision.suggested_size_pct or float(os.getenv("PAPER_TRADER_SIZE_PCT", "0.05")))
+        size_pct = float(decision.suggested_size_pct or float(os.getenv("AI_LAB_SIZE_PCT", os.getenv("PAPER_TRADER_SIZE_PCT", "0.05"))))
         notional = equity * max(0.0, size_pct)
         qty = notional / decision.entry_price if decision.entry_price > 0 else 0.0
         if qty <= 0:

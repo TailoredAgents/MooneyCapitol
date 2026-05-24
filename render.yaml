@@ -121,6 +121,12 @@ services:
         value: "2.00"
       - key: SHADOW_TRADER_SIZE_PCT
         value: "0.05"
+      - key: AI_LAB_ENABLED
+        value: "1"
+      - key: AI_LAB_STARTING_EQUITY
+        value: "100000"
+      - key: AI_LAB_SIZE_PCT
+        value: "0.05"
       - key: PAPER_TRADER_ENABLED
         value: "1"
       - key: PAPER_TRADER_BROKER_MODE
@@ -276,6 +282,12 @@ services:
       - key: SHADOW_TRADER_MIN_RR
         value: "2.00"
       - key: SHADOW_TRADER_SIZE_PCT
+        value: "0.05"
+      - key: AI_LAB_ENABLED
+        value: "1"
+      - key: AI_LAB_STARTING_EQUITY
+        value: "100000"
+      - key: AI_LAB_SIZE_PCT
         value: "0.05"
       - key: PAPER_TRADER_ENABLED
         value: "1"
