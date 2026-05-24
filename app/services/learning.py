@@ -41,6 +41,7 @@ FEATURE_VERSION = "2026-05-24-connor-size-v1"
 # Regime-specific model keys
 _REGIME_MODELS_KEY = "learning_regime_models"
 _REGIME_META_MODEL_KEY = "learning_regime_meta_model"
+_CONNOR_SIZER_KEY = "learning_model_connor_sizer"
 
 FEATURE_COLS = [
     "box_height",
@@ -939,7 +940,8 @@ class LearningService:
                     logger.info("learning.regime_specialists.success", regimes=regime_result.get("regimes_trained"))
             except Exception as exc:
                 logger.warning("learning.regime_specialists.failed", err=str(exc))
-        
+
+        self._train_connor_sizer(df)
         return {"status": "trained", **report}
 
     def _train_regime_specialists(self, trade_date: date, df: pd.DataFrame) -> dict[str, Any]:
@@ -1026,6 +1028,44 @@ class LearningService:
             "model_type": "regime_specialists",
         }
 
+    def _train_connor_sizer(self, df: pd.DataFrame) -> None:
+        """Train a model to predict Connor's expected position size from setup features."""
+        if "connor_size_pct" not in df:
+            return
+        size_df = df[df["connor_size_pct"] > 0].copy()
+        if len(size_df) < 10:
+            return
+        try:
+            from xgboost import XGBRegressor
+        except Exception:
+            return
+        try:
+            X = self._feature_matrix(size_df)
+            y = size_df["connor_size_pct"].astype(float).values
+            model = XGBRegressor(
+                n_estimators=100,
+                max_depth=3,
+                learning_rate=0.05,
+                subsample=0.9,
+                colsample_bytree=0.9,
+                objective="reg:squarederror",
+                random_state=42,
+                n_jobs=2,
+            )
+            model.fit(X, y)
+            model_buf = io.BytesIO()
+            joblib.dump(model, model_buf)
+            set_bytes(_CONNOR_SIZER_KEY, model_buf.getvalue())
+            logger.info("learning.connor_sizer.trained", rows=len(size_df))
+        except Exception as exc:
+            logger.warning("learning.connor_sizer.failed", err=str(exc))
+
+    def load_connor_sizer(self):
+        model_bytes = get_bytes(_CONNOR_SIZER_KEY)
+        if model_bytes:
+            return joblib.load(io.BytesIO(model_bytes))
+        raise FileNotFoundError("Connor sizer model not found")
+
     def _train_logistic(self, trade_date: date, df: pd.DataFrame, fallback_reason: str | None = None) -> dict[str, Any]:
         if df.empty or df["label"].sum() < 5:
             logger.warning("learning.dataset.insufficient", rows=len(df))
@@ -1089,6 +1129,7 @@ class LearningService:
             fallback_reason=fallback_reason,
         )
         self._persist_report(report)
+        self._train_connor_sizer(df)
         return {"status": "trained", **report}
 
     def _feature_importance(self, model) -> list[dict[str, float | str]]:
@@ -1392,3 +1433,15 @@ def get_learning_service() -> LearningService:
     if _LEARNING is None:
         _LEARNING = LearningService()
     return _LEARNING
+
+
+def predict_connor_size_pct(features: dict[str, float]) -> float | None:
+    """Return the model's predicted position size for a setup, or None if no model exists yet."""
+    try:
+        svc = get_learning_service()
+        model = svc.load_connor_sizer()
+        vector = svc._feature_matrix(pd.DataFrame([features]))
+        prediction = float(model.predict(vector)[0])
+        return max(0.0, prediction)
+    except Exception:
+        return None

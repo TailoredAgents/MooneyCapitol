@@ -38,6 +38,14 @@ def _confidence(p2r: float | None) -> str:
     return "low"
 
 
+def _predict_size(features: dict) -> float | None:
+    try:
+        from app.services.learning import predict_connor_size_pct
+        return predict_connor_size_pct(features)
+    except Exception:
+        return None
+
+
 def evaluate_shadow_decision(payload: dict[str, Any], alert_type: str) -> dict[str, Any]:
     min_p2r = float(os.getenv("SHADOW_TRADER_MIN_P2R", "0.70"))
     min_rr = float(os.getenv("SHADOW_TRADER_MIN_RR", "2.00"))
@@ -77,13 +85,19 @@ def evaluate_shadow_decision(payload: dict[str, Any], alert_type: str) -> dict[s
     decision = "would_take" if would_take else ("watch" if not blockers else "skip")
     reason = "; ".join(positives + blockers) or "no decision context"
 
+    if would_take:
+        predicted_size = _predict_size(payload.get("features") or {})
+        suggested_size_pct = predicted_size if predicted_size is not None else size_pct
+    else:
+        suggested_size_pct = None
+
     return {
         "p2r": p2r,
         "rr": rr,
         "entry_price": entry,
         "stop_price": stop,
         "target_price": target,
-        "suggested_size_pct": size_pct if would_take else None,
+        "suggested_size_pct": suggested_size_pct,
         "would_take": would_take,
         "decision": decision,
         "confidence": _confidence(p2r),

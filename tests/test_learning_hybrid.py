@@ -16,6 +16,7 @@ from app.services.learning import (
     _master_equity,
     calculate_hybrid_target,
     normalize_realized_r,
+    predict_connor_size_pct,
 )
 from app.services.trade_matcher import best_setup_match
 
@@ -537,6 +538,42 @@ def test_paper_trade_features_connor_size_pct_is_zero():
 
 def test_connor_size_pct_in_feature_cols():
     assert "connor_size_pct" in FEATURE_COLS
+
+
+def test_predict_connor_size_pct_returns_none_without_model(monkeypatch):
+    import app.services.learning as learning_module
+    monkeypatch.setattr(learning_module, "get_bytes", lambda key: None)
+    result = predict_connor_size_pct({"rvol_break": 2.0, "l2_mean": 0.75})
+    assert result is None
+
+
+def test_connor_sizer_trains_on_taken_rows_only(monkeypatch):
+    pytest.importorskip("xgboost")
+    service = LearningService()
+    captured = {}
+
+    def fake_set_bytes(key, value):
+        captured[key] = value
+
+    import app.services.learning as learning_module
+    monkeypatch.setattr(learning_module, "set_bytes", fake_set_bytes)
+
+    df = _training_df(rows=20)
+    # Give half the rows a non-zero connor_size_pct (simulating taken trades)
+    df["connor_size_pct"] = [0.03 if i % 2 == 0 else 0.0 for i in range(len(df))]
+
+    service._train_connor_sizer(df)
+
+    from app.services.learning import _CONNOR_SIZER_KEY
+    assert _CONNOR_SIZER_KEY in captured
+
+
+def test_connor_sizer_skips_training_when_too_few_taken_rows():
+    service = LearningService()
+    df = _training_df(rows=20)
+    df["connor_size_pct"] = 0.0  # no taken trades with known size
+    # Should not raise — just silently skips
+    service._train_connor_sizer(df)
 
 
 def test_setup_row_includes_connor_size_pct_from_fills(monkeypatch):
