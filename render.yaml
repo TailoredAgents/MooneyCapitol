@@ -87,6 +87,10 @@ services:
         value: "20"
       - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES
         value: "30"
+      - key: LEARNING_MATCH_PRE_ALERT_SECONDS
+        value: "60"
+      - key: LEARNING_MATCH_MIN_CONFIDENCE
+        value: likely
       - key: LEARNING_BEHAVIOR_WEIGHT
         value: "0.35"
       - key: LEARNING_OUTCOME_WEIGHT
@@ -101,6 +105,12 @@ services:
         value: "3.0"
       - key: LEARNING_SYNTHETIC_SAMPLE_WEIGHT
         value: "0.15"
+      - key: TRADE_MATCH_WINDOW_SECONDS
+        value: "1800"
+      - key: TRADE_MATCH_PRE_ALERT_SECONDS
+        value: "60"
+      - key: TRADE_MATCH_MIN_CONFIDENCE
+        value: likely
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
@@ -191,6 +201,10 @@ services:
         value: "20"
       - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES
         value: "30"
+      - key: LEARNING_MATCH_PRE_ALERT_SECONDS
+        value: "60"
+      - key: LEARNING_MATCH_MIN_CONFIDENCE
+        value: likely
       - key: LEARNING_BEHAVIOR_WEIGHT
         value: "0.35"
       - key: LEARNING_OUTCOME_WEIGHT
@@ -205,6 +219,12 @@ services:
         value: "3.0"
       - key: LEARNING_SYNTHETIC_SAMPLE_WEIGHT
         value: "0.15"
+      - key: TRADE_MATCH_WINDOW_SECONDS
+        value: "1800"
+      - key: TRADE_MATCH_PRE_ALERT_SECONDS
+        value: "60"
+      - key: TRADE_MATCH_MIN_CONFIDENCE
+        value: likely
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD

@@ -135,6 +135,9 @@ class Fill(Base):
     price = Column(Float, nullable=False)
     fee = Column(Float, nullable=True)
     setup_id = Column(BigInteger, ForeignKey("setups.id"), index=True, nullable=True)
+    setup_match_score = Column(Float, nullable=True)
+    setup_match_confidence = Column(String(16), nullable=True, index=True)
+    setup_match_reason = Column(JSONB, nullable=True)
 
 
 class Trade(Base):

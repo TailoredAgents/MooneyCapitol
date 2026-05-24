@@ -14,6 +14,7 @@ from app.services.learning import (
     calculate_hybrid_target,
     normalize_realized_r,
 )
+from app.services.trade_matcher import best_setup_match
 
 
 def test_normalize_realized_r_clips_and_scales():
@@ -159,6 +160,122 @@ def test_dataset_builder_labels_manual_no_alert(monkeypatch):
     assert bool(df.iloc[0]["manual_no_alert"]) is True
     assert df.iloc[0]["setup_id"] is None
     assert service._label_breakdown(df) == {LABEL_MANUAL_NO_ALERT: 1}
+
+
+def test_delayed_manual_fill_matches_scout_setup_for_learning(monkeypatch):
+    service = LearningService()
+    detected_ts = datetime(2026, 5, 16, 14, 30, tzinfo=timezone.utc)
+    fill_ts = datetime(2026, 5, 16, 14, 35, tzinfo=timezone.utc)
+    setup = SimpleNamespace(
+        id=41,
+        payload_json={
+            "symbol": "MNY",
+            "features": {
+                "box_height": 0.08,
+                "box_bars": 12,
+                "rvol_break": 2.2,
+                "l2_mean": 0.71,
+                "l2_persist": 4.0,
+                "dist_htf": 0.2,
+                "dist_gap": 0.1,
+                "spread_cents": 0.8,
+            },
+        },
+        direction="long",
+        detected_ts=detected_ts,
+        entry_price=4.25,
+        rr_min=2.2,
+        score=86,
+    )
+    alert = SimpleNamespace(id=42)
+    fill = SimpleNamespace(id=43, setup_id=None, symbol="MNY", ts=fill_ts, side="BUY", qty=100, price=4.30)
+
+    monkeypatch.setattr(service, "_load_setups", lambda start_ts: [setup])
+    monkeypatch.setattr(service, "_load_fills", lambda start_ts, end_ts: [fill])
+    monkeypatch.setattr(service, "_load_trades", lambda start_ts, end_ts: [])
+    monkeypatch.setattr(service, "_alerts_for_setups", lambda setup_ids: {41: [alert]})
+
+    df = service._build_rows(detected_ts.date())
+
+    assert len(df) == 1
+    assert df.iloc[0]["label_class"] == LABEL_SUGGESTED_TAKEN
+    assert bool(df.iloc[0]["taken_by_master"]) is True
+    assert df.iloc[0]["setup_id"] == 41
+    assert df.iloc[0]["fill_id"] == 43
+    assert df.iloc[0]["setup_match_confidence"] in {"likely", "exact"}
+    assert df.iloc[0]["setup_match_score"] > 0.0
+
+
+def test_direction_mismatch_does_not_mark_setup_taken(monkeypatch):
+    service = LearningService()
+    detected_ts = datetime(2026, 5, 16, 14, 30, tzinfo=timezone.utc)
+    fill_ts = datetime(2026, 5, 16, 14, 35, tzinfo=timezone.utc)
+    setup = SimpleNamespace(
+        id=51,
+        payload_json={
+            "symbol": "MNY",
+            "features": {
+                "box_height": 0.08,
+                "box_bars": 12,
+                "rvol_break": 2.2,
+                "l2_mean": 0.71,
+                "l2_persist": 4.0,
+                "dist_htf": 0.2,
+                "dist_gap": 0.1,
+                "spread_cents": 0.8,
+            },
+        },
+        direction="long",
+        detected_ts=detected_ts,
+        entry_price=4.25,
+        rr_min=2.2,
+        score=86,
+    )
+    fill = SimpleNamespace(id=53, setup_id=None, symbol="MNY", ts=fill_ts, side="SELL", qty=100, price=4.30)
+
+    monkeypatch.setattr(service, "_load_setups", lambda start_ts: [setup])
+    monkeypatch.setattr(service, "_load_fills", lambda start_ts, end_ts: [fill])
+    monkeypatch.setattr(service, "_load_trades", lambda start_ts, end_ts: [])
+    monkeypatch.setattr(service, "_alerts_for_setups", lambda setup_ids: {})
+
+    df = service._build_rows(detected_ts.date())
+
+    assert df["label_class"].tolist() == [LABEL_SUGGESTED_IGNORED, LABEL_MANUAL_NO_ALERT]
+    assert bool(df.iloc[0]["taken_by_master"]) is False
+    assert bool(df.iloc[1]["manual_no_alert"]) is True
+
+
+def test_best_setup_match_scores_time_direction_and_price():
+    detected_ts = datetime(2026, 5, 16, 14, 30, tzinfo=timezone.utc)
+    setup = SimpleNamespace(
+        id=61,
+        payload_json={"symbol": "MNY"},
+        direction="long",
+        detected_ts=detected_ts,
+        entry_price=4.25,
+    )
+
+    match = best_setup_match(
+        symbol="MNY",
+        side="BUY",
+        ts=datetime(2026, 5, 16, 14, 34, tzinfo=timezone.utc),
+        price=4.27,
+        setups=[setup],
+        window_seconds=1800,
+    )
+    mismatch = best_setup_match(
+        symbol="MNY",
+        side="SELL",
+        ts=datetime(2026, 5, 16, 14, 34, tzinfo=timezone.utc),
+        price=4.27,
+        setups=[setup],
+        window_seconds=1800,
+    )
+
+    assert match.matched is True
+    assert match.confidence in {"likely", "exact"}
+    assert mismatch.matched is False
+    assert mismatch.reason["reject"] == "direction_mismatch"
 
 
 def _training_df(rows: int = 12):

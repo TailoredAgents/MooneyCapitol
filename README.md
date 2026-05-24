@@ -336,6 +336,12 @@ Deploy-now defaults:
 - `OPENAI_DAILY_REQUEST_LIMIT=200`
 - `OPENAI_RESEARCH_DAILY_REQUEST_LIMIT=30`
 
+Learning and fill matching defaults:
+
+- `LEARNING_MANUAL_MATCH_WINDOW_MINUTES=30` lets the nightly learner treat a delayed manual fill as a scout take when the symbol, direction, timing, and entry price match.
+- `LEARNING_MATCH_MIN_CONFIDENCE=likely` means weak matches stay separate instead of being counted as taken scout alerts.
+- `TRADE_MATCH_MIN_CONFIDENCE=likely` stores the same confidence-gated setup link when broker fills are ingested.
+
 Set these during the first Render Blueprint deploy:
 
 - `COWORK_OPERATOR_USERNAME`

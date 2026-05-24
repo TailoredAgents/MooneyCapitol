@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from app.db.models import Fill, Setup
 from app.db.session import get_session
+from app.services.trade_matcher import best_setup_match
 from app.services.watchlist import get_or_create_symbol
 
 
@@ -25,6 +26,9 @@ def _parse_timestamp(value: str) -> datetime:
 
 def ingest_fills(fills: Iterable[dict[str, Any]]) -> int:
     inserted = 0
+    match_window_s = int(os.getenv("TRADE_MATCH_WINDOW_SECONDS", "1800"))
+    pre_alert_s = int(os.getenv("TRADE_MATCH_PRE_ALERT_SECONDS", "60"))
+    minimum_confidence = os.getenv("TRADE_MATCH_MIN_CONFIDENCE", "likely").lower()
     with get_session() as session:
         for item in fills:
             ext_id = item.get("ext_trade_id")
@@ -41,19 +45,41 @@ def ingest_fills(fills: Iterable[dict[str, Any]]) -> int:
             fee = float(item.get("fee", 0.0)) if item.get("fee") is not None else None
             account = item.get("account", "demo")
             setup_id = item.get("setup_id")
+            setup_match_score = None
+            setup_match_confidence = None
+            setup_match_reason = None
 
             if setup_id is None and symbol:
-                # Attempt to link to latest setup for the symbol within 30 min window
+                # Link manual broker fills back to scout setups when the symbol,
+                # direction, timing, and entry price make the intent clear.
                 symbol_row = get_or_create_symbol(session, symbol)
                 stmt = (
                     select(Setup)
-                    .where(Setup.symbol_id == symbol_row.id, Setup.detected_ts <= ts_dt)
+                    .where(
+                        Setup.symbol_id == symbol_row.id,
+                        Setup.detected_ts >= ts_dt - timedelta(seconds=match_window_s),
+                        Setup.detected_ts <= ts_dt + timedelta(seconds=pre_alert_s),
+                    )
                     .order_by(Setup.detected_ts.desc())
-                    .limit(1)
                 )
-                setup = session.execute(stmt).scalar_one_or_none()
-                if setup and abs((ts_dt - setup.detected_ts).total_seconds()) <= 1800:
-                    setup_id = setup.id
+                match = best_setup_match(
+                    symbol=symbol,
+                    side=side,
+                    ts=ts_dt,
+                    price=price,
+                    setups=session.execute(stmt).scalars().all(),
+                    window_seconds=match_window_s,
+                    pre_alert_seconds=pre_alert_s,
+                )
+                setup_match_score = match.score
+                setup_match_confidence = match.confidence
+                setup_match_reason = match.reason
+                if match.matched and match.meets(minimum_confidence):
+                    setup_id = match.setup.id
+            elif setup_id is not None:
+                setup_match_score = 1.0
+                setup_match_confidence = "direct"
+                setup_match_reason = {"confidence": "direct", "setup_id": setup_id}
 
             fill = Fill(
                 ext_trade_id=ext_id,
@@ -65,6 +91,9 @@ def ingest_fills(fills: Iterable[dict[str, Any]]) -> int:
                 price=price,
                 fee=fee,
                 setup_id=setup_id,
+                setup_match_score=setup_match_score,
+                setup_match_confidence=setup_match_confidence,
+                setup_match_reason=setup_match_reason,
             )
             session.add(fill)
             inserted += 1

@@ -21,6 +21,7 @@ from app.db.models import Alert, Fill, Setup, Trade
 from app.db.session import get_session
 from app.observability.logging import get_logger
 from app.services.kv_store import get_bytes, get_json, set_bytes, set_json
+from app.services.trade_matcher import SetupMatch, best_setup_match
 
 
 logger = get_logger("learning")
@@ -234,6 +235,9 @@ class LearningRow:
     trade_id: int | None = None
     fill_id: int | None = None
     source: str | None = None
+    setup_match_confidence: str | None = None
+    setup_match_score: float | None = None
+    setup_match_reason: dict[str, Any] | None = None
 
     def as_training_dict(self, weights: HybridTargetWeights = DEFAULT_HYBRID_WEIGHTS) -> dict[str, Any]:
         row: dict[str, Any] = {
@@ -250,6 +254,9 @@ class LearningRow:
             "trade_id": self.trade_id,
             "fill_id": self.fill_id,
             "source": self.source,
+            "setup_match_confidence": self.setup_match_confidence,
+            "setup_match_score": self.setup_match_score,
+            "setup_match_reason": self.setup_match_reason,
             "hybrid_target": calculate_hybrid_target(
                 label=self.label,
                 taken_by_master=self.taken_by_master,
@@ -346,6 +353,8 @@ class LearningService:
     def __init__(self) -> None:
         self.lookback_days = int(os.getenv("LEARNING_LOOKBACK_DAYS", "30"))
         self.manual_match_window_minutes = int(os.getenv("LEARNING_MANUAL_MATCH_WINDOW_MINUTES", "30"))
+        self.match_pre_alert_seconds = int(os.getenv("LEARNING_MATCH_PRE_ALERT_SECONDS", "60"))
+        self.learning_match_min_confidence = os.getenv("LEARNING_MATCH_MIN_CONFIDENCE", "likely").lower()
         self.xgb_min_rows = int(os.getenv("LEARNING_XGB_MIN_ROWS", "20"))
         self.sandbox_enabled = os.getenv("LEARNING_SANDBOX_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
         self.synthetic_max_ratio = max(0.0, float(os.getenv("LEARNING_SYNTHETIC_MAX_RATIO", "3.0")))
@@ -460,6 +469,17 @@ class LearningService:
                 return True
         return False
 
+    def _best_fill_setup_match(self, fill: Fill, setups: list[Setup]) -> SetupMatch:
+        return best_setup_match(
+            symbol=getattr(fill, "symbol", None),
+            side=getattr(fill, "side", None),
+            ts=getattr(fill, "ts", None),
+            price=getattr(fill, "price", None),
+            setups=setups,
+            window_seconds=self.manual_match_window_minutes * 60,
+            pre_alert_seconds=self.match_pre_alert_seconds,
+        )
+
     def _build_learning_rows(self, trade_date: date) -> list[LearningRow]:
         end = datetime.combine(trade_date, datetime.min.time(), tzinfo=timezone.utc)
         start = end - timedelta(days=self.lookback_days)
@@ -469,9 +489,20 @@ class LearningService:
         alerts_map = self._alerts_for_setups([s.id for s in setups])
 
         fills_by_setup: dict[int, list[Fill]] = {}
+        fill_matches: dict[int, SetupMatch] = {}
+        unmatched_fills: list[Fill] = []
         for fill in fills:
             if fill.setup_id is not None:
                 fills_by_setup.setdefault(int(fill.setup_id), []).append(fill)
+                continue
+            match = self._best_fill_setup_match(fill, setups)
+            if match.matched and match.meets(self.learning_match_min_confidence):
+                fills_by_setup.setdefault(int(match.setup.id), []).append(fill)
+                fill_matches[getattr(fill, "id", id(fill))] = match
+            else:
+                if match.confidence != "none":
+                    fill_matches[getattr(fill, "id", id(fill))] = match
+                unmatched_fills.append(fill)
 
         trades_by_setup: dict[int, list[Trade]] = {}
         for trade in trades:
@@ -507,6 +538,28 @@ class LearningService:
             alert_id = alerts[-1].id if alerts else None
             trade_id = setup_trades[-1].id if setup_trades else None
             fill_id = setup_fills[-1].id if setup_fills else None
+            fill_match = fill_matches.get(fill_id) if fill_id is not None else None
+            setup_match_confidence = (
+                fill_match.confidence
+                if fill_match
+                else getattr(setup_fills[-1], "setup_match_confidence", None)
+                if setup_fills
+                else None
+            )
+            setup_match_score = (
+                fill_match.score
+                if fill_match
+                else getattr(setup_fills[-1], "setup_match_score", None)
+                if setup_fills
+                else None
+            )
+            setup_match_reason = (
+                fill_match.reason
+                if fill_match
+                else getattr(setup_fills[-1], "setup_match_reason", None)
+                if setup_fills
+                else None
+            )
             label = LABEL_SUGGESTED_TAKEN if taken else LABEL_SUGGESTED_IGNORED
             rows.append(
                 LearningRow(
@@ -523,14 +576,15 @@ class LearningService:
                     trade_id=trade_id,
                     fill_id=fill_id,
                     source="scout",
+                    setup_match_confidence=setup_match_confidence,
+                    setup_match_score=setup_match_score,
+                    setup_match_reason=setup_match_reason,
                 )
             )
 
-        for fill in fills:
-            if fill.setup_id is not None:
-                continue
-            if self._is_near_setup(fill.symbol, fill.ts, setups):
-                continue
+        for fill in unmatched_fills:
+            fill_key = getattr(fill, "id", id(fill))
+            weak_match = fill_matches.get(fill_key)
             rows.append(
                 LearningRow(
                     label=LABEL_MANUAL_NO_ALERT,
@@ -543,6 +597,9 @@ class LearningService:
                     manual_no_alert=True,
                     fill_id=fill.id,
                     source="master_manual",
+                    setup_match_confidence=weak_match.confidence if weak_match else None,
+                    setup_match_score=weak_match.score if weak_match else None,
+                    setup_match_reason=weak_match.reason if weak_match else None,
                 )
             )
 
