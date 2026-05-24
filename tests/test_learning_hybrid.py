@@ -12,6 +12,8 @@ from app.services.learning import (
     LABEL_SUGGESTED_TAKEN,
     LearningRow,
     LearningService,
+    _fills_connor_size_pct,
+    _master_equity,
     calculate_hybrid_target,
     normalize_realized_r,
 )
@@ -465,3 +467,112 @@ def test_hybrid_weights_can_be_configured_from_environment(monkeypatch):
     assert service.hybrid_weights.outcome_weight == 0.60
     assert service.hybrid_weights.manual_edge_weight == 0.10
     assert service.hybrid_weights.penalty_weight == 0.05
+
+
+# ---- connor_size_pct feature tests ----------------------------------------
+
+def test_master_equity_reads_from_env(monkeypatch):
+    monkeypatch.setenv("WEBULL_MASTER_ACCOUNT_EQUITY", "75000")
+    assert _master_equity() == 75000.0
+
+
+def test_master_equity_returns_none_when_unset(monkeypatch):
+    monkeypatch.delenv("WEBULL_MASTER_ACCOUNT_EQUITY", raising=False)
+    assert _master_equity() is None
+
+
+def test_master_equity_returns_none_for_zero(monkeypatch):
+    monkeypatch.setenv("WEBULL_MASTER_ACCOUNT_EQUITY", "0")
+    assert _master_equity() is None
+
+
+def test_fills_connor_size_pct_computes_buy_notional_over_equity():
+    fill = SimpleNamespace(side="BUY", qty=200, price=5.0)
+    result = _fills_connor_size_pct([fill], equity=50000.0)
+    # 200 * 5.0 = 1000; 1000 / 50000 = 0.02
+    assert result == pytest.approx(0.02, rel=1e-5)
+
+
+def test_fills_connor_size_pct_ignores_sell_fills():
+    buy_fill = SimpleNamespace(side="BUY", qty=100, price=10.0)
+    sell_fill = SimpleNamespace(side="SELL", qty=100, price=11.0)
+    result = _fills_connor_size_pct([buy_fill, sell_fill], equity=50000.0)
+    # only buy: 100 * 10 = 1000; 1000 / 50000 = 0.02
+    assert result == pytest.approx(0.02, rel=1e-5)
+
+
+def test_fills_connor_size_pct_returns_zero_when_no_equity():
+    fill = SimpleNamespace(side="BUY", qty=100, price=10.0)
+    assert _fills_connor_size_pct([fill], equity=None) == 0.0
+
+
+def test_fills_connor_size_pct_returns_zero_when_no_fills():
+    assert _fills_connor_size_pct([], equity=50000.0) == 0.0
+
+
+def test_manual_trade_features_includes_connor_size_pct(monkeypatch):
+    monkeypatch.setenv("WEBULL_MASTER_ACCOUNT_EQUITY", "50000")
+    service = LearningService()
+    fill = SimpleNamespace(qty=200, price=5.0, side="BUY")
+    feats = service._manual_trade_features(fill=fill)
+    assert feats["connor_size_pct"] == pytest.approx(0.02, rel=1e-5)
+
+
+def test_manual_trade_features_connor_size_pct_zero_without_equity(monkeypatch):
+    monkeypatch.delenv("WEBULL_MASTER_ACCOUNT_EQUITY", raising=False)
+    service = LearningService()
+    fill = SimpleNamespace(qty=200, price=5.0, side="BUY")
+    feats = service._manual_trade_features(fill=fill)
+    assert feats["connor_size_pct"] == 0.0
+
+
+def test_paper_trade_features_connor_size_pct_is_zero():
+    service = LearningService()
+    paper_trade = SimpleNamespace(
+        entry_price=4.0, direction="long", realized_r=1.5
+    )
+    feats = service._paper_trade_features(paper_trade, shadow_decision=None)
+    assert feats["connor_size_pct"] == 0.0
+
+
+def test_connor_size_pct_in_feature_cols():
+    assert "connor_size_pct" in FEATURE_COLS
+
+
+def test_setup_row_includes_connor_size_pct_from_fills(monkeypatch):
+    monkeypatch.setenv("WEBULL_MASTER_ACCOUNT_EQUITY", "50000")
+    service = LearningService()
+    detected_ts = datetime(2026, 5, 24, 10, 0, tzinfo=timezone.utc)
+    setup = SimpleNamespace(
+        id=99,
+        payload_json={
+            "symbol": "TST",
+            "features": {
+                "box_height": 0.05,
+                "box_bars": 10,
+                "rvol_break": 2.0,
+                "l2_mean": 0.7,
+                "l2_persist": 3.0,
+                "dist_htf": 0.1,
+                "dist_gap": 0.05,
+                "spread_cents": 0.3,
+            },
+        },
+        direction="long",
+        detected_ts=detected_ts,
+        entry_price=5.0,
+        rr_min=2.0,
+        score=80,
+    )
+    fill = SimpleNamespace(id=99, setup_id=99, symbol="TST", ts=detected_ts, side="BUY", qty=100, price=5.0)
+
+    monkeypatch.setattr(service, "_load_setups", lambda start_ts: [setup])
+    monkeypatch.setattr(service, "_load_fills", lambda start_ts, end_ts: [fill])
+    monkeypatch.setattr(service, "_load_trades", lambda start_ts, end_ts: [])
+    monkeypatch.setattr(service, "_alerts_for_setups", lambda setup_ids: {})
+
+    df = service._build_rows(detected_ts.date())
+
+    assert len(df) == 1
+    # 100 * 5.0 = 500; 500 / 50000 = 0.01
+    assert df.iloc[0]["connor_size_pct"] == pytest.approx(0.01, rel=1e-5)

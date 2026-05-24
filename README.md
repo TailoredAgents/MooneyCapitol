@@ -355,6 +355,7 @@ Learning and fill matching defaults:
 - `PAPER_TRADER_*` env vars remain supported as legacy aliases for the existing internal paper-trade code.
 - `PAPER_TRADER_BROKER_MODE=internal` keeps the AI Trading Lab broker-disconnected by default. Later, set it to `webull_paper` only after `WEBULL_AI_PAPER_*` credentials are configured and validated.
 - `LEARNING_PAPER_SAMPLE_WEIGHT=0.25` lets closed AI paper trades influence nightly learning at low weight while real Connor trades remain the highest-trust signal.
+- `WEBULL_MASTER_ACCOUNT_EQUITY` — Connor's approximate account equity used to normalize position size into a fraction (e.g. 100 shares × $5 ÷ $50,000 = 2%). This fraction becomes `connor_size_pct`, a learning feature that lets the model learn Connor's conviction signals. Without this set the feature defaults to 0.0, which is safe but loses the sizing signal.
 - `PAPER_PROMOTION_*` env vars define read-only promotion gates for the AI Trading Lab. Passing them reports readiness only; it does not enable live autonomous trading.
 - `AI_LIVE_TRADING_ENABLED=0` is an explicit launch-readiness gate. The current autonomous AI work is observation/paper only.
 

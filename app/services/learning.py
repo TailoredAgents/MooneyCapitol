@@ -36,7 +36,7 @@ _FEATURE_IMPORTANCE_KEY = "learning_feature_importance"
 _THRESHOLDS_KEY = "learning_thresholds"
 _CANARY_KEY = "learning_thresholds_canary"
 _REPORT_KEY = "learning_report"
-FEATURE_VERSION = "2026-05-17-regime-l2-v1"
+FEATURE_VERSION = "2026-05-24-connor-size-v1"
 
 # Regime-specific model keys
 _REGIME_MODELS_KEY = "learning_regime_models"
@@ -82,6 +82,8 @@ FEATURE_COLS = [
     "momentum_acceleration",
     "l2_wall_detection",
     "microstructure_edge",
+    # Connor's conviction signal
+    "connor_size_pct",
 ]
 
 
@@ -291,6 +293,29 @@ def bucket_time(ts: datetime | None) -> str:
     return "unknown"
 
 
+def _master_equity() -> float | None:
+    val = os.getenv("WEBULL_MASTER_ACCOUNT_EQUITY")
+    if not val:
+        return None
+    try:
+        equity = float(val)
+        return equity if equity > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _fills_connor_size_pct(fills: list, equity: float | None) -> float:
+    """Buy-side fill notional as a fraction of Connor's account equity."""
+    if not fills or not equity:
+        return 0.0
+    notional = sum(
+        float(f.qty or 0) * float(f.price or 0)
+        for f in fills
+        if str(getattr(f, "side", "") or "").upper().startswith("B")
+    )
+    return round(notional / equity, 6) if notional > 0 else 0.0
+
+
 def _encode_price_bucket(value) -> float:
     mapping = {"unknown": 0.0, "0.5-5": 1.0, "5-10": 2.0, "10-20": 3.0, "20+": 4.0}
     if value in mapping:
@@ -451,6 +476,9 @@ class LearningService:
         elif trade is not None:
             price = trade.basis
             qty = trade.qty
+        equity = _master_equity()
+        notional = float(qty or 0) * float(price or 0)
+        connor_size_pct = round(notional / equity, 6) if (equity and notional > 0) else 0.0
         features = {
             "price": float(price or 0.0),
             "qty": float(qty or 0.0),
@@ -464,6 +492,7 @@ class LearningService:
             "dist_htf": 0.0,
             "dist_gap": 0.0,
             "spread_cents": 0.0,
+            "connor_size_pct": connor_size_pct,
         }
         return features
 
@@ -491,6 +520,7 @@ class LearningService:
             "spread_cents": 0.0,
             "score": 0.0,
             "rr_min": 0.0,
+            "connor_size_pct": 0.0,
         }.items():
             features.setdefault(key, default)
         return features
@@ -525,6 +555,7 @@ class LearningService:
     def _build_learning_rows(self, trade_date: date) -> list[LearningRow]:
         end = datetime.combine(trade_date, datetime.min.time(), tzinfo=timezone.utc)
         start = end - timedelta(days=self.lookback_days)
+        master_equity = _master_equity()
         setups = self._load_setups(start)
         fills = self._load_fills(start, end)
         trades = self._load_trades(start, end)
@@ -604,12 +635,14 @@ class LearningService:
                 else None
             )
             label = LABEL_SUGGESTED_TAKEN if taken else LABEL_SUGGESTED_IGNORED
+            setup_feats = self._setup_features(setup)
+            setup_feats["connor_size_pct"] = _fills_connor_size_pct(setup_fills, master_equity)
             rows.append(
                 LearningRow(
                     label=label,
                     symbol=payload.get("symbol"),
                     detected_ts=setup.detected_ts,
-                    features=self._setup_features(setup),
+                    features=setup_feats,
                     taken_by_master=taken,
                     realized_r=realized_r_float,
                     pnl=pnl_float,
