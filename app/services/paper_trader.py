@@ -25,6 +25,24 @@ def _account_equity() -> float:
     return max(0.0, float(value))
 
 
+def _max_open_positions() -> int:
+    return max(1, int(os.getenv("AI_LAB_MAX_OPEN_POSITIONS", "5")))
+
+
+def _max_hold_minutes() -> int:
+    return max(0, int(os.getenv("AI_LAB_MAX_HOLD_MINUTES", "390")))
+
+
+def _no_duplicate_symbols() -> bool:
+    return os.getenv("AI_LAB_NO_DUPLICATE_SYMBOLS", "1").lower() in {"1", "true", "yes", "on"}
+
+
+def _confidence_size_mult(p2r: float | None) -> float:
+    if p2r is not None and p2r >= 0.85:
+        return float(os.getenv("AI_LAB_HIGH_CONF_SIZE_MULT", "1.5"))
+    return 1.0
+
+
 def _risk_per_share(direction: str, entry: float, stop: float | None) -> float | None:
     if stop is None:
         return None
@@ -51,8 +69,26 @@ def maybe_open_paper_trade_from_shadow_decision(shadow_decision_id: int | None) 
         if not decision.entry_price or decision.entry_price <= 0:
             return None
 
+        # Load open positions once for entry guards
+        open_trades = list(
+            session.execute(select(PaperTrade).where(PaperTrade.status == "open")).scalars()
+        )
+
+        # Block duplicate symbol — one open trade per symbol at a time
+        if _no_duplicate_symbols():
+            sym = str(decision.symbol or "").upper()
+            if any(str(t.symbol or "").upper() == sym for t in open_trades):
+                logger.info("paper_trade.skipped.duplicate_symbol", symbol=decision.symbol)
+                return None
+
+        # Block entry when at the max concurrent open position limit
+        if len(open_trades) >= _max_open_positions():
+            logger.info("paper_trade.skipped.max_positions", open=len(open_trades), max=_max_open_positions())
+            return None
+
         equity = _account_equity()
-        size_pct = float(decision.suggested_size_pct or float(os.getenv("AI_LAB_SIZE_PCT", os.getenv("PAPER_TRADER_SIZE_PCT", "0.05"))))
+        base_size = float(decision.suggested_size_pct or float(os.getenv("AI_LAB_SIZE_PCT", os.getenv("PAPER_TRADER_SIZE_PCT", "0.05"))))
+        size_pct = round(base_size * _confidence_size_mult(decision.p2r), 6)
         notional = equity * max(0.0, size_pct)
         qty = notional / decision.entry_price if decision.entry_price > 0 else 0.0
         if qty <= 0:
@@ -103,6 +139,7 @@ def update_open_paper_trades(symbol: str, *, high: float, low: float, close: flo
                 select(PaperTrade).where(PaperTrade.symbol == symbol_upper, PaperTrade.status == "open")
             ).scalars()
         )
+        max_hold = _max_hold_minutes()
         for trade in trades:
             exit_price = None
             exit_reason = None
@@ -123,6 +160,13 @@ def update_open_paper_trades(symbol: str, *, high: float, low: float, close: flo
                 elif trade.target_price is not None and low <= trade.target_price:
                     exit_price = trade.target_price
                     exit_reason = "target"
+
+            # Time-decay exit: close at current price after max hold time
+            if exit_price is None and max_hold > 0 and trade.opened_at is not None:
+                minutes_open = (mark_at - _as_utc(trade.opened_at)).total_seconds() / 60
+                if minutes_open >= max_hold:
+                    exit_price = close
+                    exit_reason = "timeout"
 
             trade.last_price = close
             trade.last_mark_at = mark_at

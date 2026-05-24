@@ -52,6 +52,29 @@ class FakeSession:
             row.id = idx
 
 
+class FakeSessionMulti:
+    """FakeSession that pops successive result lists for each execute call."""
+
+    def __init__(self, decision=None, results=None):
+        self.decision = decision
+        self._results = list(results or [])
+        self.added = []
+
+    def get(self, model, row_id):
+        return self.decision
+
+    def execute(self, stmt):
+        rows = self._results.pop(0) if self._results else []
+        return FakeResult(rows)
+
+    def add(self, row):
+        self.added.append(row)
+
+    def flush(self):
+        for idx, row in enumerate(self.added, start=1):
+            row.id = idx
+
+
 class FakeScope:
     def __init__(self, session):
         self.session = session
@@ -448,3 +471,223 @@ def test_summary_includes_period_breakdown_and_symbol_stats(monkeypatch):
     assert summary["period_breakdown"]["all_time"]["trades"] == 1
     assert summary["symbol_stats"][0]["symbol"] == "MNY"
     assert "target" in summary["exit_reason_stats"]
+
+
+# ── Phase 6: entry guards and smarter exits ──────────────────────────────────
+
+
+def _make_decision(symbol="MNY", p2r=0.80, rr=3.0):
+    return SimpleNamespace(
+        id=7,
+        would_take=True,
+        entry_price=4.0,
+        stop_price=3.8,
+        target_price=4.6,
+        suggested_size_pct=None,
+        alert_id=11,
+        setup_id=12,
+        symbol=symbol,
+        direction="long",
+        p2r=p2r,
+        rr=rr,
+        confidence="medium",
+        reason="p2R and RR met thresholds",
+    )
+
+
+def _open_trade(symbol="OTHER", trade_id=99):
+    return PaperTrade(
+        id=trade_id,
+        symbol=symbol,
+        direction="long",
+        status="open",
+        opened_at=datetime.now(timezone.utc),
+        entry_price=5.0,
+        size_pct=0.05,
+        account_equity=100000,
+        notional=5000,
+        qty=1000,
+    )
+
+
+def test_duplicate_symbol_blocks_entry(monkeypatch):
+    decision = _make_decision(symbol="MNY")
+    open_in_mny = _open_trade(symbol="MNY")
+    session = FakeSessionMulti(
+        decision=decision,
+        results=[
+            [],              # existing shadow_decision_id check → none
+            [open_in_mny],  # open trades → MNY already open
+        ],
+    )
+    monkeypatch.setenv("AI_LAB_ENABLED", "1")
+    monkeypatch.setenv("AI_LAB_NO_DUPLICATE_SYMBOLS", "1")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    result = paper_trader.maybe_open_paper_trade_from_shadow_decision(7)
+
+    assert result is None
+    assert session.added == []
+
+
+def test_duplicate_symbol_allows_different_symbol(monkeypatch):
+    decision = _make_decision(symbol="MNY")
+    open_in_other = _open_trade(symbol="TSLA")
+    session = FakeSessionMulti(
+        decision=decision,
+        results=[
+            [],              # no existing by shadow_decision_id
+            [open_in_other], # open trades — different symbol, should not block
+        ],
+    )
+    monkeypatch.setenv("AI_LAB_ENABLED", "1")
+    monkeypatch.setenv("AI_LAB_STARTING_EQUITY", "100000")
+    monkeypatch.setenv("AI_LAB_NO_DUPLICATE_SYMBOLS", "1")
+    monkeypatch.setenv("AI_LAB_MAX_OPEN_POSITIONS", "5")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    result = paper_trader.maybe_open_paper_trade_from_shadow_decision(7)
+
+    assert result == 1
+    assert len(session.added) == 1
+
+
+def test_max_open_positions_blocks_entry(monkeypatch):
+    decision = _make_decision(symbol="NEW")
+    full_book = [_open_trade(symbol=f"T{i}", trade_id=100 + i) for i in range(5)]
+    session = FakeSessionMulti(
+        decision=decision,
+        results=[
+            [],         # no existing by shadow_decision_id
+            full_book,  # 5 open trades → at limit
+        ],
+    )
+    monkeypatch.setenv("AI_LAB_ENABLED", "1")
+    monkeypatch.setenv("AI_LAB_MAX_OPEN_POSITIONS", "5")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    result = paper_trader.maybe_open_paper_trade_from_shadow_decision(7)
+
+    assert result is None
+    assert session.added == []
+
+
+def test_high_confidence_entry_uses_larger_size(monkeypatch):
+    decision = _make_decision(symbol="HI", p2r=0.90)
+    session = FakeSessionMulti(
+        decision=decision,
+        results=[[], []],  # no existing, no open trades
+    )
+    monkeypatch.setenv("AI_LAB_ENABLED", "1")
+    monkeypatch.setenv("AI_LAB_STARTING_EQUITY", "100000")
+    monkeypatch.setenv("AI_LAB_SIZE_PCT", "0.05")
+    monkeypatch.setenv("AI_LAB_HIGH_CONF_SIZE_MULT", "1.5")
+    monkeypatch.setenv("AI_LAB_MAX_OPEN_POSITIONS", "5")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    paper_trader.maybe_open_paper_trade_from_shadow_decision(7)
+
+    trade = session.added[0]
+    assert trade.size_pct == 0.075        # 5% * 1.5
+    assert trade.notional == 7500.0       # 100000 * 7.5%
+
+
+def test_medium_confidence_entry_uses_base_size(monkeypatch):
+    decision = _make_decision(symbol="MED", p2r=0.75)
+    session = FakeSessionMulti(
+        decision=decision,
+        results=[[], []],
+    )
+    monkeypatch.setenv("AI_LAB_ENABLED", "1")
+    monkeypatch.setenv("AI_LAB_STARTING_EQUITY", "100000")
+    monkeypatch.setenv("AI_LAB_SIZE_PCT", "0.05")
+    monkeypatch.setenv("AI_LAB_HIGH_CONF_SIZE_MULT", "1.5")
+    monkeypatch.setenv("AI_LAB_MAX_OPEN_POSITIONS", "5")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    paper_trader.maybe_open_paper_trade_from_shadow_decision(7)
+
+    trade = session.added[0]
+    assert trade.size_pct == 0.05         # no multiplier for medium confidence
+    assert trade.notional == 5000.0
+
+
+def test_timeout_closes_trade_at_close_price(monkeypatch):
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    opened = now - timedelta(minutes=400)  # well past 390-minute default
+    trade = PaperTrade(
+        id=90,
+        symbol="TMO",
+        direction="long",
+        status="open",
+        opened_at=opened,
+        entry_price=10.0,
+        size_pct=0.05,
+        account_equity=100000,
+        notional=5000,
+        qty=500,
+    )
+    session = FakeSession(trades=[trade])
+    monkeypatch.setenv("AI_LAB_MAX_HOLD_MINUTES", "390")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    paper_trader.update_open_paper_trades("TMO", high=10.5, low=9.8, close=10.2, mark_at=now)
+
+    assert trade.status == "closed"
+    assert trade.exit_reason == "timeout"
+    assert trade.exit_price == 10.2
+
+
+def test_timeout_does_not_fire_before_threshold(monkeypatch):
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    opened = now - timedelta(minutes=100)  # short hold, under threshold
+    trade = PaperTrade(
+        id=91,
+        symbol="TMO",
+        direction="long",
+        status="open",
+        opened_at=opened,
+        entry_price=10.0,
+        size_pct=0.05,
+        account_equity=100000,
+        notional=5000,
+        qty=500,
+        stop_price=9.5,
+        target_price=11.5,
+    )
+    session = FakeSession(trades=[trade])
+    monkeypatch.setenv("AI_LAB_MAX_HOLD_MINUTES", "390")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    paper_trader.update_open_paper_trades("TMO", high=10.5, low=9.8, close=10.2, mark_at=now)
+
+    assert trade.status == "open"
+
+
+def test_timeout_disabled_when_set_to_zero(monkeypatch):
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    opened = now - timedelta(minutes=9999)
+    trade = PaperTrade(
+        id=92,
+        symbol="TMO",
+        direction="long",
+        status="open",
+        opened_at=opened,
+        entry_price=10.0,
+        size_pct=0.05,
+        account_equity=100000,
+        notional=5000,
+        qty=500,
+        stop_price=9.5,
+        target_price=11.5,
+    )
+    session = FakeSession(trades=[trade])
+    monkeypatch.setenv("AI_LAB_MAX_HOLD_MINUTES", "0")
+    monkeypatch.setattr(paper_trader, "get_session", lambda: FakeScope(session))
+
+    paper_trader.update_open_paper_trades("TMO", high=10.5, low=9.8, close=10.2, mark_at=now)
+
+    assert trade.status == "open"

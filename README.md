@@ -345,6 +345,10 @@ Learning and fill matching defaults:
 - `AI_LAB_ENABLED=1` lets shadow `would_take` decisions open broker-disconnected AI Trading Lab practice trades.
 - `AI_LAB_STARTING_EQUITY=100000` sets the fake starting account value for AI Lab sizing and future portfolio reporting.
 - `AI_LAB_SIZE_PCT=0.05` is the default practice-trade size when the shadow decision does not provide one.
+- `AI_LAB_HIGH_CONF_SIZE_MULT=1.5` scales the trade size up for high-confidence entries (p2R >= 0.85). Medium-confidence entries use the base size.
+- `AI_LAB_MAX_OPEN_POSITIONS=5` limits how many AI Lab trades can be open at the same time. New entries are skipped when the limit is reached.
+- `AI_LAB_NO_DUPLICATE_SYMBOLS=1` blocks a second AI Lab trade in the same symbol while one is already open.
+- `AI_LAB_MAX_HOLD_MINUTES=390` closes any AI Lab trade that has been open longer than this many minutes at the current price with reason `timeout`. Set to `0` to disable time-decay exits.
 - The AI Trading Lab summary tracks fake account value, cash, open exposure, total P&L, today P&L, weekly P&L, win rate, and drawdown from internal lab trades.
 - The AI Trading Lab dashboard includes open positions with quantity, entry, latest mark, market value, unrealized P&L, stop, target, and time open.
 - The AI Trading Lab performance view also shows AI vs Connor match rate, recent closed lab trades, and best/worst closed lab trades.

@@ -127,6 +127,14 @@ services:
         value: "100000"
       - key: AI_LAB_SIZE_PCT
         value: "0.05"
+      - key: AI_LAB_MAX_OPEN_POSITIONS
+        value: "5"
+      - key: AI_LAB_MAX_HOLD_MINUTES
+        value: "390"
+      - key: AI_LAB_NO_DUPLICATE_SYMBOLS
+        value: "1"
+      - key: AI_LAB_HIGH_CONF_SIZE_MULT
+        value: "1.5"
       - key: PAPER_TRADER_ENABLED
         value: "1"
       - key: PAPER_TRADER_BROKER_MODE
@@ -289,6 +297,14 @@ services:
         value: "100000"
       - key: AI_LAB_SIZE_PCT
         value: "0.05"
+      - key: AI_LAB_MAX_OPEN_POSITIONS
+        value: "5"
+      - key: AI_LAB_MAX_HOLD_MINUTES
+        value: "390"
+      - key: AI_LAB_NO_DUPLICATE_SYMBOLS
+        value: "1"
+      - key: AI_LAB_HIGH_CONF_SIZE_MULT
+        value: "1.5"
       - key: PAPER_TRADER_ENABLED
         value: "1"
       - key: PAPER_TRADER_BROKER_MODE
