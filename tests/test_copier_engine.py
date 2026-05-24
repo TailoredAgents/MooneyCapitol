@@ -109,6 +109,57 @@ def test_percent_equity_sizing_matches_master_account_percentage():
     ) == 4.0
 
 
+def test_sizing_truncation_to_zero_logs_warning(caplog):
+    import logging
+    # _master(): qty=10, price=25 → master_notional=$250
+    # master_equity=100_000 → 0.25% of account
+    # target_equity=100 → target_notional=$0.25 → 0.01 shares → truncates to 0
+    master = _master()
+    with caplog.at_level(logging.WARNING, logger="copier.sizing"):
+        result = size_child_order(
+            master,
+            SizingPolicy(mode="percent_equity"),
+            master_equity=100_000,
+            target_equity=100,
+        )
+    assert result == 0.0
+    assert any("truncated_to_zero" in r.message for r in caplog.records)
+
+
+def test_sizing_truncation_drift_logs_warning_above_threshold(caplog):
+    import logging
+    # _master(): qty=10, price=25 → master_notional=$250
+    # master_equity=100_000, target_equity=18_000
+    # → target_notional=$45 → 1.8 shares → truncates to 1 (44% lost, > 5% threshold)
+    master = _master()
+    with caplog.at_level(logging.WARNING, logger="copier.sizing"):
+        result = size_child_order(
+            master,
+            SizingPolicy(mode="percent_equity"),
+            master_equity=100_000,
+            target_equity=18_000,
+        )
+    assert result == 1.0
+    assert any("truncation_drift" in r.message for r in caplog.records)
+
+
+def test_sizing_minor_truncation_does_not_warn(caplog):
+    import logging
+    # _master(): qty=10, price=25 → master_notional=$250
+    # master_equity=100_000, target_equity=886_000
+    # → target_notional=$2215 → 88.6 shares → truncates to 88 (0.68% lost, under threshold)
+    master = _master()
+    with caplog.at_level(logging.WARNING, logger="copier.sizing"):
+        result = size_child_order(
+            master,
+            SizingPolicy(mode="percent_equity"),
+            master_equity=100_000,
+            target_equity=886_000,
+        )
+    assert result == 88.0
+    assert not any("truncation" in r.message for r in caplog.records)
+
+
 def test_risk_blocks_kill_switch_and_notional():
     master = _master()
 

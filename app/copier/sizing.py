@@ -4,9 +4,15 @@ from dataclasses import dataclass
 from typing import Literal
 
 from app.copier.models import MasterExecutionEvent
+from app.observability.logging import get_logger
 
+
+logger = get_logger("copier.sizing")
 
 SizingMode = Literal["disabled", "fixed_quantity", "fixed_multiplier", "percent_equity", "equity_ratio"]
+
+# Warn when whole-share truncation silently discards more than this fraction of intended notional
+_TRUNCATION_WARN_THRESHOLD = 0.05
 
 
 @dataclass(frozen=True)
@@ -41,7 +47,32 @@ def size_child_order(
         return 0.0
 
     if policy.whole_shares:
+        raw_qty = qty
         qty = int(qty)
+        if raw_qty > 0 and qty == 0:
+            # Entire position rounded away — order will be blocked below
+            logger.warning(
+                "copier.sizing.truncated_to_zero",
+                symbol=master.symbol,
+                raw_qty=round(raw_qty, 4),
+                price=master.price,
+                mode=policy.mode,
+                master_equity=master_equity,
+                target_equity=target_equity,
+            )
+        elif raw_qty > 0:
+            lost_pct = (raw_qty - qty) / raw_qty
+            if lost_pct > _TRUNCATION_WARN_THRESHOLD:
+                logger.warning(
+                    "copier.sizing.truncation_drift",
+                    symbol=master.symbol,
+                    raw_qty=round(raw_qty, 4),
+                    truncated_qty=qty,
+                    lost_pct=round(lost_pct, 4),
+                    price=master.price,
+                    mode=policy.mode,
+                )
+
     if policy.min_notional and qty * master.price < policy.min_notional:
         return 0.0
     if qty < policy.min_quantity:
