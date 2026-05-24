@@ -1326,28 +1326,40 @@
         </div>
         <div class="grid">
           <div class="stat">
-            <div class="muted">Open</div>
-            <div id="paper-open" class="value">-</div>
+            <div class="muted">Account Value</div>
+            <div id="paper-account-value" class="value">-</div>
           </div>
           <div class="stat">
-            <div class="muted">Closed</div>
-            <div id="paper-closed" class="value">-</div>
+            <div class="muted">Total P&L</div>
+            <div id="paper-total-pnl" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Weekly P&L</div>
+            <div id="paper-weekly-pnl" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Today P&L</div>
+            <div id="paper-today-pnl" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Cash</div>
+            <div id="paper-cash" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Open Exposure</div>
+            <div id="paper-open-exposure" class="value">-</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Open Trades</div>
+            <div id="paper-open" class="value">-</div>
           </div>
           <div class="stat">
             <div class="muted">Win Rate</div>
             <div id="paper-win-rate" class="value">-</div>
           </div>
           <div class="stat">
-            <div class="muted">Realized P&L</div>
-            <div id="paper-realized" class="value">-</div>
-          </div>
-          <div class="stat">
-            <div class="muted">Open P&L</div>
-            <div id="paper-unrealized" class="value">-</div>
-          </div>
-          <div class="stat">
-            <div class="muted">Avg R</div>
-            <div id="paper-avg-r" class="value">-</div>
+            <div class="muted">Max Drawdown</div>
+            <div id="paper-max-drawdown" class="value">-</div>
           </div>
         </div>
 
@@ -2077,14 +2089,20 @@
 
       function renderPaper(payload, readiness = null, webullPaper = null) {
         const summary = payload.summary || {};
+        setText('paper-account-value', formatMoney(summary.account_value));
+        const totalPnl = document.getElementById('paper-total-pnl');
+        if (totalPnl) totalPnl.innerHTML = `${moneySpan(summary.total_pnl)} <span class="muted">${formatPct(summary.total_return_pct)}</span>`;
+        const weeklyPnl = document.getElementById('paper-weekly-pnl');
+        if (weeklyPnl) weeklyPnl.innerHTML = moneySpan(summary.weekly_pnl);
+        const todayPnl = document.getElementById('paper-today-pnl');
+        if (todayPnl) todayPnl.innerHTML = moneySpan(summary.today_pnl);
+        setText('paper-cash', formatMoney(summary.cash_balance));
+        const exposure = document.getElementById('paper-open-exposure');
+        if (exposure) exposure.innerHTML = `${formatMoney(summary.open_exposure)} <span class="muted">${formatPct(summary.open_exposure_pct)}</span>`;
         setText('paper-open', String(summary.open ?? 0));
-        setText('paper-closed', String(summary.closed ?? 0));
         setText('paper-win-rate', formatPct(summary.win_rate));
-        const realized = document.getElementById('paper-realized');
-        if (realized) realized.innerHTML = moneySpan(summary.realized_pnl);
-        const unrealized = document.getElementById('paper-unrealized');
-        if (unrealized) unrealized.innerHTML = moneySpan(summary.open_unrealized_pnl);
-        setText('paper-avg-r', formatDecimal(summary.avg_r, 2));
+        const maxDrawdown = document.getElementById('paper-max-drawdown');
+        if (maxDrawdown) maxDrawdown.innerHTML = `${formatMoney(summary.max_drawdown)} <span class="muted">${formatPct(summary.max_drawdown_pct)}</span>`;
         const items = payload.items || [];
         paperTradesBody.innerHTML = items.length ? items.map((item) => {
           const pnlValue = item.status === 'closed' ? item.realized_pnl : item.unrealized_pnl;

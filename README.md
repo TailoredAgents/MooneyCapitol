@@ -345,6 +345,7 @@ Learning and fill matching defaults:
 - `AI_LAB_ENABLED=1` lets shadow `would_take` decisions open broker-disconnected AI Trading Lab practice trades.
 - `AI_LAB_STARTING_EQUITY=100000` sets the fake starting account value for AI Lab sizing and future portfolio reporting.
 - `AI_LAB_SIZE_PCT=0.05` is the default practice-trade size when the shadow decision does not provide one.
+- The AI Trading Lab summary tracks fake account value, cash, open exposure, total P&L, today P&L, weekly P&L, win rate, and drawdown from internal lab trades.
 - `PAPER_TRADER_*` env vars remain supported as legacy aliases for the existing internal paper-trade code.
 - `PAPER_TRADER_BROKER_MODE=internal` keeps the AI Trading Lab broker-disconnected by default. Later, set it to `webull_paper` only after `WEBULL_AI_PAPER_*` credentials are configured and validated.
 - `LEARNING_PAPER_SAMPLE_WEIGHT=0.25` lets closed AI paper trades influence nightly learning at low weight while real Connor trades remain the highest-trust signal.

@@ -187,6 +187,53 @@ def test_paper_promotion_readiness_passes_when_rules_are_met(monkeypatch):
     assert readiness["summary"]["max_drawdown_pct"] == 0.004
 
 
+def test_ai_lab_summary_tracks_portfolio_value_cash_and_period_pnl(monkeypatch):
+    now = datetime.now(timezone.utc)
+    trades = [
+        PaperTrade(
+            id=41,
+            symbol="WIN",
+            direction="long",
+            status="closed",
+            opened_at=now,
+            closed_at=now,
+            entry_price=10.0,
+            size_pct=0.05,
+            account_equity=100000,
+            notional=5000,
+            qty=500,
+            realized_pnl=600,
+            realized_r=1.2,
+        ),
+        PaperTrade(
+            id=42,
+            symbol="OPEN",
+            direction="long",
+            status="open",
+            opened_at=now,
+            entry_price=20.0,
+            size_pct=0.05,
+            account_equity=100000,
+            notional=5000,
+            qty=250,
+            unrealized_pnl=250,
+            last_price=21.0,
+        ),
+    ]
+    monkeypatch.setenv("AI_LAB_STARTING_EQUITY", "100000")
+
+    summary = paper_trader._paper_summary_from_rows(trades)
+
+    assert summary["starting_equity"] == 100000
+    assert summary["account_value"] == 100850
+    assert summary["cash_balance"] == 95600
+    assert summary["open_exposure"] == 5000
+    assert summary["total_pnl"] == 850
+    assert summary["today_pnl"] == 850
+    assert summary["weekly_pnl"] == 850
+    assert summary["total_return_pct"] == 0.0085
+
+
 def test_paper_promotion_readiness_blocks_too_few_trades(monkeypatch):
     trade = PaperTrade(
         id=31,

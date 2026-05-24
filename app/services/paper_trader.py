@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.db.models import PaperTrade, ShadowDecision
 from app.db.session import get_session
@@ -228,13 +228,38 @@ def paper_summary_from_session(session) -> dict[str, Any]:
 
 def _paper_summary_from_rows(rows: list[PaperTrade]) -> dict[str, Any]:
     closed = [row for row in rows if row.status == "closed"]
+    open_rows = [row for row in rows if row.status == "open"]
     wins = [row for row in closed if (row.realized_pnl or 0.0) > 0]
+    starting_equity = _account_equity()
     total_realized = sum(float(row.realized_pnl or 0.0) for row in closed)
-    open_unrealized = sum(float(row.unrealized_pnl or 0.0) for row in rows if row.status == "open")
+    open_unrealized = sum(float(row.unrealized_pnl or 0.0) for row in open_rows)
+    open_notional = sum(float(row.notional or 0.0) for row in open_rows)
+    total_pnl = total_realized + open_unrealized
+    account_value = starting_equity + total_pnl
+    cash_balance = starting_equity + total_realized - open_notional
+    now = datetime.now(timezone.utc)
+    today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+    week_start = today_start - timedelta(days=today_start.weekday())
+    today_realized = _realized_since(closed, today_start)
+    week_realized = _realized_since(closed, week_start)
+    drawdown = _max_realized_drawdown(closed, starting_equity=starting_equity)
     avg_r = sum(float(row.realized_r or 0.0) for row in closed) / len(closed) if closed else None
     return {
+        "starting_equity": round(starting_equity, 2),
+        "account_value": round(account_value, 2),
+        "cash_balance": round(cash_balance, 2),
+        "open_exposure": round(open_notional, 2),
+        "open_exposure_pct": round(open_notional / account_value, 6) if account_value > 0 else None,
+        "total_pnl": round(total_pnl, 2),
+        "total_return_pct": round(total_pnl / starting_equity, 6) if starting_equity > 0 else None,
+        "today_pnl": round(today_realized + open_unrealized, 2),
+        "today_realized_pnl": round(today_realized, 2),
+        "weekly_pnl": round(week_realized + open_unrealized, 2),
+        "weekly_realized_pnl": round(week_realized, 2),
+        "max_drawdown": drawdown["max_drawdown"] or 0.0,
+        "max_drawdown_pct": drawdown["max_drawdown_pct"] or 0.0,
         "total": len(rows),
-        "open": sum(1 for row in rows if row.status == "open"),
+        "open": len(open_rows),
         "closed": len(closed),
         "wins": len(wins),
         "win_rate": round(len(wins) / len(closed), 4) if closed else None,
@@ -244,14 +269,22 @@ def _paper_summary_from_rows(rows: list[PaperTrade]) -> dict[str, Any]:
     }
 
 
-def _max_realized_drawdown(closed: list[PaperTrade]) -> dict[str, float | None]:
+def _realized_since(closed: list[PaperTrade], start: datetime) -> float:
+    return sum(
+        float(row.realized_pnl or 0.0)
+        for row in closed
+        if row.closed_at is not None and _as_utc(row.closed_at) >= start
+    )
+
+
+def _max_realized_drawdown(closed: list[PaperTrade], *, starting_equity: float | None = None) -> dict[str, float | None]:
     if not closed:
         return {"max_drawdown": None, "max_drawdown_pct": None}
-    equity = float(closed[0].account_equity or _account_equity() or 0.0)
+    equity = float(starting_equity if starting_equity is not None else closed[0].account_equity or _account_equity() or 0.0)
     cumulative = 0.0
     peak = 0.0
     max_drawdown = 0.0
-    for row in closed:
+    for row in sorted(closed, key=lambda item: _as_utc(item.closed_at or item.opened_at or datetime.min.replace(tzinfo=timezone.utc))):
         cumulative += float(row.realized_pnl or 0.0)
         peak = max(peak, cumulative)
         max_drawdown = max(max_drawdown, peak - cumulative)
@@ -259,6 +292,10 @@ def _max_realized_drawdown(closed: list[PaperTrade]) -> dict[str, float | None]:
         "max_drawdown": round(max_drawdown, 2),
         "max_drawdown_pct": round(max_drawdown / equity, 6) if equity > 0 else None,
     }
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
 
 def _serialize(row: PaperTrade) -> dict[str, Any]:
