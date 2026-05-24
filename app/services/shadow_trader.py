@@ -48,7 +48,7 @@ def _predict_size(features: dict) -> float | None:
 
 def _bounded_size_pct(value: float | None, fallback: float) -> float:
     size = fallback if value is None else float(value)
-    max_size = float(os.getenv("SHADOW_TRADER_MAX_SIZE_PCT", "0.10"))
+    max_size = float(os.getenv("AI_LAB_BUYING_POWER_MULTIPLIER", "4.00"))
     return min(max(0.0, size), max(0.0, max_size))
 
 

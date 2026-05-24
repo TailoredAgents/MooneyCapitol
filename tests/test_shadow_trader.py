@@ -63,7 +63,7 @@ def test_shadow_route_returns_service_payload(monkeypatch):
 
 
 def test_shadow_uses_predicted_size_when_model_available(monkeypatch):
-    monkeypatch.setenv("SHADOW_TRADER_MAX_SIZE_PCT", "0.20")
+    monkeypatch.setenv("AI_LAB_BUYING_POWER_MULTIPLIER", "0.20")
     monkeypatch.setattr(shadow_trader_module, "_predict_size", lambda features: 0.15)
     payload = {
         "entry": "5.00",
@@ -79,8 +79,8 @@ def test_shadow_uses_predicted_size_when_model_available(monkeypatch):
     assert decision["suggested_size_pct"] == 0.15
 
 
-def test_shadow_caps_predicted_size(monkeypatch):
-    monkeypatch.setenv("SHADOW_TRADER_MAX_SIZE_PCT", "0.10")
+def test_shadow_caps_predicted_size_to_ai_lab_buying_power(monkeypatch):
+    monkeypatch.setenv("AI_LAB_BUYING_POWER_MULTIPLIER", "0.10")
     monkeypatch.setattr(shadow_trader_module, "_predict_size", lambda features: 0.40)
     payload = {
         "entry": "5.00",

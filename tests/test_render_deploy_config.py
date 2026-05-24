@@ -21,6 +21,7 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count("WEBULL_PERSONAL_DISPLAY_NAME") == 2
     assert text.count("AI_LAB_ENABLED") == 2
     assert text.count("AI_LAB_STARTING_EQUITY") == 2
+    assert text.count("AI_LAB_BUYING_POWER_MULTIPLIER") == 2
     assert text.count("PAPER_TRADER_BROKER_MODE") == 2
     assert text.count("WEBULL_AI_PAPER_API_ENDPOINT") == 2
     assert text.count("WEBULL_AI_PAPER_ACCOUNT_ID") == 2

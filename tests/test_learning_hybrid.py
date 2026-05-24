@@ -547,7 +547,7 @@ def test_predict_connor_size_pct_returns_none_without_model(monkeypatch):
     assert result is None
 
 
-def test_predict_connor_size_pct_caps_model_output(monkeypatch):
+def test_predict_connor_size_pct_caps_model_output_to_ai_lab_buying_power(monkeypatch):
     import app.services.learning as learning_module
 
     class FakeModel:
@@ -562,7 +562,7 @@ def test_predict_connor_size_pct_caps_model_output(monkeypatch):
             return df
 
     monkeypatch.setattr(learning_module, "get_learning_service", lambda: FakeService())
-    monkeypatch.setenv("LEARNING_CONNOR_SIZER_MAX_PCT", "0.10")
+    monkeypatch.setenv("AI_LAB_BUYING_POWER_MULTIPLIER", "0.10")
 
     result = predict_connor_size_pct({"rvol_break": 2.0, "l2_mean": 0.75})
 
