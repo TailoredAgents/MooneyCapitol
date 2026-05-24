@@ -260,6 +260,7 @@ def _paper_summary_from_rows(rows: list[PaperTrade]) -> dict[str, Any]:
         "max_drawdown_pct": drawdown["max_drawdown_pct"] or 0.0,
         "total": len(rows),
         "open": len(open_rows),
+        "positions": [_position_from_trade(row, now=now) for row in sorted(open_rows, key=lambda item: item.opened_at or now, reverse=True)],
         "closed": len(closed),
         "wins": len(wins),
         "win_rate": round(len(wins) / len(closed), 4) if closed else None,
@@ -296,6 +297,32 @@ def _max_realized_drawdown(closed: list[PaperTrade], *, starting_equity: float |
 
 def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
+def _position_from_trade(row: PaperTrade, *, now: datetime | None = None) -> dict[str, Any]:
+    now = now or datetime.now(timezone.utc)
+    opened_at = _as_utc(row.opened_at) if row.opened_at else None
+    seconds_open = int((now - opened_at).total_seconds()) if opened_at else None
+    last_price = row.last_price if row.last_price is not None else row.entry_price
+    market_value = float(row.qty or 0.0) * float(last_price or 0.0)
+    return {
+        "id": row.id,
+        "symbol": row.symbol,
+        "direction": row.direction,
+        "opened_at": row.opened_at.isoformat() if row.opened_at else None,
+        "seconds_open": seconds_open,
+        "qty": row.qty,
+        "entry_price": row.entry_price,
+        "last_price": last_price,
+        "market_value": round(market_value, 2),
+        "notional": row.notional,
+        "stop_price": row.stop_price,
+        "target_price": row.target_price,
+        "unrealized_pnl": row.unrealized_pnl,
+        "unrealized_pnl_pct": round(float(row.unrealized_pnl or 0.0) / float(row.notional or 0.0), 6) if row.notional else None,
+        "size_pct": row.size_pct,
+        "reason": row.reason,
+    }
 
 
 def _serialize(row: PaperTrade) -> dict[str, Any]:

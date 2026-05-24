@@ -232,6 +232,12 @@ def test_ai_lab_summary_tracks_portfolio_value_cash_and_period_pnl(monkeypatch):
     assert summary["today_pnl"] == 850
     assert summary["weekly_pnl"] == 850
     assert summary["total_return_pct"] == 0.0085
+    assert len(summary["positions"]) == 1
+    position = summary["positions"][0]
+    assert position["symbol"] == "OPEN"
+    assert position["market_value"] == 5250
+    assert position["unrealized_pnl_pct"] == 0.05
+    assert position["seconds_open"] is not None
 
 
 def test_paper_promotion_readiness_blocks_too_few_trades(monkeypatch):

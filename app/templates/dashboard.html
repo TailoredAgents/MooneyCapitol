@@ -1385,6 +1385,30 @@
         </div>
 
         <div class="section">
+          <h2>Open Positions</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Opened</th>
+                  <th>Symbol</th>
+                  <th>Direction</th>
+                  <th>Qty</th>
+                  <th>Entry</th>
+                  <th>Last</th>
+                  <th>Value</th>
+                  <th>Unrealized</th>
+                  <th>Stop</th>
+                  <th>Target</th>
+                  <th>Time Open</th>
+                </tr>
+              </thead>
+              <tbody id="paper-positions-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section">
           <h2>AI Lab Trades</h2>
           <div class="scroll">
             <table>
@@ -1774,6 +1798,7 @@
       const launchReadonlyBody = document.getElementById('launch-readonly-body');
       const shadowDecisionsBody = document.getElementById('shadow-decisions-body');
       const paperTradesBody = document.getElementById('paper-trades-body');
+      const paperPositionsBody = document.getElementById('paper-positions-body');
       const paperReadinessList = document.getElementById('paper-readiness-list');
       const paperWebullList = document.getElementById('paper-webull-list');
       const targetsBody = document.getElementById('targets-body');
@@ -2103,6 +2128,7 @@
         setText('paper-win-rate', formatPct(summary.win_rate));
         const maxDrawdown = document.getElementById('paper-max-drawdown');
         if (maxDrawdown) maxDrawdown.innerHTML = `${formatMoney(summary.max_drawdown)} <span class="muted">${formatPct(summary.max_drawdown_pct)}</span>`;
+        renderPaperPositions(summary.positions || []);
         const items = payload.items || [];
         paperTradesBody.innerHTML = items.length ? items.map((item) => {
           const pnlValue = item.status === 'closed' ? item.realized_pnl : item.unrealized_pnl;
@@ -2143,6 +2169,33 @@
           `).join('') : '<div class="muted">Promotion gates will appear after the paper readiness endpoint is available.</div>';
         }
         renderWebullPaper(webullPaper);
+      }
+
+      function renderPaperPositions(items) {
+        if (!paperPositionsBody) return;
+        paperPositionsBody.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td>${formatTime(item.opened_at)}</td>
+            <td><strong>${escapeHtml(item.symbol || '')}</strong></td>
+            <td>${escapeHtml(item.direction || '')}</td>
+            <td>${formatQty(item.qty)}</td>
+            <td>${formatMoney(item.entry_price)}</td>
+            <td>${formatMoney(item.last_price)}</td>
+            <td>${formatMoney(item.market_value)}</td>
+            <td>${moneySpan(item.unrealized_pnl)} <div class="muted">${formatPct(item.unrealized_pnl_pct)}</div></td>
+            <td>${formatMoney(item.stop_price)}</td>
+            <td>${formatMoney(item.target_price)}</td>
+            <td>${formatDuration(item.seconds_open)}</td>
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="11">
+              <div class="empty-state">
+                <div class="title">No open AI lab positions</div>
+                <div class="muted">Active autonomous practice positions will appear here while trades are open.</div>
+              </div>
+            </td>
+          </tr>`;
       }
 
       function renderWebullPaper(payload) {
@@ -2603,6 +2656,17 @@
         if (!value) return '-';
         const date = new Date(value);
         return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+      }
+      function formatDuration(seconds) {
+        const value = Number(seconds);
+        if (!Number.isFinite(value) || value < 0) return '-';
+        const minutes = Math.floor(value / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        if (days > 0) return `${days}d ${hours % 24}h`;
+        if (hours > 0) return `${hours}h ${minutes % 60}m`;
+        if (minutes > 0) return `${minutes}m`;
+        return `${Math.floor(value)}s`;
       }
       function setStatus(id, text, isError) {
         const el = document.getElementById(id);
