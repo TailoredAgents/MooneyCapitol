@@ -7,6 +7,7 @@ import pytest
 from app.services.learning import (
     FEATURE_COLS,
     LABEL_MANUAL_NO_ALERT,
+    LABEL_PAPER_OUTCOME,
     LABEL_SUGGESTED_IGNORED,
     LABEL_SUGGESTED_TAKEN,
     LearningRow,
@@ -15,6 +16,11 @@ from app.services.learning import (
     normalize_realized_r,
 )
 from app.services.trade_matcher import best_setup_match
+
+
+@pytest.fixture(autouse=True)
+def no_paper_trades_by_default(monkeypatch):
+    monkeypatch.setattr(LearningService, "_load_closed_paper_trades", lambda self, start_ts, end_ts: [])
 
 
 def test_normalize_realized_r_clips_and_scales():
@@ -243,6 +249,53 @@ def test_direction_mismatch_does_not_mark_setup_taken(monkeypatch):
     assert df["label_class"].tolist() == [LABEL_SUGGESTED_IGNORED, LABEL_MANUAL_NO_ALERT]
     assert bool(df.iloc[0]["taken_by_master"]) is False
     assert bool(df.iloc[1]["manual_no_alert"]) is True
+
+
+def test_closed_paper_trades_enter_learning_as_low_weight_outcomes(monkeypatch):
+    service = LearningService()
+    detected_ts = datetime(2026, 5, 16, 14, 30, tzinfo=timezone.utc)
+    closed_ts = datetime(2026, 5, 16, 14, 45, tzinfo=timezone.utc)
+    paper_trade = SimpleNamespace(
+        id=70,
+        setup_id=71,
+        alert_id=72,
+        symbol="MNY",
+        direction="long",
+        opened_at=detected_ts,
+        closed_at=closed_ts,
+        entry_price=4.25,
+        realized_r=2.3,
+        realized_pnl=115.0,
+    )
+    shadow_decision = SimpleNamespace(
+        payload_json={
+            "features": {
+                "box_height": 0.08,
+                "box_bars": 12,
+                "rvol_break": 2.2,
+                "l2_mean": 0.71,
+                "l2_persist": 4.0,
+                "dist_htf": 0.2,
+                "dist_gap": 0.1,
+                "spread_cents": 0.8,
+            }
+        }
+    )
+
+    monkeypatch.setattr(service, "_load_setups", lambda start_ts: [])
+    monkeypatch.setattr(service, "_load_fills", lambda start_ts, end_ts: [])
+    monkeypatch.setattr(service, "_load_trades", lambda start_ts, end_ts: [])
+    monkeypatch.setattr(service, "_load_closed_paper_trades", lambda start_ts, end_ts: [(paper_trade, shadow_decision)])
+    monkeypatch.setattr(service, "_alerts_for_setups", lambda setup_ids: {})
+
+    df = service._build_rows(closed_ts.date())
+
+    assert len(df) == 1
+    assert df.iloc[0]["label_class"] == LABEL_PAPER_OUTCOME
+    assert df.iloc[0]["source"] == "paper_trader"
+    assert df.iloc[0]["sample_weight"] == service.paper_sample_weight
+    assert df.iloc[0]["realized_r"] == 2.3
+    assert df.iloc[0]["label"] == 1
 
 
 def test_best_setup_match_scores_time_direction_and_price():

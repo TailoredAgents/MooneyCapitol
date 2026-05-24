@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 
 from sqlalchemy import select
 
-from app.db.models import Alert, Fill, Setup, Trade
+from app.db.models import Alert, Fill, PaperTrade, Setup, ShadowDecision, Trade
 from app.db.session import get_session
 from app.observability.logging import get_logger
 from app.services.kv_store import get_bytes, get_json, set_bytes, set_json
@@ -107,12 +107,13 @@ TRADING_REGIMES = [
     ((15, 30), (16, 5), "closing"),    # Power hour/closing
 ]
 
-LearningLabel = Literal["suggested_taken", "suggested_ignored", "manual_no_alert", "copied_outcome"]
+LearningLabel = Literal["suggested_taken", "suggested_ignored", "manual_no_alert", "copied_outcome", "paper_outcome"]
 
 LABEL_SUGGESTED_TAKEN: LearningLabel = "suggested_taken"
 LABEL_SUGGESTED_IGNORED: LearningLabel = "suggested_ignored"
 LABEL_MANUAL_NO_ALERT: LearningLabel = "manual_no_alert"
 LABEL_COPIED_OUTCOME: LearningLabel = "copied_outcome"
+LABEL_PAPER_OUTCOME: LearningLabel = "paper_outcome"
 
 
 @dataclass(frozen=True)
@@ -238,6 +239,7 @@ class LearningRow:
     setup_match_confidence: str | None = None
     setup_match_score: float | None = None
     setup_match_reason: dict[str, Any] | None = None
+    sample_weight: float = 1.0
 
     def as_training_dict(self, weights: HybridTargetWeights = DEFAULT_HYBRID_WEIGHTS) -> dict[str, Any]:
         row: dict[str, Any] = {
@@ -257,6 +259,7 @@ class LearningRow:
             "setup_match_confidence": self.setup_match_confidence,
             "setup_match_score": self.setup_match_score,
             "setup_match_reason": self.setup_match_reason,
+            "sample_weight": self.sample_weight,
             "hybrid_target": calculate_hybrid_target(
                 label=self.label,
                 taken_by_master=self.taken_by_master,
@@ -359,6 +362,7 @@ class LearningService:
         self.sandbox_enabled = os.getenv("LEARNING_SANDBOX_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
         self.synthetic_max_ratio = max(0.0, float(os.getenv("LEARNING_SYNTHETIC_MAX_RATIO", "3.0")))
         self.synthetic_sample_weight = max(0.0, float(os.getenv("LEARNING_SYNTHETIC_SAMPLE_WEIGHT", "0.15")))
+        self.paper_sample_weight = max(0.0, float(os.getenv("LEARNING_PAPER_SAMPLE_WEIGHT", "0.25")))
         self.hybrid_weights = HybridTargetWeights(
             behavior_weight=float(os.getenv("LEARNING_BEHAVIOR_WEIGHT", "0.35")),
             outcome_weight=float(os.getenv("LEARNING_OUTCOME_WEIGHT", "0.50")),
@@ -404,6 +408,16 @@ class LearningService:
         with get_session() as session:
             stmt = select(Trade).where(Trade.open_ts >= start_ts, Trade.open_ts < end_ts).order_by(Trade.open_ts.asc())
             return list(session.execute(stmt).scalars())
+
+    def _load_closed_paper_trades(self, start_ts: datetime, end_ts: datetime) -> list[tuple[PaperTrade, ShadowDecision | None]]:
+        with get_session() as session:
+            stmt = (
+                select(PaperTrade, ShadowDecision)
+                .outerjoin(ShadowDecision, PaperTrade.shadow_decision_id == ShadowDecision.id)
+                .where(PaperTrade.status == "closed", PaperTrade.closed_at >= start_ts, PaperTrade.closed_at < end_ts)
+                .order_by(PaperTrade.closed_at.asc())
+            )
+            return list(session.execute(stmt).all())
 
     def _setup_features(self, setup: Setup) -> dict[str, float]:
         payload = setup.payload_json or {}
@@ -453,6 +467,34 @@ class LearningService:
         }
         return features
 
+    def _paper_trade_features(self, paper_trade: PaperTrade, shadow_decision: ShadowDecision | None = None) -> dict[str, float]:
+        payload = getattr(shadow_decision, "payload_json", None) or {}
+        features = dict(payload.get("features", {}) or {})
+        entry_price = paper_trade.entry_price or payload.get("entry_price") or payload.get("entry")
+        try:
+            price = float(entry_price) if entry_price not in (None, "n/a", "") else 0.0
+        except (TypeError, ValueError):
+            price = 0.0
+        direction = str(paper_trade.direction or payload.get("direction") or "long").lower()
+        features.setdefault("price", price)
+        features.setdefault("direction_long", 1.0 if direction == "long" else 0.0)
+        if paper_trade.realized_r is not None:
+            features.setdefault("rr_min", float(paper_trade.realized_r))
+        for key, default in {
+            "box_height": 0.0,
+            "box_bars": 0.0,
+            "rvol_break": 0.0,
+            "l2_mean": 0.0,
+            "l2_persist": 0.0,
+            "dist_htf": 0.0,
+            "dist_gap": 0.0,
+            "spread_cents": 0.0,
+            "score": 0.0,
+            "rr_min": 0.0,
+        }.items():
+            features.setdefault(key, default)
+        return features
+
     def _is_near_setup(self, symbol: str | None, ts: datetime | None, setups: list[Setup]) -> bool:
         if not symbol or not ts:
             return False
@@ -486,6 +528,7 @@ class LearningService:
         setups = self._load_setups(start)
         fills = self._load_fills(start, end)
         trades = self._load_trades(start, end)
+        paper_trades = self._load_closed_paper_trades(start, end)
         alerts_map = self._alerts_for_setups([s.id for s in setups])
 
         fills_by_setup: dict[int, list[Fill]] = {}
@@ -603,6 +646,24 @@ class LearningService:
                 )
             )
 
+        for paper_trade, shadow_decision in paper_trades:
+            rows.append(
+                LearningRow(
+                    label=LABEL_PAPER_OUTCOME,
+                    symbol=paper_trade.symbol,
+                    detected_ts=paper_trade.closed_at or paper_trade.opened_at,
+                    features=self._paper_trade_features(paper_trade, shadow_decision),
+                    taken_by_master=False,
+                    realized_r=paper_trade.realized_r,
+                    pnl=paper_trade.realized_pnl,
+                    manual_no_alert=False,
+                    setup_id=paper_trade.setup_id,
+                    alert_id=paper_trade.alert_id,
+                    source="paper_trader",
+                    sample_weight=self.paper_sample_weight,
+                )
+            )
+
         return rows
 
     def _label_breakdown(self, df: pd.DataFrame) -> dict[str, int]:
@@ -658,6 +719,7 @@ class LearningService:
                     taken_by_master=row.get("taken_by_master", False),
                     realized_r=row.get("realized_r"),
                     source=row.get("source") or "real_trading",
+                    sample_weight=float(row.get("sample_weight", 1.0) or 1.0),
                 )
                 for _, row in df.iterrows()
             ]
@@ -676,7 +738,7 @@ class LearningService:
                 row["price_bucket"] = bucket_price(float(row.get("price", 0.0)))
                 row["time_bucket"] = bucket_time(row.get("detected_ts") or datetime.now())
                 row["label"] = 1 if (row.get("realized_r") is not None and row["realized_r"] >= 2.0) else 0
-                row["sample_weight"] = self.synthetic_sample_weight if sample.source == "sandbox_simulation" else 1.0
+                row["sample_weight"] = self.synthetic_sample_weight if sample.source == "sandbox_simulation" else sample.sample_weight
                 enhanced_rows.append(row)
             
             enhanced_df = pd.DataFrame(enhanced_rows) if enhanced_rows else df
