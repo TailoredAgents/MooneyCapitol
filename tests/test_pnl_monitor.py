@@ -100,6 +100,30 @@ def test_normalize_account_balance_accepts_webull_openapi_balance_shape():
     assert balance.buying_power == 661.08
 
 
+def test_normalize_account_balance_accepts_margin_asset_shape():
+    balance = normalize_account_balance(
+        {
+            "total_asset_currency": "USD",
+            "total_asset": "25000.50",
+            "total_cash_balance": "12000.25",
+            "account_currency_assets": [
+                {
+                    "currency": "USD",
+                    "cash_balance": "12000.25",
+                    "day_buying_power": "100000.00",
+                    "overnight_buying_power": "50000.00",
+                    "margin_power": "75000.00",
+                }
+            ],
+        }
+    )
+
+    assert balance.total_value == 25000.50
+    assert balance.equity_value == 25000.50
+    assert balance.cash_balance == 12000.25
+    assert balance.buying_power == 100000.00
+
+
 def test_target_display_name_prefers_env_then_config(monkeypatch):
     target = CopyTargetAccountConfig(
         name="personal",

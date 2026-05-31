@@ -264,6 +264,8 @@ def normalize_account_balance(payload: dict[str, Any]) -> NormalizedBalance:
         [
             "total_value",
             "totalValue",
+            "total_asset",
+            "totalAsset",
             "total_net_liquidation_value",
             "totalNetLiquidationValue",
             "net_liquidation",
@@ -279,6 +281,8 @@ def normalize_account_balance(payload: dict[str, Any]) -> NormalizedBalance:
             "equityValue",
             "total_equity",
             "totalEquity",
+            "total_asset",
+            "totalAsset",
         ],
     )
     equity_value = _first_float(
@@ -289,6 +293,8 @@ def normalize_account_balance(payload: dict[str, Any]) -> NormalizedBalance:
             "equity",
             "total_equity",
             "totalEquity",
+            "total_asset",
+            "totalAsset",
             "total_net_liquidation_value",
             "totalNetLiquidationValue",
             "net_liquidation",
@@ -303,7 +309,24 @@ def normalize_account_balance(payload: dict[str, Any]) -> NormalizedBalance:
         data,
         ["cash_balance", "cashBalance", "total_cash_balance", "totalCashBalance", "cash", "cashAvailable"],
     )
-    buying_power = _first_float(data, ["buying_power", "buyingPower", "dayTradingBuyingPower", "overnightBuyingPower"])
+    buying_power = _first_float(
+        data,
+        [
+            "buying_power",
+            "buyingPower",
+            "day_buying_power",
+            "dayBuyingPower",
+            "dayTradingBuyingPower",
+            "overnight_buying_power",
+            "overnightBuyingPower",
+            "night_trading_buying_power",
+            "nightTradingBuyingPower",
+            "margin_power",
+            "marginPower",
+            "cash_power",
+            "cashPower",
+        ],
+    )
     if total_value is None:
         total_value = equity_value if equity_value is not None else cash_balance
     if total_value is None:
