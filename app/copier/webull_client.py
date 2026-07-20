@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import os
+from pathlib import Path
+from threading import Lock
 from typing import Any, Callable
 
 from app.copier.models import WebullCredentials, WebullEquityOrder
+
+
+_TOKEN_LOCKS_GUARD = Lock()
+_TOKEN_INIT_LOCKS: dict[str, Lock] = {}
 
 
 class WebullClientError(RuntimeError):
@@ -94,7 +101,16 @@ class WebullTradingClient:
             self.credentials.region_id,
         )
         api_client.add_endpoint(self.credentials.region_id, self.credentials.endpoint)
-        return trade_client_factory(api_client)
+        token_dir = _token_dir_for_credentials(self.credentials)
+        set_token_dir = getattr(api_client, "set_token_dir", None)
+        if callable(set_token_dir):
+            set_token_dir(token_dir)
+
+        # TradeClient initializes Webull's reusable 2FA token in its constructor.
+        # Several worker jobs can initialize the same account concurrently, so
+        # serialize that work and let later clients reuse the verified token.
+        with _token_init_lock(token_dir):
+            return trade_client_factory(api_client)
 
     def get_account_list(self) -> list[dict[str, Any]]:
         response = self.trade_client.account_v2.get_account_list()
@@ -157,3 +173,33 @@ class WebullTradingClient:
         if status_code is not None and not (200 <= int(status_code) < 300):
             raise WebullClientError(f"Webull request failed with status {status_code}: {payload}")
         return payload
+
+
+def _token_dir_for_credentials(credentials: WebullCredentials) -> str:
+    """Return a stable, credential-scoped SDK token directory.
+
+    Webull's SDK otherwise stores every App Key's access token in the same
+    ``conf/token.txt`` file. This application connects multiple Webull accounts,
+    so the shared default causes one account's token to overwrite another's and
+    can trigger repeated Open API verification prompts.
+    """
+
+    base_dir = Path(os.getenv("WEBULL_OPENAPI_TOKEN_DIR", "conf/webull_tokens")).expanduser()
+    identity = "\0".join(
+        [
+            credentials.app_key,
+            credentials.endpoint,
+            credentials.account_id or "",
+        ]
+    )
+    credential_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:20]
+    return str((base_dir / credential_id).absolute())
+
+
+def _token_init_lock(token_dir: str) -> Lock:
+    with _TOKEN_LOCKS_GUARD:
+        lock = _TOKEN_INIT_LOCKS.get(token_dir)
+        if lock is None:
+            lock = Lock()
+            _TOKEN_INIT_LOCKS[token_dir] = lock
+        return lock

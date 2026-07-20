@@ -147,6 +147,9 @@ def test_webull_trading_client_warm_up_builds_trade_client():
         def add_endpoint(self, region_id, endpoint):
             calls.append(("endpoint", region_id, endpoint))
 
+        def set_token_dir(self, token_dir):
+            calls.append(("token_dir", token_dir))
+
     class TradeClient:
         def __init__(self, api_client):
             calls.append(("trade", api_client))
@@ -162,7 +165,59 @@ def test_webull_trading_client_warm_up_builds_trade_client():
 
     assert calls[0] == ("api", "key", "secret", "us")
     assert calls[1] == ("endpoint", "us", "endpoint")
-    assert calls[2][0] == "trade"
+    assert calls[2][0] == "token_dir"
+    assert calls[3][0] == "trade"
+
+
+def test_webull_trading_clients_use_separate_token_dirs_per_credentials(monkeypatch, tmp_path):
+    token_dirs = []
+
+    class ApiClient:
+        def __init__(self, app_key, app_secret, region_id):
+            pass
+
+        def add_endpoint(self, region_id, endpoint):
+            pass
+
+        def set_token_dir(self, token_dir):
+            token_dirs.append(token_dir)
+
+    class TradeClient:
+        def __init__(self, api_client):
+            self.order_v2 = FakeOrderV2()
+
+    monkeypatch.setenv("WEBULL_OPENAPI_TOKEN_DIR", str(tmp_path / "tokens"))
+    clients = [
+        WebullTradingClient(
+            WebullCredentials(
+                app_key="master-key",
+                app_secret="master-secret",
+                endpoint="https://api.webull.com",
+                account_id="master-account",
+                environment="live",
+            ),
+            api_client_factory=ApiClient,
+            trade_client_factory=TradeClient,
+        ),
+        WebullTradingClient(
+            WebullCredentials(
+                app_key="target-key",
+                app_secret="target-secret",
+                endpoint="https://api.webull.com",
+                account_id="target-account",
+                environment="live",
+            ),
+            api_client_factory=ApiClient,
+            trade_client_factory=TradeClient,
+        ),
+    ]
+
+    for client in clients:
+        client.warm_up()
+
+    assert len(token_dirs) == 2
+    assert token_dirs[0] != token_dirs[1]
+    assert all(token_dir.startswith(str(tmp_path / "tokens")) for token_dir in token_dirs)
 
 
 def test_webull_trading_client_raises_on_non_success_response():
