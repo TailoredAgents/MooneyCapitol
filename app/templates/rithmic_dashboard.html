@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>Rithmic Observation Console | Mooney Capital</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
+    <link rel="icon" type="image/png" href="/static/favicon.png" />
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+    <script>
+      (() => {
+        const stored = localStorage.getItem('mooney-v2-dashboard-theme');
+        const preferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = stored || (preferred ? 'dark' : 'light');
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f5f8;
+        --surface: #ffffff;
+        --surface-soft: #f8fafc;
+        --ink: #15202d;
+        --muted: #627083;
+        --line: #dce2ea;
+        --brand: #173f73;
+        --brand-strong: #102f59;
+        --accent: #0f766e;
+        --accent-soft: #dff7f2;
+        --warn: #a15c00;
+        --warn-soft: #fff2d7;
+        --danger: #b42318;
+        --danger-soft: #fee9e7;
+        --neutral-soft: #edf1f6;
+        --shadow: 0 18px 48px rgba(26, 39, 55, 0.08);
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0d131b;
+        --surface: #141d28;
+        --surface-soft: #192431;
+        --ink: #edf3fa;
+        --muted: #9eacbd;
+        --line: #2b3949;
+        --brand: #8db8ec;
+        --brand-strong: #b7d5f7;
+        --accent: #59c6b9;
+        --accent-soft: #173c39;
+        --warn: #f3bd66;
+        --warn-soft: #3b2c15;
+        --danger: #ff9188;
+        --danger-soft: #421f21;
+        --neutral-soft: #23303e;
+        --shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      button, a { font: inherit; }
+      a { color: inherit; }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 68px;
+        padding: 0.8rem clamp(1rem, 4vw, 3.5rem);
+        color: #fff;
+        background: #102f59;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+      }
+      .brand { display: flex; align-items: center; gap: 0.8rem; }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(255,255,255,0.35);
+        border-radius: 10px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+      .brand strong { display: block; font-size: 1rem; }
+      .brand span { display: block; color: #b8c9df; font-size: 0.76rem; margin-top: 0.12rem; }
+      .header-actions { display: flex; align-items: center; gap: 0.55rem; }
+      .header-button {
+        border: 1px solid rgba(255,255,255,0.28);
+        border-radius: 8px;
+        padding: 0.48rem 0.72rem;
+        color: #fff;
+        background: rgba(255,255,255,0.08);
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 0.82rem;
+      }
+      .header-button:hover { background: rgba(255,255,255,0.15); }
+      .logout-form { margin: 0; }
+      .shell {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        width: min(1600px, 100%);
+        margin: 0 auto;
+      }
+      .sidebar {
+        position: sticky;
+        top: 68px;
+        align-self: start;
+        height: calc(100vh - 68px);
+        padding: 1.4rem 1rem;
+        border-right: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .sidebar-label {
+        margin: 0 0 0.65rem 0.65rem;
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .sidebar a {
+        display: block;
+        margin-bottom: 0.25rem;
+        padding: 0.62rem 0.7rem;
+        border-radius: 8px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.84rem;
+        font-weight: 650;
+      }
+      .sidebar a:hover { color: var(--ink); background: var(--surface-soft); }
+      .sidebar .legacy {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--line);
+        color: var(--warn);
+      }
+      main { min-width: 0; padding: 2rem clamp(1rem, 3vw, 2.4rem) 4rem; }
+      .hero {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1.5rem;
+        margin-bottom: 1.2rem;
+      }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0.35rem 0 0.35rem; font-size: clamp(1.75rem, 3vw, 2.7rem); line-height: 1.08; }
+      h2 { margin: 0; font-size: 1.05rem; }
+      p { line-height: 1.55; }
+      .hero p { max-width: 760px; margin: 0; color: var(--muted); }
+      .refresh {
+        flex: 0 0 auto;
+        border: 0;
+        border-radius: 9px;
+        padding: 0.72rem 1rem;
+        color: #fff;
+        background: var(--brand);
+        cursor: pointer;
+        font-weight: 750;
+      }
+      :root[data-theme="dark"] .refresh { color: #0e1b2a; }
+      .refresh:disabled { opacity: 0.6; cursor: wait; }
+      .safety-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.1rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+        border-radius: 11px;
+        background: var(--accent-soft);
+      }
+      .safety-banner strong { color: var(--accent); }
+      .safety-banner span { color: var(--muted); font-size: 0.84rem; }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.8rem;
+        margin-bottom: 1.4rem;
+      }
+      .summary-card, .panel {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .summary-card { padding: 1rem; }
+      .label { color: var(--muted); font-size: 0.73rem; font-weight: 750; letter-spacing: 0.05em; text-transform: uppercase; }
+      .metric { margin-top: 0.28rem; font-size: 1.55rem; font-weight: 780; }
+      .submetric { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
+      .section { margin-top: 1.25rem; scroll-margin-top: 90px; }
+      .section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.65rem;
+      }
+      .section-heading p { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.82rem; }
+      .grid-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+      .panel { min-width: 0; padding: 1rem; }
+      .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.75rem; }
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.25rem 0.52rem;
+        background: var(--neutral-soft);
+        color: var(--muted);
+        font-size: 0.71rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .status-chip.ok { color: var(--accent); background: var(--accent-soft); }
+      .status-chip.warn { color: var(--warn); background: var(--warn-soft); }
+      .status-chip.bad { color: var(--danger); background: var(--danger-soft); }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .key-values { display: grid; gap: 0.58rem; }
+      .key-value { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
+      .key-value:last-child { padding-bottom: 0; border-bottom: 0; }
+      .key-value span { color: var(--muted); font-size: 0.79rem; }
+      .key-value strong { text-align: right; font-size: 0.82rem; }
+      .scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+      th, td { padding: 0.68rem 0.72rem; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+      th { position: sticky; top: 0; color: var(--muted); background: var(--surface-soft); font-size: 0.68rem; letter-spacing: 0.055em; text-transform: uppercase; }
+      tr:last-child td { border-bottom: 0; }
+      td.mono { font-family: var(--mono); font-size: 0.73rem; }
+      .empty { padding: 1.4rem; color: var(--muted); text-align: center; }
+      .loading { color: var(--muted); }
+      .error-box { display: none; margin-bottom: 1rem; padding: 0.8rem 1rem; border: 1px solid var(--danger); border-radius: 10px; color: var(--danger); background: var(--danger-soft); }
+      .error-box.visible { display: block; }
+      .limitations { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+      .limit-card { padding: 0.9rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+      .limit-card strong { display: block; margin-bottom: 0.25rem; font-size: 0.82rem; }
+      .limit-card span { color: var(--muted); font-size: 0.77rem; line-height: 1.45; }
+      .footer-note { margin-top: 1.5rem; color: var(--muted); font-size: 0.74rem; text-align: right; }
+      @media (max-width: 1100px) {
+        .shell { grid-template-columns: 1fr; }
+        .sidebar { position: static; height: auto; display: flex; gap: 0.25rem; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 0.55rem 1rem; }
+        .sidebar-label { display: none; }
+        .sidebar a { flex: 0 0 auto; margin: 0; }
+        .sidebar .legacy { margin: 0 0 0 auto; padding: 0.62rem 0.7rem; border: 0; }
+        .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      }
+      @media (max-width: 720px) {
+        .topbar { padding: 0.7rem 0.85rem; }
+        .brand span { display: none; }
+        .header-actions .legacy-header { display: none; }
+        main { padding: 1.3rem 0.8rem 3rem; }
+        .hero { display: block; }
+        .refresh { width: 100%; margin-top: 0.9rem; }
+        .safety-banner { align-items: flex-start; flex-direction: column; }
+        .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .grid-two, .limitations { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">MC</span>
+        <div><strong>Mooney Capital</strong><span>V2 futures operations</span></div>
+      </div>
+      <div class="header-actions">
+        <a class="header-button legacy-header" href="/dashboard/legacy">Legacy V1</a>
+        <button class="header-button" id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+        <form class="logout-form" action="/logout" method="post"><button class="header-button" type="submit">Log out</button></form>
+      </div>
+    </header>
+
+    <div class="shell">
+      <nav class="sidebar" aria-label="Observation console navigation">
+        <div class="sidebar-label">Observation Console</div>
+        <a href="#overview">Overview</a>
+        <a href="#connectivity">Connectivity</a>
+        <a href="#accounts">Accounts &amp; P&amp;L</a>
+        <a href="#orders">Orders &amp; fills</a>
+        <a href="#risk">Risk &amp; brackets</a>
+        <a href="#contracts">Contracts</a>
+        <a class="legacy" href="/dashboard/legacy">Legacy V1 reference</a>
+      </nav>
+
+      <main>
+        <section class="hero" id="overview">
+          <div>
+            <div class="eyebrow">Rithmic Test · read-only</div>
+            <h1>Broker observation console</h1>
+            <p>Live service health and durable Rithmic observations. This console can inspect captured state but cannot place, modify, cancel, or flatten orders.</p>
+          </div>
+          <button class="refresh" id="refresh" type="button">Refresh observations</button>
+        </section>
+
+        <div class="safety-banner">
+          <strong>Broker submission is structurally disabled</strong>
+          <span>No execution controls are exposed by this dashboard or the Rithmic capture service.</span>
+        </div>
+        <div class="error-box" id="error-box" role="alert"></div>
+
+        <section class="summary-grid" aria-label="Observation summary">
+          <article class="summary-card"><div class="label">Capture</div><div class="metric" id="capture-state">Loading</div><div class="submetric" id="capture-detail">Checking health endpoint</div></article>
+          <article class="summary-card"><div class="label">Journal events</div><div class="metric" id="event-count">-</div><div class="submetric" id="last-event">No event timestamp</div></article>
+          <article class="summary-card"><div class="label">Orders observed</div><div class="metric" id="order-count">-</div><div class="submetric">Append-only observations</div></article>
+          <article class="summary-card"><div class="label">Executions observed</div><div class="metric" id="execution-count">-</div><div class="submetric">Fills, busts, and corrections</div></article>
+          <article class="summary-card"><div class="label">Accounts observed</div><div class="metric" id="account-count">-</div><div class="submetric">Aliases only; IDs are redacted</div></article>
+        </section>
+
+        <section class="section" id="connectivity">
+          <div class="section-heading"><div><h2>Connectivity and reconciliation</h2><p>Independent plant generations and subscribe-first recovery state.</p></div></div>
+          <div class="grid-two">
+            <article class="panel">
+              <div class="panel-head"><h2>Capture service</h2><span id="capture-chip" class="status-chip"><span class="dot"></span>Checking</span></div>
+              <div id="capture-details" class="key-values loading">Loading capture health…</div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>Latest plant generations</h2><span class="status-chip">Durable state</span></div>
+              <div class="scroll"><table><thead><tr><th>Plant</th><th>State</th><th>Ready</th><th>Last message</th><th>Reconnect</th></tr></thead><tbody id="plants-body"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody></table></div>
+            </article>
+          </div>
+          <article class="panel section">
+            <div class="panel-head"><h2>Latest reconciliation checkpoints</h2><span class="status-chip">Per account and plant</span></div>
+            <div class="scroll"><table><thead><tr><th>Account</th><th>Plant</th><th>Phase</th><th>Status</th><th>Ready</th><th>Discrepancies</th><th>Recorded</th></tr></thead><tbody id="reconciliation-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="section" id="accounts">
+          <div class="section-heading"><div><h2>Accounts, balances, and positions</h2><p>Latest append-only observations; account identifiers are replaced with stable aliases.</p></div></div>
+          <div class="grid-two">
+            <article class="panel">
+              <div class="panel-head"><h2>Observed accounts</h2><span class="status-chip" id="accounts-chip">0 latest</span></div>
+              <div class="scroll"><table><thead><tr><th>Account</th><th>Status</th><th>Access</th><th>Currency</th><th>Allowlisted</th><th>Observed</th></tr></thead><tbody id="accounts-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>Account P&amp;L</h2><span class="status-chip">Latest per account</span></div>
+              <div class="scroll"><table><thead><tr><th>Account</th><th>Balance</th><th>Day P&amp;L</th><th>Buying power</th><th>Margin</th><th>Freshness</th><th>Received</th></tr></thead><tbody id="account-pnl-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
+            </article>
+          </div>
+          <article class="panel section">
+            <div class="panel-head"><h2>Instrument positions</h2><span class="status-chip">Latest per account / contract</span></div>
+            <div class="scroll"><table><thead><tr><th>Account</th><th>Contract</th><th>Net qty</th><th>Average open</th><th>Open P&amp;L</th><th>Day P&amp;L</th><th>Working buy / sell</th><th>Received</th></tr></thead><tbody id="positions-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="section" id="orders">
+          <div class="section-heading"><div><h2>Orders and executions</h2><p>Observed broker lifecycle only. Rows do not imply ownership or authorization to act.</p></div></div>
+          <article class="panel">
+            <div class="panel-head"><h2>Recent order observations</h2><span class="status-chip">Newest first</span></div>
+            <div class="scroll"><table><thead><tr><th>Received</th><th>Account</th><th>Order</th><th>Contract</th><th>Side</th><th>Type</th><th>Qty</th><th>Filled</th><th>State</th><th>Price</th><th>Source</th></tr></thead><tbody id="orders-body"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody></table></div>
+          </article>
+          <article class="panel section">
+            <div class="panel-head"><h2>Recent execution observations</h2><span class="status-chip">Fills and corrections</span></div>
+            <div class="scroll"><table><thead><tr><th>Executed</th><th>Account</th><th>Order</th><th>Fill</th><th>Kind</th><th>Side</th><th>Qty</th><th>Effective Δ</th><th>Price</th><th>Commission</th><th>Source</th></tr></thead><tbody id="executions-body"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="section" id="risk">
+          <div class="section-heading"><div><h2>RMS and bracket observations</h2><p>Read-only risk and protective-order facts reported by the broker.</p></div></div>
+          <div class="grid-two">
+            <article class="panel">
+              <div class="panel-head"><h2>Risk management state</h2><span class="status-chip">Latest per scope</span></div>
+              <div class="scroll"><table><thead><tr><th>Account</th><th>Scope</th><th>Product</th><th>Status</th><th>Loss limit</th><th>Auto-liquidate</th><th>Max qty</th><th>Received</th></tr></thead><tbody id="risk-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody></table></div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>Recent brackets</h2><span class="status-chip">Observed only</span></div>
+              <div class="scroll"><table><thead><tr><th>Received</th><th>Account</th><th>Parent</th><th>Type</th><th>Status</th><th>Target qty</th><th>Stop qty</th></tr></thead><tbody id="brackets-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="contracts">
+          <div class="section-heading"><div><h2>Contract reference observations</h2><p>Exact symbol, exchange, expiry, tick, and point-value facts when Ticker Plant queries are enabled.</p></div></div>
+          <article class="panel">
+            <div class="scroll"><table><thead><tr><th>Received</th><th>Symbol</th><th>Exchange</th><th>Product</th><th>Expiration</th><th>Type</th><th>Tick</th><th>Point value</th><th>Tradable</th><th>Source</th></tr></thead><tbody id="contracts-body"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="section panel" aria-labelledby="limits-title">
+          <div class="panel-head"><h2 id="limits-title">Current V2 boundaries</h2><span class="status-chip warn">Foundation phase</span></div>
+          <div class="limitations">
+            <div class="limit-card"><strong>No broker mutations</strong><span>Order entry, cancel/modify, flatten, bracket changes, and follower submission remain structurally absent.</span></div>
+            <div class="limit-card"><strong>No live V2 Scout</strong><span>The current Conner NQ work is an observation and learning-data foundation, not a completed strategy or signal service.</span></div>
+            <div class="limit-card"><strong>No production claim</strong><span>Rithmic Test conformance and manual R|Trader-to-API visibility validation still have to be completed.</span></div>
+          </div>
+        </section>
+
+        <div class="footer-note">Last dashboard refresh: <span id="last-refresh">never</span> · automatic refresh every 15 seconds</div>
+      </main>
+    </div>
+
+    <script>
+      const refreshButton = document.getElementById('refresh');
+      let loading = false;
+
+      const escapeHtml = (value) => String(value ?? '')
+        .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+      const present = (value, fallback = '—') => value === null || value === undefined || value === '' ? fallback : value;
+      const boolText = (value) => value === true ? 'Yes' : value === false ? 'No' : '—';
+      const number = (value) => value === null || value === undefined ? '—' : Number(value).toLocaleString();
+      const money = (value, currency = '') => {
+        if (value === null || value === undefined || value === '') return '—';
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return escapeHtml(value);
+        return `${currency ? `${escapeHtml(currency)} ` : ''}${parsed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+      };
+      const time = (value) => {
+        if (!value) return '—';
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.valueOf()) ? escapeHtml(value) : parsed.toLocaleString();
+      };
+      const chip = (label, kind = '') => `<span class="status-chip ${kind}">${escapeHtml(present(label))}</span>`;
+      const stateKind = (value) => {
+        const text = String(value ?? '').toUpperCase();
+        if (['READY', 'COMPLETE', 'CONNECTED', 'AUTHENTICATED', 'OK', 'LIVE'].some((item) => text.includes(item))) return 'ok';
+        if (['FAILED', 'ERROR', 'REJECT', 'DISCONNECT', 'FORCED'].some((item) => text.includes(item))) return 'bad';
+        return 'warn';
+      };
+      const setText = (id, value) => { const node = document.getElementById(id); if (node) node.textContent = present(value); };
+      const emptyRow = (columns, message) => `<tr><td colspan="${columns}" class="empty">${escapeHtml(message)}</td></tr>`;
+
+      async function api(path) {
+        const response = await fetch(path, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        if (response.status === 401) { window.location.assign('/login'); throw new Error('Authentication required'); }
+        if (!response.ok) {
+          let message = `Request failed (${response.status})`;
+          try { const body = await response.json(); message = body.detail || message; } catch (_) {}
+          throw new Error(message);
+        }
+        return response.json();
+      }
+
+      function renderSummary(data) {
+        const capture = data.capture || {};
+        const storage = data.storage || {};
+        setText('capture-state', capture.ready ? 'Ready' : capture.live ? 'Live' : capture.reachable ? 'Blocked' : 'Offline');
+        setText('capture-detail', capture.configured ? (capture.lifecycle || capture.status) : 'Health URL not configured');
+        setText('event-count', number(storage.events));
+        setText('last-event', storage.last_event_at ? `Latest ${time(storage.last_event_at)}` : 'No captured events');
+        setText('order-count', number(storage.orders));
+        setText('execution-count', number(storage.executions));
+        setText('account-count', number(storage.accounts));
+      }
+
+      function renderCapture(capture) {
+        const status = capture.ready ? ['Ready', 'ok'] : capture.live ? ['Live, not ready', 'warn'] : capture.reachable ? ['Blocked', 'warn'] : ['Unavailable', 'bad'];
+        const chipNode = document.getElementById('capture-chip');
+        chipNode.className = `status-chip ${status[1]}`;
+        chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(status[0])}`;
+        const blockers = (capture.blockers || []).length ? capture.blockers.join(', ') : 'None reported';
+        document.getElementById('capture-details').className = 'key-values';
+        document.getElementById('capture-details').innerHTML = [
+          ['Health endpoint', capture.configured ? (capture.reachable ? 'Reachable' : 'Unavailable') : 'Not configured'],
+          ['Lifecycle', present(capture.lifecycle)],
+          ['Connectivity gate', boolText(capture.connectivity_enabled)],
+          ['Broker submission', 'Disabled'],
+          ['Configured accounts', number(capture.configured_account_count)],
+          ['Reconciled accounts', number(capture.reconciled_account_count)],
+          ['Buffered events', number(capture.buffered_event_count)],
+          ['Journal queue depth', number(capture.journal_depth)],
+          ['Blockers', blockers],
+        ].map(([key, value]) => `<div class="key-value"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+      }
+
+      function renderPlants(items) {
+        document.getElementById('plants-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td><strong>${escapeHtml(present(item.plant))}</strong></td>
+          <td>${chip(item.state, stateKind(item.state))}</td>
+          <td>${chip(item.ready ? 'Ready' : 'Not ready', item.ready ? 'ok' : 'warn')}</td>
+          <td>${time(item.last_message_at)}</td>
+          <td>${number(item.reconnect_attempt)}</td>
+        </tr>`).join('') : emptyRow(5, 'No durable plant generation has been recorded.');
+      }
+
+      function renderReconciliation(items) {
+        document.getElementById('reconciliation-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td class="mono">${escapeHtml(item.account)}</td><td>${escapeHtml(present(item.plant))}</td><td>${escapeHtml(present(item.phase))}</td>
+          <td>${chip(item.status, stateKind(item.status))}</td><td>${chip(item.ready ? 'Ready' : 'Blocked', item.ready ? 'ok' : 'warn')}</td>
+          <td>${number(item.discrepancy_count)}</td><td>${time(item.recorded_at)}</td>
+        </tr>`).join('') : emptyRow(7, 'No reconciliation checkpoint has been recorded.');
+      }
+
+      function renderAccounts(items) {
+        setText('accounts-chip', `${items.length} latest`);
+        document.getElementById('accounts-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td class="mono">${escapeHtml(item.account)}</td><td>${chip(item.status, stateKind(item.status))}</td><td>${escapeHtml(present(item.access_type))}</td>
+          <td>${escapeHtml(present(item.currency))}</td><td>${chip(item.allowlisted ? 'Yes' : 'No', item.allowlisted ? 'ok' : 'bad')}</td><td>${time(item.observed_at)}</td>
+        </tr>`).join('') : emptyRow(6, 'No allowlisted account observation has been captured.');
+      }
+
+      function renderAccountPnl(items) {
+        document.getElementById('account-pnl-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td class="mono">${escapeHtml(item.account)}</td><td>${money(item.account_balance, item.currency)}</td><td>${money(item.day_total_pnl, item.currency)}</td>
+          <td>${money(item.available_buying_power, item.currency)}</td><td>${money(item.margin_balance, item.currency)}</td>
+          <td>${chip(item.freshness, stateKind(item.freshness))}</td><td>${time(item.received_at)}</td>
+        </tr>`).join('') : emptyRow(7, 'No account-level P&L observation has been captured.');
+      }
+
+      function renderPositions(items) {
+        document.getElementById('positions-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td class="mono">${escapeHtml(item.account)}</td><td><strong>${escapeHtml(present(item.symbol))}</strong> <span class="submetric">${escapeHtml(present(item.exchange, ''))}</span></td>
+          <td>${number(item.net_quantity)}</td><td>${money(item.average_open_fill_price)}</td><td>${money(item.open_position_pnl, item.currency)}</td>
+          <td>${money(item.day_total_pnl, item.currency)}</td><td>${number(item.working_buy_quantity)} / ${number(item.working_sell_quantity)}</td><td>${time(item.received_at)}</td>
+        </tr>`).join('') : emptyRow(8, 'No instrument P&L or position observation has been captured.');
+      }
+
+      function renderOrders(items) {
+        document.getElementById('orders-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td>${time(item.received_at)}</td><td class="mono">${escapeHtml(item.account)}</td><td class="mono">${escapeHtml(item.order)}</td>
+          <td><strong>${escapeHtml(present(item.symbol))}</strong> ${escapeHtml(present(item.exchange, ''))}</td><td>${escapeHtml(present(item.side))}</td><td>${escapeHtml(present(item.order_type))}</td>
+          <td>${number(item.quantity)}</td><td>${number(item.total_fill_size)}</td><td>${chip(item.state, stateKind(item.state))}</td>
+          <td>${money(item.average_fill_price ?? item.fill_price ?? item.limit_price)}</td><td>${escapeHtml(present(item.source_kind))}</td>
+        </tr>`).join('') : emptyRow(11, 'No order lifecycle observation has been captured.');
+      }
+
+      function renderExecutions(items) {
+        document.getElementById('executions-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td>${time(item.executed_at || item.received_at)}</td><td class="mono">${escapeHtml(item.account)}</td><td class="mono">${escapeHtml(item.order)}</td><td class="mono">${escapeHtml(item.execution)}</td>
+          <td>${chip(item.kind, stateKind(item.kind))}</td><td>${escapeHtml(present(item.side))}</td><td>${number(item.quantity)}</td><td>${number(item.effective_quantity_delta)}</td>
+          <td>${money(item.price)}</td><td>${money(item.commission)}</td><td>${escapeHtml(present(item.source_kind))}</td>
+        </tr>`).join('') : emptyRow(11, 'No execution observation has been captured.');
+      }
+
+      function renderRisk(items) {
+        document.getElementById('risk-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td class="mono">${escapeHtml(item.account)}</td><td>${escapeHtml(present(item.scope))}</td><td>${escapeHtml(present(item.product_code))}</td>
+          <td>${chip(item.status, stateKind(item.status))}</td><td>${money(item.loss_limit, item.currency)}</td><td>${boolText(item.auto_liquidate)}</td>
+          <td>${number(item.max_order_quantity)}</td><td>${time(item.received_at)}</td>
+        </tr>`).join('') : emptyRow(8, 'No RMS observation has been captured.');
+      }
+
+      function renderBrackets(items) {
+        document.getElementById('brackets-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td>${time(item.received_at)}</td><td class="mono">${escapeHtml(item.account)}</td><td class="mono">${escapeHtml(item.parent_order)}</td>
+          <td>${escapeHtml(present(item.bracket_type))}</td><td>${chip(item.status, stateKind(item.status))}</td>
+          <td>${number(item.target_released_quantity)} / ${number(item.target_total_quantity)}</td><td>${number(item.stop_released_quantity)} / ${number(item.stop_total_quantity)}</td>
+        </tr>`).join('') : emptyRow(7, 'No bracket observation has been captured.');
+      }
+
+      function renderContracts(items) {
+        document.getElementById('contracts-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td>${time(item.received_at)}</td><td><strong>${escapeHtml(present(item.symbol))}</strong></td><td>${escapeHtml(present(item.exchange))}</td>
+          <td>${escapeHtml(present(item.product_code))}</td><td>${escapeHtml(present(item.expiration_date))}</td><td>${escapeHtml(present(item.instrument_type))}</td>
+          <td>${money(item.minimum_quoted_price_change)}</td><td>${money(item.single_point_value, item.currency)}</td>
+          <td>${boolText(item.tradable)}</td><td>${escapeHtml(present(item.source_kind))}</td>
+        </tr>`).join('') : emptyRow(10, 'No contract reference observation has been captured. Ticker Plant reference queries are optional.');
+      }
+
+      async function loadOverview() {
+        if (loading) return;
+        loading = true;
+        refreshButton.disabled = true;
+        refreshButton.textContent = 'Refreshing…';
+        document.getElementById('error-box').classList.remove('visible');
+        try {
+          const data = await api('/v2/operations/overview?limit=40');
+          renderSummary(data); renderCapture(data.capture || {}); renderPlants(data.plants || []);
+          renderReconciliation(data.reconciliation || []); renderAccounts(data.accounts || []); renderAccountPnl(data.account_pnl || []);
+          renderPositions(data.positions || []); renderOrders(data.orders || []); renderExecutions(data.executions || []);
+          renderRisk(data.risk || []); renderBrackets(data.brackets || []); renderContracts(data.contracts || []);
+          setText('last-refresh', new Date().toLocaleTimeString());
+        } catch (error) {
+          const box = document.getElementById('error-box');
+          box.textContent = error.message || 'The V2 observation dashboard could not be loaded.';
+          box.classList.add('visible');
+        } finally {
+          loading = false;
+          refreshButton.disabled = false;
+          refreshButton.textContent = 'Refresh observations';
+        }
+      }
+
+      const themeToggle = document.getElementById('theme-toggle');
+      function syncThemeButton() {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        themeToggle.textContent = dark ? 'Light mode' : 'Dark mode';
+        themeToggle.setAttribute('aria-pressed', String(dark));
+      }
+      themeToggle.addEventListener('click', () => {
+        document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('mooney-v2-dashboard-theme', document.documentElement.dataset.theme);
+        syncThemeButton();
+      });
+      refreshButton.addEventListener('click', loadOverview);
+      syncThemeButton();
+      loadOverview();
+      setInterval(() => { if (!document.hidden) loadOverview(); }, 15000);
+    </script>
+  </body>
+</html>

@@ -25,6 +25,7 @@ from app.api.routes.launch import router as launch_router
 from app.api.routes.paper import router as paper_router
 from app.api.routes.pnl import router as pnl_router
 from app.api.routes.shadow import router as shadow_router
+from app.api.routes.v2_operations import router as v2_operations_router
 from app.api.routes.slash import router as slash_router
 from app.api.routes.slack import router as slack_router
 from app.api.ws import router as ws_router
@@ -74,6 +75,7 @@ app.include_router(launch_router)
 app.include_router(paper_router)
 app.include_router(pnl_router)
 app.include_router(shadow_router)
+app.include_router(v2_operations_router)
 app.include_router(slash_router)
 app.include_router(slack_router)
 app.include_router(ws_router)

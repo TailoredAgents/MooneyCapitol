@@ -158,16 +158,16 @@ def test_public_policy_pages_render_page_specific_metadata():
     assert '<a href="/platform" aria-current="page">Platform</a>' in response.text
     assert '<section class="summary-grid" aria-label="Page summary">' in response.text
     assert "Private internal console" in response.text
-    assert "Human trader remains in control" in response.text
+    assert "Rithmic Test observation" in response.text
     assert 'href="/dashboard"' not in response.text
 
 
 def test_public_homepage_has_customer_facing_sections_without_private_controls():
     html = Path("app/templates/public_home.html").read_text(encoding="utf-8")
 
-    assert "Private trading operations platform" in html
-    assert "Private trading operations, monitored from one system." in html
-    assert "Mooney Trading organizes scout signals, copied execution oversight, account activity, latency, and post-trade review" in html
+    assert "Private futures observation platform" in html
+    assert "Futures operations, observed with clear boundaries." in html
+    assert "read-only Rithmic Test capture" in html
     assert "hero-proof" in html
     assert "visual-meta" in html
     assert "brand-mark" in html
@@ -181,13 +181,13 @@ def test_public_homepage_has_customer_facing_sections_without_private_controls()
     assert "Audit trail" in html
     assert "Scout, mirror, monitor, and learn from live trading activity." not in html
     assert "A focused system for trading operations." in html
-    assert "From signal to review." in html
-    assert "Built around the live trading stack." in html
+    assert "From connection to trusted observation." in html
+    assert "Built around a broker-neutral futures boundary." in html
     assert "Public site" in html
     assert "Private internal console" in html
-    assert "Operational data, account controls, readiness checks, and execution controls stay inside authenticated internal access." in html
+    assert "Operational observations, readiness checks, and redacted broker state stay inside authenticated internal access." in html
     assert "Private operations platform." in html
-    assert "Trading activity, account controls, readiness checks, and execution workflows remain inside authenticated internal access." in html
+    assert "Captured broker activity, readiness checks, and research workflows remain inside authenticated internal access." in html
     assert "cta-meta" in html
     assert "footer-risk" in html
     assert "primary-preview" in html

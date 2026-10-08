@@ -108,6 +108,8 @@ The migration is additive, uses BigInteger for official 64-bit quantities, prese
 
 The Rithmic capture journal durably writes immutable native events and append-only observation projections. No production ingestion/repository service is currently writing a durable point-in-time NQ/ES strategy-market history.
 
+The authenticated `/dashboard` route now exposes a read-only V2 operations console over those durable projections. Account and broker object identifiers are represented as deterministic aliases rather than raw values. Optional sanitized live process health is read from `RITHMIC_CAPTURE_BASE_URL`; the old equity/Webull console remains isolated at `/dashboard/legacy` for reference.
+
 The earlier PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and reported zero V2 metadata drift through that revision. `0011` has automated additive schema/model tests and is wired into the same migration runner; a live PostgreSQL upgrade plus Rithmic Test capture is the next deployment validation. Existing V1 drift observations remain a separate legacy-schema audit item.
 
 ## Tests in place
@@ -128,7 +130,7 @@ V2 tests cover:
 - transport-level rejection of all broker-mutation template IDs and structural absence of capture mutation methods;
 - durable projections, append-only migration/model alignment, redaction, and fail-closed Render configuration.
 
-Current verification is 471 passing repository tests with one skipped test. Compilation of `app`, `tests`, and `migrations`, Render YAML parsing, the `0011` Alembic head/offline SQL check, and `git diff --check` pass. Seven existing `datetime.utcnow()` deprecation warnings remain. Whole-chain offline Alembic SQL is still limited by `0001` inspecting a mock connection; targeted `0010` to `0011` offline generation passes, and deployment uses the existing live PostgreSQL migration runner.
+Current verification is 476 passing repository tests with one skipped test. Compilation of `app`, `tests`, and `migrations`, Render YAML parsing, the `0011` Alembic head/offline SQL check, and `git diff --check` pass. Seven existing `datetime.utcnow()` deprecation warnings remain. Whole-chain offline Alembic SQL is still limited by `0001` inspecting a mock connection; targeted `0010` to `0011` offline generation passes, and deployment uses the existing live PostgreSQL migration runner.
 
 ## Not implemented
 

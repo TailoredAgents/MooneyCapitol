@@ -63,26 +63,6 @@ services:
         sync: false
       - key: TS_REFRESH_TOKEN
         sync: false
-      - key: WEBULL_MASTER_API_ENDPOINT
-        sync: false
-      - key: WEBULL_MASTER_EVENTS_ENDPOINT
-        sync: false
-      - key: WEBULL_MASTER_APP_KEY
-        sync: false
-      - key: WEBULL_MASTER_APP_SECRET
-        sync: false
-      - key: WEBULL_MASTER_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_PERSONAL_API_ENDPOINT
-        sync: false
-      - key: WEBULL_PERSONAL_APP_KEY
-        sync: false
-      - key: WEBULL_PERSONAL_APP_SECRET
-        sync: false
-      - key: WEBULL_PERSONAL_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_PERSONAL_DISPLAY_NAME
-        value: Austin Dugger's Account
       - key: LEARNING_XGB_MIN_ROWS
         value: "20"
       - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES
@@ -114,7 +94,7 @@ services:
       - key: TRADE_MATCH_MIN_CONFIDENCE
         value: likely
       - key: SHADOW_TRADER_ENABLED
-        value: "1"
+        value: "0"
       - key: SHADOW_TRADER_MIN_P2R
         value: "0.70"
       - key: SHADOW_TRADER_MIN_RR
@@ -122,7 +102,7 @@ services:
       - key: SHADOW_TRADER_SIZE_PCT
         value: "0.05"
       - key: AI_LAB_ENABLED
-        value: "1"
+        value: "0"
       - key: AI_LAB_STARTING_EQUITY
         value: "100000"
       - key: AI_LAB_BUYING_POWER_MULTIPLIER
@@ -138,7 +118,7 @@ services:
       - key: AI_LAB_HIGH_CONF_SIZE_MULT
         value: "1.5"
       - key: PAPER_TRADER_ENABLED
-        value: "1"
+        value: "0"
       - key: PAPER_TRADER_BROKER_MODE
         value: internal
       - key: PAPER_TRADER_ACCOUNT_EQUITY
@@ -155,24 +135,16 @@ services:
         value: "0.20"
       - key: PAPER_PROMOTION_MAX_DRAWDOWN_PCT
         value: "0.10"
-      - key: WEBULL_AI_PAPER_API_ENDPOINT
-        sync: false
-      - key: WEBULL_AI_PAPER_EVENTS_ENDPOINT
-        sync: false
-      - key: WEBULL_AI_PAPER_APP_KEY
-        sync: false
-      - key: WEBULL_AI_PAPER_APP_SECRET
-        sync: false
-      - key: WEBULL_AI_PAPER_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_AI_PAPER_DISPLAY_NAME
-        value: Austin Webull Paper Account
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
         sync: false
       - key: COWORK_OPERATOR_API_TOKEN
         sync: false
+      - key: RITHMIC_CAPTURE_BASE_URL
+        sync: false
+      - key: RITHMIC_CAPTURE_HEALTH_TIMEOUT_SECONDS
+        value: "2"
 
   - type: worker
     name: trading-agent-worker
@@ -233,26 +205,6 @@ services:
         sync: false
       - key: TS_REFRESH_TOKEN
         sync: false
-      - key: WEBULL_MASTER_API_ENDPOINT
-        sync: false
-      - key: WEBULL_MASTER_EVENTS_ENDPOINT
-        sync: false
-      - key: WEBULL_MASTER_APP_KEY
-        sync: false
-      - key: WEBULL_MASTER_APP_SECRET
-        sync: false
-      - key: WEBULL_MASTER_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_PERSONAL_API_ENDPOINT
-        sync: false
-      - key: WEBULL_PERSONAL_APP_KEY
-        sync: false
-      - key: WEBULL_PERSONAL_APP_SECRET
-        sync: false
-      - key: WEBULL_PERSONAL_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_PERSONAL_DISPLAY_NAME
-        value: Austin Dugger's Account
       - key: LEARNING_XGB_MIN_ROWS
         value: "20"
       - key: LEARNING_MANUAL_MATCH_WINDOW_MINUTES
@@ -284,7 +236,7 @@ services:
       - key: TRADE_MATCH_MIN_CONFIDENCE
         value: likely
       - key: SHADOW_TRADER_ENABLED
-        value: "1"
+        value: "0"
       - key: SHADOW_TRADER_MIN_P2R
         value: "0.70"
       - key: SHADOW_TRADER_MIN_RR
@@ -292,7 +244,7 @@ services:
       - key: SHADOW_TRADER_SIZE_PCT
         value: "0.05"
       - key: AI_LAB_ENABLED
-        value: "1"
+        value: "0"
       - key: AI_LAB_STARTING_EQUITY
         value: "100000"
       - key: AI_LAB_BUYING_POWER_MULTIPLIER
@@ -308,7 +260,7 @@ services:
       - key: AI_LAB_HIGH_CONF_SIZE_MULT
         value: "1.5"
       - key: PAPER_TRADER_ENABLED
-        value: "1"
+        value: "0"
       - key: PAPER_TRADER_BROKER_MODE
         value: internal
       - key: PAPER_TRADER_ACCOUNT_EQUITY
@@ -325,18 +277,6 @@ services:
         value: "0.20"
       - key: PAPER_PROMOTION_MAX_DRAWDOWN_PCT
         value: "0.10"
-      - key: WEBULL_AI_PAPER_API_ENDPOINT
-        sync: false
-      - key: WEBULL_AI_PAPER_EVENTS_ENDPOINT
-        sync: false
-      - key: WEBULL_AI_PAPER_APP_KEY
-        sync: false
-      - key: WEBULL_AI_PAPER_APP_SECRET
-        sync: false
-      - key: WEBULL_AI_PAPER_ACCOUNT_ID
-        sync: false
-      - key: WEBULL_AI_PAPER_DISPLAY_NAME
-        value: Austin Webull Paper Account
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD

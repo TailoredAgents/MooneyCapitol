@@ -188,10 +188,10 @@ def test_public_homepage_is_available_without_login_when_dashboard_auth_configur
     assert "Mooney Trading" in resp.text
     assert 'href="/dashboard"' not in resp.text
     assert "Operator Dashboard" not in resp.text
-    assert "Live Scout" in resp.text
-    assert "Trade Copier" in resp.text
-    assert "Account Monitor" in resp.text
-    assert "Learning Reports" in resp.text
+    assert "Read-only Capture" in resp.text
+    assert "Recovery &amp; Reconciliation" in resp.text
+    assert "Observation Console" in resp.text
+    assert "Futures Research" in resp.text
     assert "Trading involves risk" in resp.text
     assert "Copier Settings" not in resp.text
 
@@ -235,7 +235,7 @@ def test_public_platform_page_is_available_without_login(monkeypatch):
     assert resp.status_code == 200
     assert "Platform Overview" in resp.text
     assert "What Mooney Trading is" in resp.text
-    assert "Trader workflow" in resp.text
+    assert "Observation workflow" in resp.text
     assert "Operator workflow" in resp.text
     assert "Learning and review" in resp.text
     assert "Launch boundaries" in resp.text
@@ -330,6 +330,13 @@ def test_login_success_sets_cookie_and_opens_dashboard(monkeypatch):
 
     dashboard_resp = client.get("/dashboard")
     assert dashboard_resp.status_code == 200
+    assert "Rithmic Test" in dashboard_resp.text
+    assert "Broker observation console" in dashboard_resp.text
+
+    legacy_resp = client.get("/dashboard/legacy")
+    assert legacy_resp.status_code == 200
+    assert "Legacy V1 · Webull equities" in legacy_resp.text
+    assert "Copier Settings" in legacy_resp.text
 
 
 def test_login_rejects_wrong_password(monkeypatch):

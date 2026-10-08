@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mooney Capital Dashboard</title>
+    <title>Mooney Capital Legacy V1 Dashboard</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/static/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
@@ -123,6 +123,31 @@
         display: flex;
         align-items: center;
         gap: 16px;
+      }
+      .legacy-badge {
+        border: 1px solid rgba(180, 83, 9, 0.35);
+        border-radius: 999px;
+        padding: 0.3rem 0.58rem;
+        color: #9a4f08;
+        background: rgba(255, 237, 213, 0.82);
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      :root[data-theme="dark"] .legacy-badge {
+        color: #fdba74;
+        background: rgba(124, 45, 18, 0.34);
+      }
+      .v2-dashboard-link {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0.45rem 0.68rem;
+        color: var(--accent-dark);
+        background: var(--panel);
+        text-decoration: none;
+        font-size: 0.78rem;
+        font-weight: 750;
       }
       .header-right {
         display: flex;
@@ -1137,8 +1162,10 @@
     <header>
       <div class="header-left">
         <h1>Mooney Capital</h1>
+        <span class="legacy-badge">Legacy V1 · Webull equities</span>
       </div>
       <div class="header-right">
+        <a class="v2-dashboard-link" href="/dashboard">V2 Rithmic dashboard</a>
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">Dark mode</button>
         <form class="logout-form" action="/logout" method="post">
           <button class="logout-button" type="submit">Log out</button>

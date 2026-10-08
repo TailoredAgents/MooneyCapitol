@@ -76,6 +76,7 @@ def robots_txt():
             "Disallow: /copier",
             "Disallow: /launch",
             "Disallow: /pnl",
+            "Disallow: /v2/operations",
             "Disallow: /slack",
             "Disallow: /slash",
             "Disallow: /ws",
@@ -115,53 +116,53 @@ def sitemap_xml():
 def platform_overview():
     return _render_public_policy(
         title="Platform Overview",
-        description="A plain-language overview of the Mooney Trading private trading operations platform.",
+        description="A plain-language overview of the Mooney Trading private futures observation platform.",
         eyebrow="Platform overview",
-        updated="May 23, 2026",
+        updated="October 7, 2026",
         path="/platform",
         summary_cards=[
             {"label": "Access", "value": "Private internal console"},
-            {"label": "Core loop", "value": "Scout, monitor, review"},
-            {"label": "Decisioning", "value": "Human trader remains in control"},
+            {"label": "Current mode", "value": "Rithmic Test observation"},
+            {"label": "Broker actions", "value": "Structurally disabled"},
         ],
         sections=[
             {
                 "heading": "What Mooney Trading is",
                 "items": [
-                    "Mooney Trading is a private trading operations platform built around a human trader, monitored account data, and internal operator controls.",
-                    "The system combines a live scout, copy execution oversight, account monitoring, latency tracking, and review reports in one authenticated internal console.",
+                    "Mooney Trading is transitioning to a broker-neutral futures platform with a read-only Rithmic Test observation boundary.",
+                    "The current system captures account, order, fill, bracket, P&L, RMS, recovery, and contract-reference facts in an authenticated internal console.",
                     "The public site explains the platform at a high level and does not provide public account access, public trading signals, or investor onboarding.",
                 ],
             },
             {
-                "heading": "Trader workflow",
+                "heading": "Observation workflow",
                 "items": [
-                    "The scout organizes potential setups into readiness lanes so the trader can review market context faster.",
-                    "The trader remains responsible for decisions on the master account.",
-                    "Configured copy accounts are intended to mirror exposure by account percentage when copying is enabled and live-trading gates are satisfied.",
+                    "Independent Order and P&L sessions connect only to the Rithmic Test environment behind explicit fail-closed configuration gates.",
+                    "Only exact allowlisted accounts can be observed, and their broker identifiers are redacted from ordinary dashboard output.",
+                    "Live subscriptions, replay, deduplication, and reconciliation establish durable broker visibility without submitting broker commands.",
                 ],
             },
             {
                 "heading": "Operator workflow",
                 "items": [
-                    "The internal console separates trader-facing views from developer and launch-readiness controls.",
-                    "Operators can monitor account value, positions, fills, copied order status, latency, slippage, and system readiness.",
-                    "Operational controls, credentials, account identifiers, readiness checks, and execution settings stay inside authenticated access.",
+                    "The primary internal console reports V2 capture health, plant generations, reconciliation, accounts, P&L, positions, orders, fills, brackets, RMS, and contract facts.",
+                    "The previous equity console remains available only as an explicitly labeled legacy V1 reference.",
+                    "Credentials, raw account identifiers, readiness checks, and captured broker state stay inside authenticated access.",
                 ],
             },
             {
                 "heading": "Learning and review",
                 "items": [
-                    "The learning layer uses alerts, setups, trades, fills, and outcomes to support explainable review.",
-                    "AI summaries are read-only helpers for explanations, research context, trade journals, daily recaps, and learning summaries.",
-                    "Model outputs support human review and should not be treated as financial advice, guarantees, or autonomous public recommendations.",
+                    "The V2 intelligence foundation keeps exact-contract NQ observations and synchronized ES context separate from execution.",
+                    "Candidate measurements, ranking contracts, and historical replay are research foundations rather than a completed trading strategy.",
+                    "No model output is eligible to submit orders, control follower risk, or act as a public recommendation.",
                 ],
             },
             {
                 "heading": "Launch boundaries",
                 "items": [
-                    "Before real-money operation, brokerage credentials, market data, Slack, Sentry, OpenAI, database, and deployment settings must be configured and validated.",
-                    "Live trading requires account-level validation, read-only checks, working equity snapshots, copier readiness, risk monitoring, and operator review.",
+                    "Rithmic Test conformance, manual R|Trader-to-API visibility, reconnection, replay, and redaction checks must be completed before considering a write phase.",
+                    "The current V2 execution process rejects submission enablement and the read-only capture service exposes no mutation methods.",
                     "Any future public-facing product would require separate legal, regulatory, brokerage, privacy, and operational review.",
                 ],
             },
@@ -173,14 +174,14 @@ def platform_overview():
 def public_faq():
     return _render_public_policy(
         title="FAQ",
-        description="Common questions about the Mooney Trading private trading operations platform.",
+        description="Common questions about the Mooney Trading private futures observation platform.",
         eyebrow="Common questions",
-        updated="May 23, 2026",
+        updated="October 7, 2026",
         path="/faq",
         summary_cards=[
             {"label": "Audience", "value": "Authorized internal users"},
             {"label": "Public access", "value": "Information only"},
-            {"label": "AI role", "value": "Read-only explanations"},
+            {"label": "Current phase", "value": "Read-only broker capture"},
         ],
         sections=[
             {
@@ -194,17 +195,17 @@ def public_faq():
             {
                 "heading": "What does the platform do?",
                 "items": [
-                    "The platform supports a trading workflow with live market scouting, account monitoring, copied-order oversight, latency tracking, and review reports.",
-                    "It is built to help operators see the state of the trading system, account snapshots, copied executions, and post-trade review context in one place.",
+                    "The current V2 platform observes Rithmic Test account, order, execution, bracket, P&L, RMS, recovery, and reference-data events.",
+                    "It gives authorized operators a redacted view of capture readiness and durable broker observations in one place.",
                     "It is not presented as a public advisory service or a public investment product.",
                 ],
             },
             {
                 "heading": "Does the system trade by itself?",
                 "items": [
-                    "The current design keeps the human trader responsible for master-account decisions.",
-                    "Copy execution is controlled by operator settings, launch-readiness gates, account validation, and risk monitoring.",
-                    "AI features are read-only helpers for explanation, research context, trade journals, recaps, and learning summaries.",
+                    "No. The Rithmic capture service has no order-entry, cancel, modify, flatten, bracket-change, or follower-submission method.",
+                    "The separate V2 execution process rejects submission enablement, and research output cannot call broker execution.",
+                    "Any future write phase requires separate implementation, review, Test conformance, and explicit approval.",
                 ],
             },
             {
@@ -233,7 +234,7 @@ def risk_disclosure():
         title="Risk Disclosure",
         description="Important risk information for visitors reviewing Mooney Trading.",
         eyebrow="Trading risk disclosure",
-        updated="May 23, 2026",
+        updated="October 7, 2026",
         path="/risk-disclosure",
         summary_cards=[
             {"label": "Risk", "value": "Loss of principal is possible"},
@@ -244,7 +245,7 @@ def risk_disclosure():
             {
                 "heading": "Trading risk",
                 "items": [
-                    "Trading securities involves risk, including the possible loss of principal.",
+                    "Trading futures involves substantial risk, including the possible loss of principal and losses beyond posted margin.",
                     "Market prices can move quickly, liquidity can change without warning, and execution quality can vary by broker, symbol, order type, and market condition.",
                     "Past trades, alerts, reports, simulations, or examples do not guarantee future results.",
                 ],
@@ -268,9 +269,9 @@ def risk_disclosure():
             {
                 "heading": "Technology limitations",
                 "items": [
-                    "Software can fail, data can be delayed or incorrect, external APIs can be unavailable, and copied orders can experience latency, slippage, rejection, or partial fills.",
-                    "Monitoring tools, AI summaries, model outputs, and learning reports are decision-support tools, not guarantees of correctness or profitability.",
-                    "Operators remain responsible for reviewing credentials, brokerage permissions, account settings, risk controls, and live-trading readiness before using real funds.",
+                    "Software can fail, data can be delayed or incorrect, external APIs can be unavailable, and broker observations can be incomplete or arrive out of order.",
+                    "Monitoring tools, captured state, model outputs, and research measurements are not guarantees of correctness or profitability.",
+                    "The current V2 service is read-only and not approved for production order submission or use as a live execution system.",
                 ],
             },
         ],
@@ -283,7 +284,7 @@ def privacy_policy():
         title="Privacy Notice",
         description="High-level privacy notice for the Mooney Trading public site.",
         eyebrow="Privacy notice",
-        updated="May 23, 2026",
+        updated="October 7, 2026",
         path="/privacy",
         summary_cards=[
             {"label": "Public site", "value": "No public signup flow"},
@@ -303,7 +304,7 @@ def privacy_policy():
                 "heading": "Internal operator console",
                 "items": [
                     "The internal console is separate from the public site and is intended only for authorized operators.",
-                    "Internal activity can involve operational records such as account snapshots, alerts, fills, copied order records, latency measurements, AI summaries, and audit logs.",
+                    "Internal activity can involve operational records such as redacted account observations, orders, fills, brackets, P&L, RMS facts, reconciliation state, and audit logs.",
                     "Brokerage credentials and API keys belong in Render environment variables or approved secret storage, not in public pages, screenshots, chat messages, or source code.",
                 ],
             },
@@ -358,6 +359,14 @@ def logout(request: Request):
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
+    if not is_dashboard_authenticated(request):
+        return RedirectResponse("/login", status_code=303)
+    template = env.get_template("rithmic_dashboard.html")
+    return template.render()
+
+
+@router.get("/dashboard/legacy", response_class=HTMLResponse)
+def legacy_dashboard(request: Request):
     if not is_dashboard_authenticated(request):
         return RedirectResponse("/login", status_code=303)
     template = env.get_template("dashboard.html")

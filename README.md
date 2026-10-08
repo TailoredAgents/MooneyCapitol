@@ -16,7 +16,7 @@ The V2 execution path is not production-ready and cannot submit a broker order. 
 
 ### V1: legacy equity/reference system
 
-The existing API, worker, small-cap scout, Webull copier, dashboard, P&L monitor, Slack integration, AI Lab, equity learning pipeline, migrations `0001` through `0008`, and V1 tables remain available.
+The existing API, worker, small-cap scout, Webull copier, P&L monitor, Slack integration, AI Lab, equity learning pipeline, migrations `0001` through `0008`, and V1 tables remain available as legacy/reference code. The old operator console is retained at `/dashboard/legacy`; it is no longer the primary dashboard.
 
 V1 is legacy/reference code. Its stock features, `hybrid_target`, thresholds, synthetic rows, XGBoost artifacts, and paper outcomes are not valid V2 futures inputs. The V2 registry and dataset validation quarantine those sources.
 
@@ -46,6 +46,12 @@ python -m app.v2.capture.main
 ```
 
 It is fail-closed unless connectivity is explicitly enabled for `TEST`, external checksum-verified bindings and credentials are supplied through secrets, and an exact account allowlist is configured. The observer exposes no mutation methods, and a default-deny outbound-template policy rejects every known order/bracket/OCO mutation immediately before transport.
+
+### Operator dashboard
+
+`/dashboard` is the authenticated V2 Rithmic observation console. It reads the append-only V2 PostgreSQL projections and displays redacted account aliases, capture counts, connection generations, reconciliation checkpoints, account/P&L state, positions, orders, executions, brackets, RMS state, and contract-reference observations. It exposes no broker mutation control.
+
+The API service can optionally read the capture process's sanitized `/health` endpoint when `RITHMIC_CAPTURE_BASE_URL` is configured. If that value is absent or unreachable, the dashboard reports live health as unavailable but continues to display durable observations from PostgreSQL. `/dashboard/legacy` retains the old V1 equity/Webull console for reference only.
 
 ### `conner_nq_v1`: observation foundation
 
@@ -114,7 +120,7 @@ For local tests that do not require PostgreSQL, `STATE_STORE=mem` can be used. N
 
 ## V1 safety configuration
 
-Render's V1 copier variables are deny-only gates:
+The active Render blueprint no longer provisions Webull credentials, and its V1 shadow, AI Lab, and paper switches default to disabled. The remaining V1 copier variables are deny-only gates:
 
 - `COPIER_ENABLED=0` blocks operation regardless of persisted config.
 - `COPIER_MODE=test` blocks a persisted mode mismatch.

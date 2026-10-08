@@ -46,6 +46,8 @@ RITHMIC_ENABLED_PLANTS=ORDER,PNL
 
 Deploy those defaults first. `/health` is liveness and remains available while configuration is blocked; `/ready` must return 503 until both required plants are authenticated, every allowlisted account is discovered, and clean per-generation reconciliation is durably checkpointed. Health output never includes account IDs, credentials, protocol payloads, or order IDs.
 
+The authenticated `trading-agent-api` `/dashboard` route is the V2 observation console. It always reads durable V2 projections from the shared PostgreSQL database. To include live process health, set `RITHMIC_CAPTURE_BASE_URL` on `trading-agent-api` to the deployed `mooney-rithmic-capture` service origin, with no path or query string. `RITHMIC_CAPTURE_HEALTH_TIMEOUT_SECONDS` defaults to `2` and is capped at five seconds. If the health URL is absent or unreachable, the console continues to show durable observations and labels live health unavailable.
+
 ### Render Secret File
 
 Create a plaintext Render Secret File named exactly:
@@ -158,13 +160,14 @@ Perform this only after the fail-closed deployment is healthy:
 5. Set `RITHMIC_ENVIRONMENT=TEST`; then set `RITHMIC_CAPTURE_CONNECTIVITY_ENABLED=1` as the final switch and redeploy.
 6. Confirm independent Order and PnL connections authenticate with distinct generation/heartbeat health and that only allowlisted accounts are discovered and subscribed.
 7. Wait for subscribe-before-snapshot recovery to complete. Verify immutable events, replay batch completion, projections, and reconciliation checkpoints; only then expect `/ready` to return 200.
-8. In R|Trader Test, manually create an order. Verify it appears as externally originated unless a verified Mooney-owned tag exists, with basket/exchange IDs, native status, origin metadata, 64-bit quantities, and timestamps intact.
-9. Modify and cancel Test orders manually in R|Trader. Verify pending, working, modification, cancellation, rejection/command-failure, completion-reason, and unknown-state handling without any API mutation request.
-10. Exercise partial and full Test fills where the environment permits. Verify `fill_id` identity, cumulative/unfilled quantities, prices, and deduplication. Validate bust/correction facts if the Test environment can produce them.
-11. Create/manage bracket or OCO behavior manually in R|Trader Test. Verify parent/linked baskets, target/stop tiers, released quantities, and trailing facts are observed read-only.
-12. Compare instrument/account positions, open/closed and daily P&L, cash/balance/margin/buying-power/commission fields, RMS limits, product margins, currency, and auto-liquidation facts against R|Trader.
-13. Interrupt/restart the capture connection. Verify independent reconnect generations, live-first buffering, replay/live overlap deduplication, no repeated same-generation polling, and clean readiness recovery.
-14. If needed, enable Ticker Plant temporarily and validate exact NQ/MNQ symbol, exchange, expiration, tick-table, point-value, and tradability mappings. Disable it for ordinary capture after mappings are persisted.
-15. Review redaction and append-only behavior, record all conformance differences, then return connectivity to `0` until the separate paper-order phase is explicitly authorized.
+8. Open the authenticated `/dashboard`. Confirm live capture health is visible, durable counts match PostgreSQL, all account/order/fill identifiers are aliases, and no order-entry, modify, cancel, flatten, or bracket-control action is present.
+9. In R|Trader Test, manually create an order. Verify it appears as externally originated unless a verified Mooney-owned tag exists, with basket/exchange IDs, native status, origin metadata, 64-bit quantities, and timestamps intact.
+10. Modify and cancel Test orders manually in R|Trader. Verify pending, working, modification, cancellation, rejection/command-failure, completion-reason, and unknown-state handling without any API mutation request.
+11. Exercise partial and full Test fills where the environment permits. Verify `fill_id` identity, cumulative/unfilled quantities, prices, and deduplication. Validate bust/correction facts if the Test environment can produce them.
+12. Create/manage bracket or OCO behavior manually in R|Trader Test. Verify parent/linked baskets, target/stop tiers, released quantities, and trailing facts are observed read-only.
+13. Compare instrument/account positions, open/closed and daily P&L, cash/balance/margin/buying-power/commission fields, RMS limits, product margins, currency, and auto-liquidation facts against R|Trader.
+14. Interrupt/restart the capture connection. Verify independent reconnect generations, live-first buffering, replay/live overlap deduplication, no repeated same-generation polling, and clean readiness recovery.
+15. If needed, enable Ticker Plant temporarily and validate exact NQ/MNQ symbol, exchange, expiration, tick-table, point-value, and tradability mappings. Disable it for ordinary capture after mappings are persisted.
+16. Review redaction and append-only behavior, record all conformance differences, then return connectivity to `0` until the separate paper-order phase is explicitly authorized.
 
 Rithmic Test success is evidence for the observation adapter only. It does not authorize paper or live order submission and does not declare the complete system production-ready.

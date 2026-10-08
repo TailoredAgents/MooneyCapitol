@@ -20,13 +20,12 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count("OPENAI_AI_FEATURES_ENABLED") == 2
     assert text.count("OPENAI_DAILY_REQUEST_LIMIT") == 2
     assert text.count("OPENAI_RESEARCH_DAILY_REQUEST_LIMIT") == 2
-    assert text.count("WEBULL_PERSONAL_DISPLAY_NAME") == 2
+    assert "WEBULL_" not in text
+    assert text.count("SHADOW_TRADER_ENABLED") == 2
     assert text.count("AI_LAB_ENABLED") == 2
     assert text.count("AI_LAB_STARTING_EQUITY") == 2
     assert text.count("AI_LAB_BUYING_POWER_MULTIPLIER") == 2
     assert text.count("PAPER_TRADER_BROKER_MODE") == 2
-    assert text.count("WEBULL_AI_PAPER_API_ENDPOINT") == 2
-    assert text.count("WEBULL_AI_PAPER_ACCOUNT_ID") == 2
     assert "AI_LIVE_TRADING_ENABLED" not in text
     assert text.count('value: "0"') >= 6
     assert text.count("SLACK_SIGNING_SECRET") == 2
@@ -37,6 +36,8 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert "COWORK_OPERATOR_USERNAME" in text
     assert "COWORK_OPERATOR_PASSWORD" in text
     assert "COWORK_OPERATOR_API_TOKEN" in text
+    assert text.count("RITHMIC_CAPTURE_BASE_URL") == 1
+    assert text.count("RITHMIC_CAPTURE_HEALTH_TIMEOUT_SECONDS") == 1
 
 
 def test_api_mounts_static_assets_for_favicon():
