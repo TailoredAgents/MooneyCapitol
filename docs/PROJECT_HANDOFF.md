@@ -128,7 +128,7 @@ V2 tests cover:
 - transport-level rejection of all broker-mutation template IDs and structural absence of capture mutation methods;
 - durable projections, append-only migration/model alignment, redaction, and fail-closed Render configuration.
 
-Current verification is 470 passing repository tests with one skipped test. Compilation of `app`, `tests`, and `migrations`, Render YAML parsing, the `0011` Alembic head/offline SQL check, and `git diff --check` pass. Seven existing `datetime.utcnow()` deprecation warnings remain. Whole-chain offline Alembic SQL is still limited by `0001` inspecting a mock connection; targeted `0010` to `0011` offline generation passes, and deployment uses the existing live PostgreSQL migration runner.
+Current verification is 471 passing repository tests with one skipped test. Compilation of `app`, `tests`, and `migrations`, Render YAML parsing, the `0011` Alembic head/offline SQL check, and `git diff --check` pass. Seven existing `datetime.utcnow()` deprecation warnings remain. Whole-chain offline Alembic SQL is still limited by `0001` inspecting a mock connection; targeted `0010` to `0011` offline generation passes, and deployment uses the existing live PostgreSQL migration runner.
 
 ## Not implemented
 

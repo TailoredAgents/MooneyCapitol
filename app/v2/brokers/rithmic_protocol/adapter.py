@@ -160,7 +160,7 @@ class ObserverRuntimeConfig:
     account_ids: frozenset[str]
     template_version: str = PROTOCOL_TEMPLATE_VERSION
     app_name: str = "MooneyCapitol"
-    app_version: str = "2-read-only"
+    app_version: str = "v2-read-only"
     ca_file: str | None = None
     login_timeout_seconds: float = 30.0
     request_timeout_seconds: float = 30.0
@@ -229,17 +229,13 @@ class ObserverRuntimeConfig:
             account_ids=account_ids,
             template_version=template_version,
             app_name=(
-                os.getenv("RITHMIC_APPLICATION_NAME")
-                or os.getenv("RITHMIC_APP_NAME")
-                or "MooneyCapitol"
+                os.getenv("RITHMIC_APPLICATION_NAME") or "MooneyCapitol"
             ).strip()
             or "MooneyCapitol",
             app_version=(
-                os.getenv("RITHMIC_APPLICATION_VERSION")
-                or os.getenv("RITHMIC_APP_VERSION")
-                or "2-read-only"
+                os.getenv("RITHMIC_APPLICATION_VERSION") or "v2-read-only"
             ).strip()
-            or "2-read-only",
+            or "v2-read-only",
             ca_file=os.getenv("RITHMIC_CA_FILE", "").strip() or None,
             login_timeout_seconds=max(login_timeout, 1.0),
             request_timeout_seconds=max(request_timeout, 1.0),

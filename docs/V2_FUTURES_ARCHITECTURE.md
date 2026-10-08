@@ -37,6 +37,8 @@ Hard constraints include:
 
 The execution process remains a boundary skeleton. Immutable configuration rejects submission enablement, readiness remains false, and the execution-side Rithmic placeholder's submission methods raise. No work in `conner_nq_v1` changes that limitation.
 
+V2 names its deterministic local copy/request identity `client_intent_id`. The broker-neutral `client_order_id` property remains only a compatibility alias for existing callers; it is not a guaranteed Rithmic broker-side idempotency key. Rithmic `user_tag` and `user_msg` values likewise remain correlation or origin evidence rather than ownership or idempotency proof.
+
 ### Rithmic observation boundary
 
 The separate `app/v2/brokers/rithmic_protocol` adapter and `app/v2/capture` service implement production-shaped read-only R|Protocol 0.90 capture. R|API+/.NET is a fallback/conformance reference only. The adapter uses external checksum/manifest-verified protobuf bindings and secure binary WSS with TLS certificate and hostname verification.
@@ -155,7 +157,7 @@ Migration `0011_rithmic_read_capture` adds 11 tables for independent connection 
 
 All three migrations are additive. V1 records are not altered or converted. The `0010` constraints encode cutoff ordering, point-in-time availability, explicit missingness, unknown/unlabeled defaults, evidenced positive/pass labels, task isolation, Shadow-only outputs, lead-time rules, and walk-forward chronology.
 
-A PostgreSQL 16 upgrade/downgrade/re-upgrade verified the full chain, confirmed that the `0010` downgrade removes only its 13 tables, and produced zero V2 metadata drift.
+PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and produced zero V2 metadata drift through that revision. Migration `0011` currently has automated schema/model and targeted offline-SQL validation; its live PostgreSQL upgrade remains part of deployment validation.
 
 The Rithmic capture process has a durable journal/projection writer. The schema does not yet provide a durable high-volume strategy market-data ingestion process or production Scout repository/orchestrator; those remain next-phase components.
 

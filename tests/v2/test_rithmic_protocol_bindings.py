@@ -227,6 +227,8 @@ def test_runtime_config_hides_credentials_and_rejects_wrong_template(monkeypatch
     assert "top-secret-password" not in rendered
     assert runtime.order_uri is None and runtime.pnl_uri is None
     assert runtime.account_metadata_start_ssboe == 0
+    assert runtime.app_name == "MooneyCapitol"
+    assert runtime.app_version == "v2-read-only"
 
     monkeypatch.setenv("RITHMIC_TEMPLATE_VERSION", "0.49")
     with pytest.raises(ValueError, match=PROTOCOL_TEMPLATE_VERSION):
@@ -236,6 +238,33 @@ def test_runtime_config_hides_credentials_and_rejects_wrong_template(monkeypatch
     monkeypatch.setenv("RITHMIC_ACCOUNT_METADATA_START_SSBOE", "2147483648")
     with pytest.raises(ValueError, match="proto int32"):
         ObserverRuntimeConfig.from_capture_config(capture)
+
+
+def test_runtime_config_uses_only_canonical_application_identity(monkeypatch):
+    monkeypatch.setenv("RITHMIC_DISCOVERY_URI", "wss://discovery.test")
+    monkeypatch.setenv("RITHMIC_SYSTEM_NAME", "Rithmic Test")
+    monkeypatch.setenv("RITHMIC_USERNAME", "test-user")
+    monkeypatch.setenv("RITHMIC_PASSWORD", "test-password")
+    monkeypatch.setenv("RITHMIC_APP_NAME", "legacy-name")
+    monkeypatch.setenv("RITHMIC_APP_VERSION", "legacy-version")
+    monkeypatch.delenv("RITHMIC_APPLICATION_NAME", raising=False)
+    monkeypatch.delenv("RITHMIC_APPLICATION_VERSION", raising=False)
+    capture = SimpleNamespace(
+        environment="TEST",
+        connectivity_enabled=True,
+        account_allowlist=frozenset({"account"}),
+        reconcile_timeout_seconds=120,
+    )
+
+    runtime = ObserverRuntimeConfig.from_capture_config(capture)
+    assert runtime.app_name == "MooneyCapitol"
+    assert runtime.app_version == "v2-read-only"
+
+    monkeypatch.setenv("RITHMIC_APPLICATION_NAME", "Canonical Name")
+    monkeypatch.setenv("RITHMIC_APPLICATION_VERSION", "canonical-version")
+    runtime = ObserverRuntimeConfig.from_capture_config(capture)
+    assert runtime.app_name == "Canonical Name"
+    assert runtime.app_version == "canonical-version"
 
 
 def test_gateway_selection_is_explicit_when_discovery_returns_multiple():
