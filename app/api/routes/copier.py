@@ -39,6 +39,7 @@ class CopierSettingsUpdate(BaseModel):
     regular_hours_only: bool | None = None
     copy_shorts: bool | None = None
     max_orders_per_minute: int | None = Field(default=None, ge=1, le=500)
+    live_max_notional_per_order: float | None = Field(default=None, ge=0)
 
 
 class CopyTargetUpdate(BaseModel):
@@ -125,6 +126,8 @@ def update_copier_settings(
         CONFIG.copier.copy_shorts = payload.copy_shorts
     if payload.max_orders_per_minute is not None:
         CONFIG.copier.max_orders_per_minute = payload.max_orders_per_minute
+    if payload.live_max_notional_per_order is not None:
+        CONFIG.copier.live_max_notional_per_order = payload.live_max_notional_per_order
     try:
         _validate_copier_settings()
     except HTTPException:
@@ -717,6 +720,8 @@ def _target_confirmation(target_name: str) -> str:
 def _validate_copier_settings() -> None:
     if CONFIG.copier.mode == "live" and not CONFIG.copier.live_trading_enabled:
         raise HTTPException(status_code=400, detail="Live mode requires live_trading_enabled=true in config")
+    if CONFIG.copier.mode == "live" and CONFIG.copier.live_max_notional_per_order <= 0:
+        raise HTTPException(status_code=400, detail="Live mode requires a positive fail-closed notional ceiling")
     for target in CONFIG.copier.targets:
         _validate_target(target)
 

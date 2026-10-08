@@ -8,9 +8,11 @@ def test_render_runs_migrations_before_api_and_worker_start():
 
     assert runtime.startswith("python-3.11.")
     assert python_version == "3.11.11"
-    assert text.count("PYTHON_VERSION") == 2
-    assert text.count('value: "3.11.11"') == 2
-    assert text.count("preDeployCommand: python -m app.tools.run_migrations") == 2
+    # API, worker, and isolated read-only Rithmic capture use one pinned
+    # runtime and run the additive migrations before startup.
+    assert text.count("PYTHON_VERSION") == 3
+    assert text.count('value: "3.11.11"') == 3
+    assert text.count("preDeployCommand: python -m app.tools.run_migrations") == 3
     assert text.count("COPIER_ENABLED") == 2
     assert text.count("COPIER_MODE") == 2
     assert text.count("COPIER_GLOBAL_KILL_SWITCH") == 2
@@ -25,7 +27,7 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count("PAPER_TRADER_BROKER_MODE") == 2
     assert text.count("WEBULL_AI_PAPER_API_ENDPOINT") == 2
     assert text.count("WEBULL_AI_PAPER_ACCOUNT_ID") == 2
-    assert text.count("AI_LIVE_TRADING_ENABLED") == 2
+    assert "AI_LIVE_TRADING_ENABLED" not in text
     assert text.count('value: "0"') >= 6
     assert text.count("SLACK_SIGNING_SECRET") == 2
     assert "WEBULL_MASTER_ACCOUNT_EQUITY" not in text

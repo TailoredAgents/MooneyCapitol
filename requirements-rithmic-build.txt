@@ -1,0 +1,3 @@
+# Local/private build-time tooling only. Vendor schemas and generated files stay outside Git.
+grpcio-tools==1.62.3
+protobuf==4.25.6

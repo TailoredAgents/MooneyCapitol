@@ -167,8 +167,6 @@ services:
         sync: false
       - key: WEBULL_AI_PAPER_DISPLAY_NAME
         value: Austin Webull Paper Account
-      - key: AI_LIVE_TRADING_ENABLED
-        value: "0"
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
@@ -339,11 +337,85 @@ services:
         sync: false
       - key: WEBULL_AI_PAPER_DISPLAY_NAME
         value: Austin Webull Paper Account
-      - key: AI_LIVE_TRADING_ENABLED
-        value: "0"
       - key: COWORK_OPERATOR_USERNAME
         sync: false
       - key: COWORK_OPERATOR_PASSWORD
         sync: false
       - key: COWORK_OPERATOR_API_TOKEN
         sync: false
+
+  # Isolated read-only R|Protocol capture surface.  The process is live but
+  # intentionally unready/offline until explicit Rithmic TEST configuration,
+  # licensed external bindings, and the durable journal factory are supplied.
+  - type: web
+    name: mooney-rithmic-capture
+    env: python
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: python -m app.tools.run_migrations
+    startCommand: python -m app.v2.capture.main
+    healthCheckPath: /health
+    maxShutdownDelaySeconds: 60
+    numInstances: 1
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trading-agent-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: RITHMIC_CAPTURE_CONNECTIVITY_ENABLED
+        value: "0"
+      - key: RITHMIC_ENVIRONMENT
+        value: DISABLED
+      - key: RITHMIC_ENABLED_PLANTS
+        value: ORDER,PNL
+      - key: RITHMIC_ACCOUNT_ALLOWLIST
+        sync: false
+      - key: RITHMIC_DISCOVERY_URI
+        sync: false
+      - key: RITHMIC_SYSTEM_NAME
+        sync: false
+      - key: RITHMIC_GATEWAY_NAME
+        sync: false
+      - key: RITHMIC_USERNAME
+        sync: false
+      - key: RITHMIC_PASSWORD
+        sync: false
+      - key: RITHMIC_APPLICATION_NAME
+        value: MooneyCapitol
+      - key: RITHMIC_APPLICATION_VERSION
+        value: v2-read-only
+      - key: RITHMIC_TEMPLATE_VERSION
+        value: "5.55"
+      # Upload this as a Render Secret File. It is a base64-encoded ZIP of
+      # generated bindings plus the generator's checksum manifest; neither
+      # the archive nor the vendor schemas belong in Git.
+      - key: RITHMIC_GENERATED_BINDINGS_ARCHIVE_B64_FILE
+        value: /etc/secrets/rithmic-bindings.zip.b64
+      - key: RITHMIC_GENERATED_BINDINGS_SHA256
+        sync: false
+      - key: RITHMIC_CAPTURE_OBSERVER_FACTORY
+        value: app.v2.brokers.rithmic_protocol.adapter:create_observer
+      - key: RITHMIC_CAPTURE_JOURNAL_FACTORY
+        value: app.v2.capture.persistence:create_journal
+      - key: RITHMIC_CAPTURE_POLL_SECONDS
+        value: "1"
+      - key: RITHMIC_LOGIN_TIMEOUT_SECONDS
+        value: "30"
+      - key: RITHMIC_REQUEST_TIMEOUT_SECONDS
+        value: "30"
+      - key: RITHMIC_RECONCILIATION_TIMEOUT_SECONDS
+        value: "120"
+      - key: RITHMIC_MAX_BUFFERED_EVENTS
+        value: "50000"
+      - key: RITHMIC_REFERENCE_QUERY_ENABLED
+        value: "0"
+      - key: RITHMIC_REFERENCE_QUERY_TOKEN
+        sync: false
+      - key: RITHMIC_REFERENCE_QUERY_TIMEOUT_SECONDS
+        value: "15"
+      - key: RITHMIC_REFERENCE_QUERY_MAX_RESULTS
+        value: "50"
+      - key: RITHMIC_ACCOUNT_METADATA_START_SSBOE
+        value: "0"

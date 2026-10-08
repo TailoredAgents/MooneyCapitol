@@ -1,22 +1,14 @@
 from __future__ import annotations
 
-import hmac
-import os
-from hashlib import sha256
 from urllib.parse import parse_qs
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
+from app.api.slack_security import require_valid_slack_signature
 from app.core.config_store import CONFIG
 from app.core.config_store import persist_config, refresh_config
 from app.services.kv_store import StateStoreError
 router = APIRouter(prefix="", tags=["slash"])
-
-
-def _verify_signature(secret: str, timestamp: str, body: bytes, signature: str) -> bool:
-    basestring = f"v0:{timestamp}:{body.decode()}".encode()
-    computed = "v0=" + hmac.new(secret.encode(), basestring, sha256).hexdigest()
-    return hmac.compare_digest(computed, signature)
 
 
 @router.post("/slack/commands")
@@ -30,12 +22,7 @@ async def slack_commands(
     except StateStoreError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     body = await request.body()
-    secret = os.getenv("SLACK_SIGNING_SECRET")
-    if secret:
-        if not x_slack_signature or not x_slack_request_timestamp:
-            raise HTTPException(status_code=400, detail="missing signature headers")
-        if not _verify_signature(secret, x_slack_request_timestamp, body, x_slack_signature):
-            raise HTTPException(status_code=403, detail="invalid signature")
+    require_valid_slack_signature(x_slack_request_timestamp, body, x_slack_signature)
 
     form = parse_qs(body.decode())
     command = form.get("command", [""])[0]

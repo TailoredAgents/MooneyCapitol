@@ -463,3 +463,8 @@ class KVStore(Base):
     value_json = Column(JSONB, nullable=True)
     value_bytes = Column(LargeBinary, nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+
+# Import after Base and all V1 models exist so V2 metadata is registered while
+# keeping its namespace physically isolated from legacy equity models.
+from app.v2 import db_models as v2_db_models  # noqa: E402,F401

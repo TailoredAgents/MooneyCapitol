@@ -1,5 +1,7 @@
 # MooneyCapitol Roadmap
 
+> Legacy V1 history. This document is retained for reference and does not define V2 futures architecture, readiness, strategy, features, labels, or provider choices. See `docs/V2_FUTURES_ARCHITECTURE.md`.
+
 ## 1. Product Vision
 
 MooneyCapitol is intended to become a two-part trading operations platform:
@@ -61,7 +63,7 @@ OpenAI is planned as a read-only intelligence layer for explanations, recaps, le
 
 ### 🚀 ACHIEVEMENT HIGHLIGHTS
 
-This system represents a **complete, enterprise-grade trading platform** featuring:
+This section records the intended legacy V1 design scope; it is not a production-readiness claim. It includes:
 - Advanced machine learning with real-time scoring
 - Sub-300ms order execution architecture  
 - Comprehensive risk management and audit trails
@@ -842,4 +844,4 @@ Recommended next steps from the current state:
 7. Run copier latency benchmark against real Webull test/live-read-only conditions.
 8. Run live read-only mode for full sessions and compare intended copy decisions against master fills.
 9. Verify background order reconciliation and position sync with real Webull responses.
-10. (Optional follow-up) Extend operator auth to the scout read endpoints (`GET /config`, `/setups`, `/learning/report`, `/watchlist/today`, `/reports/eod`) and the `/ws/live` websocket if those also need protection from public access.
+10. `GET /config` is now operator-protected because it can expose account configuration. As an optional V1 follow-up, assess protection for the remaining scout read endpoints (`/setups`, `/learning/report`, `/watchlist/today`, `/reports/eod`) and `/ws/live`.

@@ -3,6 +3,8 @@ import os
 
 import structlog
 
+from app.security import redact_log_event
+
 
 def configure_logging() -> None:
     logging.basicConfig(
@@ -17,6 +19,7 @@ def configure_logging() -> None:
             structlog.processors.add_log_level,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
+            redact_log_event,
             structlog.processors.JSONRenderer(),
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),

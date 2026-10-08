@@ -168,15 +168,6 @@ def launch_readiness(session: Session = Depends(db_session)):
             item.get("label", ""),
             item.get("context") or {},
         )
-    add(
-        "AI Paper",
-        "live_ai_trading_blocked",
-        os.getenv("AI_LIVE_TRADING_ENABLED", "0").lower() not in {"1", "true", "yes", "on"},
-        "blocker",
-        "Live autonomous AI trading is disabled",
-        {"AI_LIVE_TRADING_ENABLED": os.getenv("AI_LIVE_TRADING_ENABLED", "0")},
-    )
-
     open_reconciliations = session.execute(select(func.count(CopyReconciliation.id)).where(CopyReconciliation.status == "open")).scalar() or 0
     recent_audit = session.execute(select(CopierAuditEvent).order_by(desc(CopierAuditEvent.created_at)).limit(10)).scalars().all()
 

@@ -144,6 +144,7 @@ class CopierConfig(BaseModel):
     enabled: bool = False
     mode: str = "test"  # test | live | read_only
     live_trading_enabled: bool = False
+    live_max_notional_per_order: float = 0.0
     global_kill_switch: bool = True
     master_broker: str = "webull"
     master_account: str | None = None

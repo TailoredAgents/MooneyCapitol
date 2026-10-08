@@ -1,27 +1,19 @@
 from __future__ import annotations
 
-import hmac
 import json
-import os
 from datetime import datetime, timezone
-from hashlib import sha256
 from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, Request
 from sqlalchemy import select
 
 from app.adapters.slack import SlackAdapter
+from app.api.slack_security import require_valid_slack_signature
 from app.db.models import Alert
 from app.db.session import get_session
 
 
 router = APIRouter(prefix="", tags=["slack"])
-
-
-def _verify_signature(secret: str, timestamp: str, body: bytes, signature: str) -> bool:
-    basestring = f"v0:{timestamp}:{body.decode()}".encode()
-    computed = "v0=" + hmac.new(secret.encode(), basestring, sha256).hexdigest()
-    return hmac.compare_digest(computed, signature)
 
 
 @router.post("/webhooks/slack/actions")
@@ -31,12 +23,7 @@ async def slack_actions(
     x_slack_request_timestamp: str | None = Header(default=None),
 ):
     body = await request.body()
-    secret = os.getenv("SLACK_SIGNING_SECRET")
-    if secret:
-        if not x_slack_signature or not x_slack_request_timestamp:
-            raise HTTPException(status_code=400, detail="missing signature headers")
-        if not _verify_signature(secret, x_slack_request_timestamp, body, x_slack_signature):
-            raise HTTPException(status_code=403, detail="invalid signature")
+    require_valid_slack_signature(x_slack_request_timestamp, body, x_slack_signature)
 
     form = parse_qs(body.decode())
     payload_raw = form.get("payload", [None])[0]

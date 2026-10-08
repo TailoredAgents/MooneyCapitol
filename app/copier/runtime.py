@@ -13,6 +13,7 @@ from app.copier.state import set_copier_status
 from app.copier.webull_master import WebullMasterEventListener
 from app.core.config import CopierConfig
 from app.core.config_store import CONFIG, refresh_config
+from app.copier.environment_safety import environment_safety_blocks
 from app.observability.logging import get_logger
 
 
@@ -84,6 +85,13 @@ class WebullCopierRuntime:
                 ignored += 1
                 logger.info("copier.event_ignored", reason="copier_disabled", execution_id=master.execution_id)
                 continue
+            deployment_blocks = environment_safety_blocks(config)
+            if deployment_blocks:
+                ignored += 1
+                reason = "; ".join(deployment_blocks)
+                set_copier_status(last_error=reason)
+                logger.warning("copier.deployment_gate_blocked", reason=reason)
+                continue
             if config.mode == "read_only":
                 targets = self._targets_for_config(config)
                 results = self.orchestrator.plan_execution(master, targets)
@@ -103,6 +111,11 @@ class WebullCopierRuntime:
                 ignored += 1
                 set_copier_status(last_error="live mode blocked because live_trading_enabled is false")
                 logger.warning("copier.live_mode_blocked", execution_id=master.execution_id)
+                continue
+            if config.mode == "live" and config.live_max_notional_per_order <= 0:
+                ignored += 1
+                set_copier_status(last_error="live mode blocked because no positive notional ceiling is configured")
+                logger.warning("copier.live_ceiling_blocked", execution_id=master.execution_id)
                 continue
 
             targets = self._targets_for_config(config)

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.core.config_store import CONFIG
+from app.copier.environment_safety import environment_safety_blocks
 from app.services.kv_store import get_json, set_json
 
 
@@ -57,7 +58,9 @@ def get_copier_status() -> dict[str, Any]:
         "enabled": CONFIG.copier.enabled,
         "mode": CONFIG.copier.mode,
         "live_trading_enabled": CONFIG.copier.live_trading_enabled,
+        "live_max_notional_per_order": CONFIG.copier.live_max_notional_per_order,
         "global_kill_switch": CONFIG.copier.global_kill_switch,
+        "deployment_safety_blockers": environment_safety_blocks(CONFIG.copier),
         "max_orders_per_minute": CONFIG.copier.max_orders_per_minute,
         "master": {
             "broker": CONFIG.copier.master_broker,

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 .pytest_cache/
+/.test-tmp-codex/
 .mypy_cache/
 
 # Envs / local
@@ -27,3 +28,15 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Licensed Rithmic material must remain external to Git.  These paths are
+# intentionally narrow so first-party protobuf/DLL files are not hidden.
+/.vendor/rithmic/
+/generated/rithmic/
+/rithmic-generated/
+/rithmic-bindings.zip
+/rithmic-bindings.zip.b64
+/Rithmic official docs/
+/RProtocolAPI*/
+/RApiPlus*/
+/rithmic_ssl_cert_auth_params

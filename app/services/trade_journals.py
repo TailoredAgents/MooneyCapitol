@@ -12,6 +12,7 @@ from app.db.session import get_session
 from app.observability.logging import get_logger
 from app.services.ai_artifacts import complete_ai_artifact, create_ai_artifact, fail_ai_artifact, latest_ai_artifact
 from app.services.ai_client import OpenAITextClient, openai_model_from_env
+from app.security import redact_sensitive
 
 
 logger = get_logger("trade_journals")
@@ -56,7 +57,7 @@ def trade_journal_input(
         copy_avg_fill_price=order.avg_fill_price,
     )
     tags = trade_journal_tags(order=order, slippage_bps=slippage_bps, scout_context=scout_context)
-    return {
+    return redact_sensitive({
         "master_execution": {
             "id": master.id,
             "broker_execution_id": master.broker_execution_id,
@@ -90,7 +91,7 @@ def trade_journal_input(
         },
         "scout_context": scout_context or {"source": "manual_no_alert"},
         "tags": tags,
-    }
+    })
 
 
 def trade_journal_tags(

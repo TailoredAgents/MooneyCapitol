@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config_store import CONFIG
 from app.db.models import AccountSnapshot, CopyOrder, CopyReconciliation
+from app.copier.environment_safety import environment_safety_blocks
 
 
 SIZING_MODES = {"disabled", "fixed_quantity", "fixed_multiplier", "percent_equity", "equity_ratio"}
@@ -36,6 +37,22 @@ def _readiness_checks(session: Session) -> list[dict]:
         "blocker",
         "Copier mode is valid and live mode is explicitly gated",
         {"mode": CONFIG.copier.mode, "live_trading_enabled": CONFIG.copier.live_trading_enabled},
+    )
+    _add_check(
+        checks,
+        "deployment_safety_gates",
+        not environment_safety_blocks(CONFIG.copier),
+        "blocker",
+        "Deployment safety flags permit the persisted copier configuration",
+        {"blockers": environment_safety_blocks(CONFIG.copier)},
+    )
+    _add_check(
+        checks,
+        "live_notional_ceiling",
+        CONFIG.copier.mode != "live" or CONFIG.copier.live_max_notional_per_order > 0,
+        "blocker",
+        "Live mode has a positive global per-order notional ceiling",
+        {"ceiling": CONFIG.copier.live_max_notional_per_order},
     )
     _add_check(
         checks,

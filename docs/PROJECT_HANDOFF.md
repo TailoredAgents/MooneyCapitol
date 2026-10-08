@@ -1,222 +1,170 @@
-# MooneyCapitol Project Handoff
+# MooneyCapitol project handoff
 
-This is the canonical restart document. If a new assistant or developer picks up the project, read this first, then `README.md`, `docs/MOONEYCAPITOL_ROADMAP.md`, `docs/HYBRID_XGBOOST_LEARNING_PLAN.md`, and `docs/OPENAI_AI_FEATURES_PLAN.md`.
+Updated: 2026-10-07
 
-## Product Vision
+Read [V2_FUTURES_ARCHITECTURE.md](V2_FUTURES_ARCHITECTURE.md) first. The detailed strategy-observation contract is in [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md), and deployment/validation is in [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md). Older roadmap and learning documents describe V1 history and must not define V2 futures behavior, labels, or features.
 
-MooneyCapitol is a two-part trading operations platform:
+## Direction
 
-1. **Scout**: finds small-cap gapper consolidation -> breakout/breakdown -> retest setups for the lead trader.
-2. **Webull trade copier**: mirrors the lead trader's Webull master-account fills into approved Webull copy accounts with very low latency.
+MooneyCapitol V2 combines a broker-neutral, strategy-neutral execution foundation with a provider-neutral futures intelligence boundary. V1's equity scout, Webull copier, AI Lab, learning pipeline, APIs, dashboard, and tables remain legacy/reference code.
 
-The scout and copier share data for reporting and learning, but their runtime paths must remain separate. The scout, dashboard, learning jobs, Slack, database writes, and reconciliation must never delay copied order submission.
+V1 equity artifacts, randomized sandbox data, synthetic labels, and `hybrid_target` cannot enter V2 futures datasets or artifact selection. V2 execution cannot import intelligence, OpenAI, or ML packages.
 
-## Current Account Plan
+The first strategy-specific observation namespace is `conner_nq_v1`. It learns nothing yet; it defines how trustworthy NQ/ES observations and Conner lifecycle labels can be collected for later learning.
 
-- V1 master account: partner's Webull personal account.
-- V1 copy account: user's Webull personal account.
-- Future: many approved Webull target accounts.
-- All v1 accounts are personal accounts.
-- Enabled targets use `percent_equity` mirroring.
-- If the master uses 5% of account equity, each target attempts to use 5% of its own account equity.
-- If the master uses leveraged exposure, targets attempt to mirror that leveraged percentage as long as Webull accepts the order and the target has the required margin/buying-power permissions.
+## Foundation completed
 
-## Built So Far
+### Execution/reference foundation
 
-### Scout
+- `app/v2/domain`: immutable futures, lifecycle, plan, trade, follower, snapshot, and reconciliation contracts.
+- `app/v2/reference.py`: NQ, MNQ, and ES product specifications plus dynamic exact-expiry registration. Only NQ/MNQ support explicit same-expiry execution/equivalence mapping.
+- `app/v2/calendar.py`: CME trade-date sessions, maintenance windows, and supplied holiday/early-close/availability overrides.
+- `app/v2/math.py`: Decimal-only risk, P&L, VWAP, R, excursions, fills, scale-out, reversal, costs, and NQ/MNQ equivalence math.
+- `app/v2/risk.py`: deterministic fail-closed sizing and hard account/product/loss/margin constraints.
+- `app/v2/brokers`: broker interface, disabled execution-side placeholder, and direct read-only R|Protocol 0.90 observer.
+- `app/v2/capture`: isolated TEST-only capture, subscribe-first recovery, durable journaling, and sanitized health/readiness/metrics.
+- `app/v2/execution`: separate disabled process with immutable config, health, actor, journal queue, fencing seam, and graceful shutdown.
 
-- FastAPI API and worker.
-- V3 dashboard shell with a clear split between Trader Workspace and Developer Setup.
-- Trader Workspace includes Scout, Trades, and P&L views for daily use by a non-developer trader.
-- Developer Setup includes Copier Settings and Launch Readiness views for configuration, validation, and production controls.
-- Dashboard Scout view with Armed, PRIMED, and Active lanes.
-- Polygon/Massive-style market data adapter with demo fallback.
-- Consolidation, breakout/retest, RVOL, spread, scoring, and alert flow foundation.
-- Slack adapter and alert scaffolding.
-- Database models for symbols, candles, L2 snapshots, boxes, setups, alerts, fills, and trades.
-- Nightly learning service upgraded toward hybrid XGBoost-first learning with logistic regression fallback.
-- Learning uses scout alerts, setups, fills, and trades, with copied-trade outcomes intended as data once live.
+The execution skeleton is intentionally not ready: order submission always raises and `submission_enabled=True` is rejected. The separate read-only observer is production-shaped for the next Rithmic Test gate. It implements secure WSS, discovery, independent Order/PnL authentication and heartbeat generations, exact account allowlisting, order/fill/P&L/RMS/bracket/reference observation, replay/reconnect reconciliation, and append-only persistence. R|API+/.NET is only a fallback/conformance reference. Production readiness has not been declared.
 
-### L2
+### Market-data foundation
 
-- L2 is part of the final scout, not an optional feature.
-- It is intentionally delayed until close to launch because of expected monthly cost.
-- Until then, the scout runs candle/volume/RVOL mode and can label missing/demo L2.
+- `app/v2/market_data.py`: typed bars/trades/BBO, exact provider bindings, schedules/reference, entitlement contracts, event/availability/retrieval/revision lineage, fixed-resolution validation, and multi-contract historical requests.
+- `app/v2/providers/massive_futures.py`: entitlement-gated historical REST adapter for exact contract reference, schedules, bars, trades, BBO, safe pagination, and deterministic replay.
 
-### Operator Authentication
+The Massive adapter requires an injected authenticated `AsyncJsonTransport`; authentication, secrets, HTTP lifecycle, and retry policy are not implemented in the adapter. Entitlements grant nothing by default. It has no demo fallback and no live-streaming capability. Historical REST results are explicitly finalized history.
 
-- `/dashboard` is gated by the app `/login` page using `COWORK_OPERATOR_USERNAME` / `COWORK_OPERATOR_PASSWORD`, then a signed HTTP-only session cookie.
-- All `/copier/*` API routes and `PUT /config` are gated by an `X-Operator-Token` header using `COWORK_OPERATOR_API_TOKEN`. A logged-in dashboard browser session is also accepted on those APIs.
-- `/health`, Slack webhook routes, `GET /config`, and the scout read endpoints (`/setups`, `/learning/report`, `/watchlist/today`, `/reports/eod`) intentionally stay open.
-- When no auth env vars are set, all gates pass through so local dev and tests still work.
+Massive is the first adapter under evaluation, not a permanent dependency.
 
-### P&L Monitoring
+### `conner_nq_v1` intelligence foundation
 
-- Real Webull account balance and position snapshot service.
-- No fake/simulated account balances are used in production monitoring.
-- API routes under `/pnl/*` expose account snapshots, positions, alerts, sessions, summary, and manual refresh.
-- P&L tables are included in Alembic migration `0004_pnl_monitoring`.
-- Dashboard has a P&L tab for balances, buying power, daily P&L, drawdown, exposure, open positions, and active P&L risk alerts.
-- Worker runs P&L refresh in the background, separate from the low-latency copier hot path.
-- Copier sizing prefers the latest cached Webull account snapshot equity. Manual equity env vars are fallback-only and are not part of the normal Render Blueprint prompt.
+- `app/v2/intelligence/observation.py`: exact NQ traded leg plus exact ES contextual leg, synchronized state, purpose, availability, and quality contracts.
+- `app/v2/intelligence/specification.py`: provider-neutral observation specs, multi-timeframe requirements, versioned measurement families, and configurable New York-window candidates.
+- `app/v2/intelligence/synchronization.py`: backward/as-of point-in-time selection with configurable age/skew tolerances and no future fill.
+- `app/v2/intelligence/measurements.py`: versioned candle geometry/relationships, swing and relative-structure candidates, SMT/divergence persistence, Fibonacci candidates, and candidate levels.
+- `app/v2/intelligence/horizons.py`: configurable versioned lead-up offsets and origin-aware snapshot records.
+- `app/v2/intelligence/datasets.py`: positive/unlabeled opportunities, evidenced explicit passes, actual master labels, separate outcome/conviction/execution labels, pairwise preferences, and task-isolated examples.
+- `app/v2/intelligence/ranking.py`: separately retained behavior, outcome, conviction, confidence, and data-quality outputs; rankings are Shadow-only and never execution-eligible.
+- `app/v2/intelligence/evaluation.py`: trade/candidate matching status, Top 1/3/5 and lead-time records, unlabeled unmatched candidates, chronological folds, and metric contracts.
+- `app/v2/intelligence/replay.py`: deterministic exact-contract NQ/ES replay with blind point-in-time and finalized-reconstruction modes.
+- `app/v2/learning`: temporal-role, source-domain, event/availability/computation, task-boundary, artifact, and V1/synthetic quarantine validation.
 
-### Launch Readiness
+Known strategy elements are represented only as candidate measurements and research clues. Nothing declares an SMT definition, Fibonacci anchoring method, candidate level, candle structure, or time window to be Conner's actual rule.
 
-- Protected `GET /launch/readiness` aggregates existing readiness signals instead of duplicating their logic.
-- Dashboard has a Launch tab for database migration state, worker heartbeat, operator auth, Polygon/Slack/depth status, copier readiness, P&L freshness, read-only validation counts/history, copied-order latency samples, and learning report availability.
-- This is display-only and does not touch the copier hot path.
+## Label and time semantics
 
-### OpenAI AI Feature Direction
+Point-in-time eligibility uses both event time and availability/knowledge time. Derived measurements also retain computation time, feature-definition availability, maximum input clocks, source events, parameters, versions, and lineage. Finalized provider history cannot enter behavior training or fabricate Conner decisions.
 
-- OpenAI is planned only for read-only explanation, summarization, journaling, learning translation, and ticker/catalyst research.
-- Approved AI features are scout alert explanations, daily trading recaps, learning report translation, trade journal automation, and ticker/catalyst research summaries.
-- Chat-style dashboard assistant features are explicitly not wanted.
-- OpenAI must never place trades, size trades, approve copier actions, override risk controls, or run inside the copier hot path.
-- Detailed plan: `docs/OPENAI_AI_FEATURES_PLAN.md`.
+Opportunities begin with unknown exposure/consideration and an unlabeled target. Actual master trades with lifecycle evidence are strong positives. Only confirmed seen-and-considered explicit passes can become negatives. An unmatched opportunity stays unlabeled.
 
-### Render Blueprint
+Four tasks remain isolated:
 
-- `render.yaml` is intended for staged deployment before paid market data and Webull credentials exist.
-- Safe defaults are `DEPTH_MODE=demo`, `COPIER_ENABLED=0`, `COPIER_MODE=test`, `COPIER_GLOBAL_KILL_SWITCH=1`, and `LEARNING_SANDBOX_ENABLED=0`.
-- First deploy should set operator auth env vars. Polygon/Webull paid/live credentials can stay blank until account/data subscriptions are ready.
+- behavior imitation;
+- setup/outcome quality;
+- conviction behavior;
+- copier execution quality.
 
-### Copier
+Execution-quality facts never become strategy labels. Conviction output is prohibited from controlling follower risk.
 
-- Webull-to-Webull architecture.
-- Webull SDK trading adapter.
-- Webull master event listener wrapper.
-- Webull SDK pinned to `webull-openapi-python-sdk==2.0.7`.
-- Master HTTP endpoint and master gRPC events endpoint are configured separately with `WEBULL_MASTER_API_ENDPOINT` and `WEBULL_MASTER_EVENTS_ENDPOINT`.
-- Runtime for Webull fill events.
-- Replay tool for recorded Webull fill payloads.
-- Webull preflight tool for env/config, SDK, account-list, positions, balance/detail, and database readiness checks without placing orders.
-- Webull event capture/normalization tool for saving real order-event messages and checking whether the copier parser understands them.
-- Webull child-order response normalization tool for checking submit/detail/status responses and mapping status, fill quantity, fill price, and reject reason.
-- Webull read-only session runner that combines raw event capture, master fill parsing, and persisted `would_copy`/`blocked` planning without broker order submission.
-- Percent-equity sizing.
-- Future multi-target design.
-- Deterministic child order IDs.
-- Global kill switch.
-- Read-only, test, and live modes.
-- Read-only mode records intended target copy orders as `would_copy` or `blocked` without submitting broker orders.
-- Dashboard Copier tab.
-- Dashboard Trades tab.
-- API endpoints for status, readiness, targets, master executions, copy orders, copied trades, errors, audit events, and reconciliations.
-- Position-aware sell handling:
-  - Sells that close copied long exposure can copy even when shorting is disabled.
-  - Sells that would create short exposure are blocked unless shorting is enabled and supported.
-- Low-latency hot path:
-  - cached target config/state
-  - warmed Webull clients
-  - no database reads before child submit
-  - no Slack/dashboard/learning/reconciliation before child submit
-  - persistence and alerts after submit/background
-- Latency benchmark tool:
-  - `python -m app.tools.copier_latency_benchmark samples\webull_execution_fill.json --iterations 100 --targets 1`
-- Background order reconciliation.
-- Startup recovery before subscribing to master events.
-- Background Webull position sync:
-  - compares actual Webull target positions against local copied-position estimate
-  - writes reconciliation warnings on mismatch
+## Persistence and migration status
 
-## Pre-Launch Validation Status
+V1 migrations `0001` through `0008` and V1 tables remain unchanged.
 
-**The system is feature-complete enough for validation testing, but not cleared for live money until Webull credentials, live read-only sessions, latency, reconciliation, and tiny-funds tests pass.**
+`0009_v2_futures_foundation` adds 23 V2 execution/reference tables using integer quantities and NUMERIC economics.
 
-### Completed Product Features
+`0010_conner_nq_scout` adds 13 tables:
 
-**Scout System:**
-- ✅ Complete consolidation detection with 1m/2m timeframes
-- ✅ L2 demo fallback; Webull Advanced Quotes is the intended live L2/tape path
-- ✅ Advanced breakout/retest triggers with volume confirmation
-- ✅ HTF level analysis and gap edge detection
-- ✅ Real-time dashboard with Armed/PRIMED/Active lanes
-- ✅ Slack integration with threading and action tracking
+- `v2_observation_specs`
+- `v2_observation_horizons`
+- `v2_synchronized_market_states`
+- `v2_candidate_feature_definitions`
+- `v2_candidate_feature_values`
+- `v2_scout_opportunities`
+- `v2_opportunity_behavior_labels`
+- `v2_trade_leadup_snapshots`
+- `v2_learning_examples`
+- `v2_scout_runs`
+- `v2_scout_rankings`
+- `v2_shadow_evaluations`
+- `v2_scout_evaluation_runs`
 
-**XGBoost Learning Engine:**
-- ✅ Hybrid XGBoost-first with logistic regression fallback
-- ✅ 15+ engineered features with real-time scoring
-- ✅ Postgres-based training dataset from all trading activity
-- ✅ Nightly retraining with feature importance reporting
-- ✅ Manual trade detection and labeling
-- ✅ Runtime p2R scoring integration
+The migration is additive and its downgrade targets only those 13 tables. Constraints encode exact contract links, cutoff/availability ordering, explicit missing values, PU semantics, evidenced labels, task boundaries, Shadow-only outputs, lead-time rules, and chronological evaluation.
 
-Learning guardrails added after the sandbox upgrade:
-- Sandbox-generated training is disabled unless `LEARNING_SANDBOX_ENABLED=1`.
-- Synthetic rows are capped by `LEARNING_SYNTHETIC_MAX_RATIO` and downweighted by `LEARNING_SYNTHETIC_SAMPLE_WEIGHT`.
-- Nightly reports include `source_breakdown`, `feature_version`, and ranking metrics for how close Connor's actual trades ranked to the top of the model output.
+`0011_rithmic_read_capture` adds 11 read-only capture tables:
 
-**Trade Copier:**
-- ✅ Complete Webull SDK integration
-- ✅ <300ms low-latency hot path
-- ✅ Percent-equity sizing algorithm
-- ✅ Kill switch and comprehensive risk controls
-- ✅ Startup recovery and order reconciliation
-- ✅ Background position sync with mismatch detection
-- ✅ Professional operator dashboard
+- `v2_rithmic_connection_generations`
+- `v2_rithmic_replay_batches`
+- `v2_rithmic_broker_events`
+- `v2_rithmic_account_observations`
+- `v2_rithmic_order_observations`
+- `v2_rithmic_execution_observations`
+- `v2_rithmic_bracket_observations`
+- `v2_rithmic_reference_observations`
+- `v2_rithmic_pnl_observations`
+- `v2_rithmic_rms_observations`
+- `v2_rithmic_reconciliation_checkpoints`
 
-**Infrastructure:**
-- ✅ FastAPI with complete REST API
-- ✅ Multi-job worker scheduler
-- ✅ SQLAlchemy models with Alembic migrations
-- ✅ Operator authentication system
-- ✅ Render deployment configuration
-- ✅ Comprehensive testing tools
+The migration is additive, uses BigInteger for official 64-bit quantities, preserves opaque native identities and unknown/correction/bust facts, and installs PostgreSQL append-only triggers on immutable history. Broker account references are preserved in full while deterministic internal hashes are used as relational keys. Generic V2 broker connection/account execution flags remain false.
 
-**Render Deployment Notes:**
-- `render.yaml` uses a paid `basic-256mb` Postgres instance, not expiring free Postgres.
-- API and worker services both run `python -m app.tools.run_migrations` before startup.
-- `app/tools/run_migrations.py` uses a Postgres advisory lock before Alembic upgrade so concurrent API/worker deploys serialize migrations.
+The Rithmic capture journal durably writes immutable native events and append-only observation projections. No production ingestion/repository service is currently writing a durable point-in-time NQ/ES strategy-market history.
 
-### ⏳ VALIDATION PHASE (Account-Dependent)
+The earlier PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and reported zero V2 metadata drift through that revision. `0011` has automated additive schema/model tests and is wired into the same migration runner; a live PostgreSQL upgrade plus Rithmic Test capture is the next deployment validation. Existing V1 drift observations remain a separate legacy-schema audit item.
 
-**Ready for real account validation when available:**
+## Tests in place
 
-1. **Webull Account Setup**
-   - Obtain Webull OpenAPI credentials for master and copy accounts
-   - Configure real account IDs and API keys
-   - Validate SDK methods against approved accounts
+V2 tests cover:
 
-2. **End-to-End Testing**
-   - Run `python -m app.tools.webull_preflight` with real credentials
-   - Capture live events with `python -m app.tools.webull_event_capture`
-   - Test read-only sessions with `python -m app.tools.webull_readonly_session`
-   - Run latency benchmarks against real Webull API
+- exact NQ/ES identity and separation from NQ/MNQ mapping;
+- point-in-time cutoffs, late revisions, finalized-history restrictions, and no-future synchronization;
+- candidate measurement lineage and raw candle geometry;
+- configurable horizons and retrospective lead-time exclusion;
+- positive/unlabeled labels and evidenced negatives;
+- task isolation and follower-quality quarantine;
+- ranking/Shadow execution ineligibility;
+- deterministic NQ/ES replay and chronological evaluation;
+- Massive entitlement, binding, typed payload, precision, pagination, and cutoff behavior;
+- R|Protocol WSS/TLS, protobuf framing, external binding integrity, discovery, login deadlines, heartbeats, forced logout/rejects, multipart responses, and independent plant generations;
+- account allowlisting, lifecycle/64-bit/fill-bust-correction/origin normalization, P&L/RMS/brackets/reference data, subscribe-first buffering, replay overlap, deduplication, and reconnect recovery;
+- transport-level rejection of all broker-mutation template IDs and structural absence of capture mutation methods;
+- durable projections, append-only migration/model alignment, redaction, and fail-closed Render configuration.
 
-3. **Production Rollout**
-   - Live read-only mode validation
-   - Tiny-funds live testing
-   - Full production deployment
+Current verification is 470 passing repository tests with one skipped test. Compilation of `app`, `tests`, and `migrations`, Render YAML parsing, the `0011` Alembic head/offline SQL check, and `git diff --check` pass. Seven existing `datetime.utcnow()` deprecation warnings remain. Whole-chain offline Alembic SQL is still limited by `0001` inspecting a mock connection; targeted `0010` to `0011` offline generation passes, and deployment uses the existing live PostgreSQL migration runner.
 
-4. **Optional Enhancements**
-   - Activate paid L2 data subscription
-   - Additional auth gates for scout endpoints if needed
+## Not implemented
 
-### 🚀 SYSTEM HIGHLIGHTS
+- An authenticated production market-data transport or configured entitlements
+- A durable point-in-time NQ/ES capture pipeline or high-volume raw-data store
+- A live candidate detector, observation scheduler, or live Scout service
+- Any trained behavior, outcome, conviction, or execution-quality model
+- A selected XGBoost classification/ranking objective or promoted artifact
+- A complete/handcrafted Conner strategy
+- Automatic trading from Scout output or any model-controlled sizing
+- Rithmic Test conformance, including manual R|Trader-to-API visibility and observed edge cases
+- Any Rithmic/V2 broker mutation or follower submission
+- Automatic contract rolling
+- A production distributed lease or durable execution journal worker
 
-This is a **sophisticated, enterprise-grade trading platform** with:
-- Advanced machine learning integration
-- Sub-300ms order execution latency
-- Comprehensive risk management
-- Professional operator interface
-- Complete audit trails and reconciliation
-- Robust error handling and recovery
+## Operational cautions
 
-## Non-Negotiable Design Rules
+- Do not call Massive finalized history point-in-time behavior data.
+- Do not mark unmatched opportunities as Conner passes.
+- Do not count retrospective trade-centered snapshots as prospective Scout lead time.
+- Do not infer a decision timestamp from a fill without recording the anchor semantics.
+- Do not infer original R when no valid original stop was observed.
+- Do not allow later stop changes to replace the original risk denominator.
+- Do not add ES to NQ/MNQ execution mappings; ES is contextual research reference.
+- Do not let ranking/display scores become a blended training target.
+- Do not let Scout, conviction, or outcome output enter execution or weaken deterministic risk.
+- Do not add unofficial Rithmic URLs, vendor schemas/bindings, credentials, certificates, or guessed lifecycle mappings to Git.
+- Do not interpret generic `COMPLETE` as filled without the native completion reason.
+- Do not use `user_tag`, `user_msg`, or `manual_or_auto` as guaranteed ownership/idempotency proof.
 
-- Copier hot path target: under 300 ms from event received to child broker response when Webull latency allows.
-- No database reads before copied order submission.
-- No broker position lookups before copied order submission.
-- No Slack, dashboard, learning, or reconciliation work before copied order submission.
-- Enabled copy targets use percent-equity mirroring.
-- L2 is required for final scout quality, but delayed until launch readiness.
-- PPO/RL does not trade or override the human in v1.
-- External investor/follower accounts are out of scope until legal/compliance review.
+## Exact next step
 
-## Current Verification Baseline
+Deploy `mooney-rithmic-capture` with its committed offline defaults. Privately generate the checksum-verified read-only Python bindings from the official external 0.90 SDK, upload them through a license-approved Render Secret File, and add only authorized Rithmic Test credentials/settings through secret management.
 
-Latest full local verification:
+Follow [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md): activate TEST connectivity last, verify both plants and the account allowlist, reconcile, then validate manual R|Trader orders/fills, P&L/RMS, brackets, replay overlap, and reconnect without API-side mutation. Production readiness has not been declared, and paper/live order submission remains disabled until a later explicit phase.
 
-- `pytest -q` -> `201 passed, 1 skipped`
-- `python -m compileall app tests` -> passed
-- `alembic heads` -> `0005_ai_artifacts (head)`
+In parallel, configure and validate an authenticated strategy market-data transport, exact NQ/ES provider-symbol bindings, and explicit capability/history entitlements. Then implement durable point-in-time capture of synchronized NQ and ES facts; do not reclassify finalized REST responses as point-in-time observations. After prospective data begins accumulating, run the candidate/ranking contracts in Shadow and store rankings, unmatched candidates, matched master trades, ranks, lead times, outcomes, and data-quality failures. Only after enough honest chronological labels exist should behavior and outcome baselines be trained and evaluated.
+
+Rithmic paper/live execution remains a separate gate after documented Test observation conformance. No environment variable in this phase can enable broker mutation.

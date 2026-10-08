@@ -89,7 +89,7 @@ def _build_target(
         risk=RiskPolicy(
             enabled=target_cfg.enabled and config.enabled,
             global_kill_switch=config.global_kill_switch,
-            max_notional_per_trade=target_cfg.max_notional_per_trade,
+            max_notional_per_trade=_effective_notional_ceiling(config, target_cfg),
             max_position_pct=target_cfg.max_position_pct,
             max_daily_notional=target_cfg.max_daily_notional,
             max_daily_trades=target_cfg.max_daily_trades,
@@ -101,6 +101,18 @@ def _build_target(
         master_equity=master_equity,
         target_equity=target_equity,
     )
+
+
+def _effective_notional_ceiling(config: CopierConfig, target: CopyTargetAccountConfig) -> float:
+    target_ceiling = float(target.max_notional_per_trade or 0)
+    if config.mode != "live":
+        return target_ceiling
+    global_ceiling = float(config.live_max_notional_per_order or 0)
+    if global_ceiling <= 0:
+        return 0.0
+    if target_ceiling <= 0:
+        return global_ceiling
+    return min(target_ceiling, global_ceiling)
 
 
 def _webull_client_from_target_config(target_cfg: CopyTargetAccountConfig) -> WebullTradingClient:

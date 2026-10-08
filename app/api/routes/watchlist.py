@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config_store import CONFIG, persist_config, refresh_config
+from app.api.auth import require_operator
 from app.db.session import get_session
 from app.services.watchlist import get_watchlist_entries
 from app.utils.time import now_et
@@ -42,7 +43,7 @@ def watchlist_today(session: Session = Depends(db_session)):
     return {"date": trade_date.isoformat(), "count": len(items), "items": items}
 
 
-@router.post("/watch/pin")
+@router.post("/watch/pin", dependencies=[Depends(require_operator)])
 def watch_pin(ticker: str):
     try:
         refresh_config()
@@ -60,7 +61,7 @@ def watch_pin(ticker: str):
     return {"ok": True, "pinned": sorted(CONFIG.universe.pinned)}
 
 
-@router.post("/watch/block")
+@router.post("/watch/block", dependencies=[Depends(require_operator)])
 def watch_block(ticker: str):
     try:
         refresh_config()
