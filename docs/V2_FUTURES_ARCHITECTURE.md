@@ -1,7 +1,7 @@
 # MooneyCapitol V2 futures architecture
 
-Status: execution submission disabled; Rithmic read-only capture and `conner_nq_v1` observation foundations implemented
-Canonical as of: 2026-10-07
+Status: execution submission disabled; Rithmic read-only capture, Shadow copy planning, and `conner_nq_v1` observation foundations implemented
+Canonical as of: 2026-10-14
 
 ## Purpose and boundary
 
@@ -35,7 +35,7 @@ Hard constraints include:
 - model output can never weaken a hard risk limit;
 - lifecycle revisions are monotonic and terminal order states cannot roll backward.
 
-The execution process remains a boundary skeleton. Immutable configuration rejects submission enablement, readiness remains false, and the execution-side Rithmic placeholder's submission methods raise. No work in `conner_nq_v1` changes that limitation.
+The execution process remains a boundary skeleton. Immutable configuration rejects submission enablement, readiness remains false, and the execution-side Rithmic placeholder's submission methods raise. The pure Shadow copier planner calculates one-master/four-follower NQ/MNQ plans from the master's actual stop-defined risk fraction and point-exposure fraction. It enforces mandatory protective stops, integer contracts, same-expiry mappings, parity tolerance, current margin capacity, loss limits, and kill switches without observing live master events or producing broker side effects. No work in `conner_nq_v1` changes that limitation. See [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md).
 
 V2 names its deterministic local copy/request identity `client_intent_id`. The broker-neutral `client_order_id` property remains only a compatibility alias for existing callers; it is not a guaranteed Rithmic broker-side idempotency key. Rithmic `user_tag` and `user_msg` values likewise remain correlation or origin evidence rather than ownership or idempotency proof.
 
@@ -167,11 +167,14 @@ Supported sizing modes are `FIXED_DOLLAR`, `PERCENT_EQUITY`, `MASTER_RISK_MULTIP
 
 `AUTO_NQ_MNQ` accepts only exact same-expiry NQ/MNQ candidates. ES context and every Scout/model output are outside this sizing decision.
 
+The Shadow copy planner adds master-relative parity selection for the fixed one-master/four-follower topology. It minimizes the larger of stop-risk percentage error and dollars-per-point exposure percentage error across integer same-expiry NQ/MNQ candidates. By default it does not consider a quantity above the master's percentage target; if even one MNQ exceeds that target, it reports the nearest granularity result but blocks the follower. Broker margin is a separate feasibility ceiling, not the risk denominator.
+
 ## Intentionally absent
 
 The repository still has no:
 
 - completed Rithmic Test conformance or any broker order submission/mutation;
+- live master-event orchestration, durable copy intents, or real follower order placement;
 - complete Conner strategy or handcrafted trade rule;
 - live Scout service or live candidate-generation loop;
 - trained futures model, selected ranking objective, or promoted artifact;
@@ -182,6 +185,6 @@ The repository still has no:
 
 ## Exact next step
 
-Deploy the dedicated Rithmic capture service offline, deliver the externally generated licensed bindings through secret management, and follow the read-only runbook against Rithmic Test. Validate independent Order/PnL health, account allowlisting, manual R|Trader-to-API visibility, lifecycle/fill/P&L/RMS/bracket facts, replay overlap, reconnect, redaction, and reconciliation before considering a separate paper-execution phase.
+Configure and exercise the one-master/four-follower Shadow planner with approved hard limits, verified current margins, and representative account balances. Use it to identify follower funding levels that cannot fit one MNQ within the accepted risk/exposure parity tolerance. In parallel, deploy the dedicated Rithmic capture service offline, deliver the externally generated licensed bindings through secret management, and follow the read-only runbook against Rithmic Test. Validate independent Order/PnL health, account allowlisting, manual R|Trader-to-API visibility, lifecycle/fill/P&L/RMS/bracket facts, replay overlap, reconnect, redaction, and reconciliation before implementing the separate master-event orchestrator and Test write adapter.
 
 In parallel, configure and validate an authenticated strategy market-data transport, exact NQ/ES provider bindings, and explicit entitlements. Begin durable point-in-time NQ/ES capture; the historical Massive REST adapter must retain its finalized-history semantics rather than being presented as live behavior evidence. Once prospective data is accumulating, run Shadow ranking records and attach observed master actions, misses, lead times, ranks, and data-quality failures. Only after enough trustworthy labels exist should chronological behavior/outcome baselines be trained and evaluated. Production readiness has not been declared, and all Rithmic broker mutation remains disabled.

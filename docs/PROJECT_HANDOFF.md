@@ -1,8 +1,8 @@
 # MooneyCapitol project handoff
 
-Updated: 2026-10-07
+Updated: 2026-10-14
 
-Read [V2_FUTURES_ARCHITECTURE.md](V2_FUTURES_ARCHITECTURE.md) first. The detailed strategy-observation contract is in [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md), and deployment/validation is in [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md). Older roadmap and learning documents describe V1 history and must not define V2 futures behavior, labels, or features.
+Read [V2_FUTURES_ARCHITECTURE.md](V2_FUTURES_ARCHITECTURE.md) first. The fixed-topology Shadow copy contract is in [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md), the detailed strategy-observation contract is in [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md), and deployment/validation is in [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md). Older roadmap and learning documents describe V1 history and must not define V2 futures behavior, labels, or features.
 
 ## Direction
 
@@ -23,9 +23,9 @@ The first strategy-specific observation namespace is `conner_nq_v1`. It learns n
 - `app/v2/risk.py`: deterministic fail-closed sizing and hard account/product/loss/margin constraints.
 - `app/v2/brokers`: broker interface, disabled execution-side placeholder, and direct read-only R|Protocol 0.90 observer.
 - `app/v2/capture`: isolated TEST-only capture, subscribe-first recovery, durable journaling, and sanitized health/readiness/metrics.
-- `app/v2/execution`: separate disabled process with immutable config, health, actor, journal queue, fencing seam, and graceful shutdown.
+- `app/v2/execution`: separate disabled process with immutable config, health, actor, journal queue, fencing seam, graceful shutdown, and a pure one-master/four-follower Shadow parity planner.
 
-The execution skeleton is intentionally not ready: order submission always raises and `submission_enabled=True` is rejected. The separate read-only observer is production-shaped for the next Rithmic Test gate. It implements secure WSS, discovery, independent Order/PnL authentication and heartbeat generations, exact account allowlisting, order/fill/P&L/RMS/bracket/reference observation, replay/reconnect reconciliation, and append-only persistence. R|API+/.NET is only a fallback/conformance reference. Production readiness has not been declared.
+The execution skeleton is intentionally not ready: order submission always raises and `submission_enabled=True` is rejected. The Shadow planner calculates stop-risk and point-exposure percentage parity across integer same-expiry NQ/MNQ candidates, with mandatory stops, margin headroom, loss ceilings, kill switches, and fail-closed configuration. It neither observes a live master event nor submits a follower order. The separate read-only observer is production-shaped for the next Rithmic Test gate. It implements secure WSS, discovery, independent Order/PnL authentication and heartbeat generations, exact account allowlisting, order/fill/P&L/RMS/bracket/reference observation, replay/reconnect reconciliation, and append-only persistence. R|API+/.NET is only a fallback/conformance reference. Production readiness has not been declared.
 
 ### Market-data foundation
 
@@ -108,7 +108,7 @@ The migration is additive, uses BigInteger for official 64-bit quantities, prese
 
 The Rithmic capture journal durably writes immutable native events and append-only observation projections. No production ingestion/repository service is currently writing a durable point-in-time NQ/ES strategy-market history.
 
-The authenticated `/dashboard` route now exposes a read-only V2 operations console over those durable projections. Account and broker object identifiers are represented as deterministic aliases rather than raw values. Optional sanitized live process health is read from `RITHMIC_CAPTURE_BASE_URL`. The retired V1 equity/Webull console route and template have been removed; remaining V1 backend code is not linked or served through the operator UI.
+The authenticated `/dashboard` route now exposes a read-only V2 operations console over those durable projections and the Shadow copier's redacted readiness state. Account and broker object identifiers are represented as deterministic aliases rather than raw values. Optional sanitized live process health is read from `RITHMIC_CAPTURE_BASE_URL`. The retired V1 equity/Webull console route and template have been removed; remaining V1 backend code is not linked or served through the operator UI.
 
 The earlier PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and reported zero V2 metadata drift through that revision. `0011` has automated additive schema/model tests and is wired into the same migration runner; a live PostgreSQL upgrade plus Rithmic Test capture is the next deployment validation. Existing V1 drift observations remain a separate legacy-schema audit item.
 
@@ -129,8 +129,9 @@ V2 tests cover:
 - account allowlisting, lifecycle/64-bit/fill-bust-correction/origin normalization, P&L/RMS/brackets/reference data, subscribe-first buffering, replay overlap, deduplication, and reconnect recovery;
 - transport-level rejection of all broker-mutation template IDs and structural absence of capture mutation methods;
 - durable projections, append-only migration/model alignment, redaction, and fail-closed Render configuration.
+- exact and underfunded NQ/MNQ master-relative Shadow sizing, whole-contract parity blocking, configuration redaction, and authenticated status/preview APIs.
 
-Current verification is 467 passing repository tests with one skipped test. Compilation of `app`, `tests`, and `migrations`, Render YAML parsing, the `0011` Alembic head/offline SQL check, and `git diff --check` pass. Seven existing `datetime.utcnow()` deprecation warnings remain. Whole-chain offline Alembic SQL is still limited by `0001` inspecting a mock connection; targeted `0010` to `0011` offline generation passes, and deployment uses the existing live PostgreSQL migration runner.
+Current verification is 478 passing repository tests with one skipped test. Compilation of `app`, `tests`, and `migrations`, Render YAML parsing, the `0011` Alembic head/offline SQL check, and `git diff --check` pass. Seven existing `datetime.utcnow()` deprecation warnings remain. Whole-chain offline Alembic SQL is still limited by `0001` inspecting a mock connection; targeted `0010` to `0011` offline generation passes, and deployment uses the existing live PostgreSQL migration runner.
 
 ## Not implemented
 
@@ -142,7 +143,7 @@ Current verification is 467 passing repository tests with one skipped test. Comp
 - A complete/handcrafted Conner strategy
 - Automatic trading from Scout output or any model-controlled sizing
 - Rithmic Test conformance, including manual R|Trader-to-API visibility and observed edge cases
-- Any Rithmic/V2 broker mutation or follower submission
+- Live master-event orchestration, durable copy intents, or any Rithmic/V2 broker mutation and follower submission
 - Automatic contract rolling
 - A production distributed lease or durable execution journal worker
 
@@ -163,9 +164,11 @@ Current verification is 467 passing repository tests with one skipped test. Comp
 
 ## Exact next step
 
-Deploy `mooney-rithmic-capture` with its committed offline defaults. Privately generate the checksum-verified read-only Python bindings from the official external 0.90 SDK, upload them through a license-approved Render Secret File, and add only authorized Rithmic Test credentials/settings through secret management.
+Configure the Shadow copier with the exact master/four-follower account topology, owner-approved hard limits, verified current margin requirements, and representative balances. Use authenticated previews to determine which follower balances can and cannot fit one MNQ inside the accepted parity tolerance; keep over-target planning disabled unless the owner explicitly accepts it.
 
-Follow [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md): activate TEST connectivity last, verify both plants and the account allowlist, reconcile, then validate manual R|Trader orders/fills, P&L/RMS, brackets, replay overlap, and reconnect without API-side mutation. Production readiness has not been declared, and paper/live order submission remains disabled until a later explicit phase.
+In parallel, deploy `mooney-rithmic-capture` with its committed offline defaults. Privately generate the checksum-verified read-only Python bindings from the official external 0.90 SDK, upload them through a license-approved Render Secret File, and add only authorized Rithmic Test credentials/settings through secret management.
+
+Follow [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md): activate TEST connectivity last, verify both plants and the account allowlist, reconcile, then validate manual R|Trader orders/fills, P&L/RMS, brackets, replay overlap, and reconnect without API-side mutation. Only then implement the separate event-driven master orchestrator, durable intent/outbox/lease layer, and Rithmic Test write adapter. Production readiness has not been declared, and paper/live order submission remains disabled until that later explicit phase.
 
 In parallel, configure and validate an authenticated strategy market-data transport, exact NQ/ES provider-symbol bindings, and explicit capability/history entitlements. Then implement durable point-in-time capture of synchronized NQ and ES facts; do not reclassify finalized REST responses as point-in-time observations. After prospective data begins accumulating, run the candidate/ranking contracts in Shadow and store rankings, unmatched candidates, matched master trades, ranks, lead times, outcomes, and data-quality failures. Only after enough honest chronological labels exist should behavior and outcome baselines be trained and evaluated.
 

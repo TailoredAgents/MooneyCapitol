@@ -245,6 +245,7 @@
       .error-box { display: none; margin-bottom: 1rem; padding: 0.8rem 1rem; border: 1px solid var(--danger); border-radius: 10px; color: var(--danger); background: var(--danger-soft); }
       .error-box.visible { display: block; }
       .limitations { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+      .copier-boundaries { grid-template-columns: 1fr; }
       .limit-card { padding: 0.9rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
       .limit-card strong { display: block; margin-bottom: 0.25rem; font-size: 0.82rem; }
       .limit-card span { color: var(--muted); font-size: 0.77rem; line-height: 1.45; }
@@ -286,6 +287,7 @@
         <div class="sidebar-label">Observation Console</div>
         <a href="#overview">Overview</a>
         <a href="#connectivity">Connectivity</a>
+        <a href="#copier">Shadow copier</a>
         <a href="#accounts">Accounts &amp; P&amp;L</a>
         <a href="#orders">Orders &amp; fills</a>
         <a href="#risk">Risk &amp; brackets</a>
@@ -332,6 +334,24 @@
             <div class="panel-head"><h2>Latest reconciliation checkpoints</h2><span class="status-chip">Per account and plant</span></div>
             <div class="scroll"><table><thead><tr><th>Account</th><th>Plant</th><th>Phase</th><th>Status</th><th>Ready</th><th>Discrepancies</th><th>Recorded</th></tr></thead><tbody id="reconciliation-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
           </article>
+        </section>
+
+        <section class="section" id="copier">
+          <div class="section-heading"><div><h2>Shadow copier readiness</h2><p>One master, four followers, mandatory stop-defined risk, and same-expiry NQ/MNQ parity planning.</p></div></div>
+          <div class="grid-two">
+            <article class="panel">
+              <div class="panel-head"><h2>Configuration</h2><span id="copier-chip" class="status-chip"><span class="dot"></span>Checking</span></div>
+              <div id="copier-details" class="key-values loading">Loading shadow copier statusâ€¦</div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>Execution boundary</h2><span class="status-chip warn">Shadow only</span></div>
+              <div class="limitations copier-boundaries">
+                <div class="limit-card"><strong>Master-relative sizing</strong><span>Each follower targets the master's actual stop-defined risk and point exposure as a percentage of equity.</span></div>
+                <div class="limit-card"><strong>Whole contracts only</strong><span>An underfunded follower is blocked when NQ/MNQ granularity cannot meet the configured parity tolerance.</span></div>
+                <div class="limit-card"><strong>No broker writes</strong><span>The planner reports intended quantities but cannot submit, modify, cancel, or flatten an order.</span></div>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="section" id="accounts">
@@ -472,6 +492,29 @@
         ].map(([key, value]) => `<div class="key-value"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
       }
 
+      function renderCopier(copier) {
+        const ready = copier.ready_for_shadow === true;
+        const chipNode = document.getElementById('copier-chip');
+        chipNode.className = `status-chip ${ready ? 'ok' : 'warn'}`;
+        chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(ready ? 'Shadow ready' : 'Configuration blocked')}`;
+        const blockers = (copier.blockers || []).length ? copier.blockers.join(', ') : 'None reported';
+        document.getElementById('copier-details').className = 'key-values';
+        document.getElementById('copier-details').innerHTML = [
+          ['Effective mode', present(copier.effective_mode)],
+          ['Master configured', boolText(copier.master_configured)],
+          ['Followers', `${number(copier.configured_follower_count)} / ${number(copier.expected_follower_count)}`],
+          ['Mandatory initial stop', boolText(copier.mandatory_initial_stop)],
+          ['Allowed products', (copier.allowed_products || []).join(', ') || 'None'],
+          ['Same-expiry mapping', boolText(copier.same_expiry_mapping_required)],
+          ['Master risk parity', boolText(copier.master_risk_parity)],
+          ['May exceed target', boolText(copier.allow_over_target)],
+          ['Parity tolerance', present(copier.max_relative_parity_error)],
+          ['Current margins configured', boolText(copier.broker_margins_configured)],
+          ['Broker submission', 'Disabled'],
+          ['Blockers', blockers],
+        ].map(([key, value]) => `<div class="key-value"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+      }
+
       function renderPlants(items) {
         document.getElementById('plants-body').innerHTML = items.length ? items.map((item) => `<tr>
           <td><strong>${escapeHtml(present(item.plant))}</strong></td>
@@ -563,8 +606,12 @@
         refreshButton.textContent = 'Refreshing…';
         document.getElementById('error-box').classList.remove('visible');
         try {
-          const data = await api('/v2/operations/overview?limit=40');
+          const [data, copier] = await Promise.all([
+            api('/v2/operations/overview?limit=40'),
+            api('/v2/copier/status'),
+          ]);
           renderSummary(data); renderCapture(data.capture || {}); renderPlants(data.plants || []);
+          renderCopier(copier || {});
           renderReconciliation(data.reconciliation || []); renderAccounts(data.accounts || []); renderAccountPnl(data.account_pnl || []);
           renderPositions(data.positions || []); renderOrders(data.orders || []); renderExecutions(data.executions || []);
           renderRisk(data.risk || []); renderBrackets(data.brackets || []); renderContracts(data.contracts || []);

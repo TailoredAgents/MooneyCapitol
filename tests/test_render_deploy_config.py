@@ -14,7 +14,7 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert text.count('value: "3.11.11"') == 3
     assert text.count("preDeployCommand: python -m app.tools.run_migrations") == 3
     assert text.count("COPIER_ENABLED") == 2
-    assert text.count("COPIER_MODE") == 2
+    assert text.count("\n      - key: COPIER_MODE\n") == 2
     assert text.count("COPIER_GLOBAL_KILL_SWITCH") == 2
     assert text.count("OPENAI_API_KEY") == 2
     assert text.count("OPENAI_AI_FEATURES_ENABLED") == 2
@@ -38,6 +38,51 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert "COWORK_OPERATOR_API_TOKEN" in text
     assert text.count("RITHMIC_CAPTURE_BASE_URL") == 1
     assert text.count("RITHMIC_CAPTURE_HEALTH_TIMEOUT_SECONDS") == 1
+
+    api_block = text.split("name: trading-agent-api", 1)[1].split(
+        "  - type: worker", 1
+    )[0]
+    capture_block = text.split("name: mooney-rithmic-capture", 1)[1]
+    copier_keys = (
+        "V2_COPIER_MODE",
+        "V2_COPIER_MASTER_ACCOUNT_ID",
+        "V2_COPIER_FOLLOWER_ACCOUNT_IDS",
+        "V2_COPIER_MAX_RISK_FRACTION",
+        "V2_COPIER_MAX_CONTRACTS",
+        "V2_COPIER_MAX_CONCURRENT_RISK_FRACTION",
+        "V2_COPIER_DAILY_REALIZED_LOSS_FRACTION",
+        "V2_COPIER_DAILY_TOTAL_LOSS_FRACTION",
+        "V2_COPIER_MAX_RELATIVE_PARITY_ERROR",
+        "V2_COPIER_MARGIN_HEADROOM_FRACTION",
+        "V2_COPIER_ALLOW_OVER_TARGET",
+        "V2_COPIER_NQ_INITIAL_MARGIN",
+        "V2_COPIER_MNQ_INITIAL_MARGIN",
+        "V2_COPIER_NQ_COST_BUFFER",
+        "V2_COPIER_MNQ_COST_BUFFER",
+    )
+    assert all(text.count(key) == 1 for key in copier_keys)
+    assert all(key in api_block for key in copier_keys)
+    assert all(key not in capture_block for key in copier_keys)
+
+
+def test_shadow_copier_environment_templates_are_fail_closed():
+    for filename in (".env.example", ".env.sample"):
+        text = Path(filename).read_text(encoding="utf-8")
+
+        assert "V2_COPIER_MODE=SHADOW" in text
+        assert "V2_COPIER_ALLOW_OVER_TARGET=0" in text
+        assert "V2_COPIER_MASTER_ACCOUNT_ID=\n" in text
+        assert "V2_COPIER_FOLLOWER_ACCOUNT_IDS=\n" in text
+        for name in (
+            "V2_COPIER_MAX_RISK_FRACTION",
+            "V2_COPIER_MAX_CONTRACTS",
+            "V2_COPIER_MAX_CONCURRENT_RISK_FRACTION",
+            "V2_COPIER_DAILY_REALIZED_LOSS_FRACTION",
+            "V2_COPIER_DAILY_TOTAL_LOSS_FRACTION",
+            "V2_COPIER_NQ_INITIAL_MARGIN",
+            "V2_COPIER_MNQ_INITIAL_MARGIN",
+        ):
+            assert f"{name}=0" in text
 
 
 def test_api_mounts_static_assets_for_favicon():

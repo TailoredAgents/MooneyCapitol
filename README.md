@@ -2,11 +2,12 @@
 
 MooneyCapitol is transitioning from a legacy Webull/equity research and copier application (V1) to a broker-neutral futures platform (V2). Both systems remain in this repository, but their runtime responsibilities, data, labels, and model artifacts are deliberately isolated.
 
-The V2 execution path is not production-ready and cannot submit a broker order. A production-shaped direct R|Protocol read-only transport and capture service now exist for Rithmic Test observation, while every broker mutation remains structurally disabled. The `conner_nq_v1` code is still an observation and learning-data foundation only: it contains no trained model, live Scout service, complete Conner strategy, or execution connection.
+The V2 execution path is not production-ready and cannot submit a broker order. A production-shaped direct R|Protocol read-only transport and capture service now exist for Rithmic Test observation. A one-master/four-follower NQ/MNQ Shadow planner now calculates master-relative percentage risk and exposure, but every broker mutation remains structurally disabled. The `conner_nq_v1` code is still an observation and learning-data foundation only: it contains no trained model, live Scout service, complete Conner strategy, or execution connection.
 
 ## Start here
 
 - [V2 architecture](docs/V2_FUTURES_ARCHITECTURE.md) — canonical plane boundaries and safety rules
+- [V2 copy trader foundation](docs/V2_COPY_TRADER_FOUNDATION.md) — one-master/four-follower parity sizing, safety gates, and activation path
 - [Conner NQ Scout foundation](docs/CONNER_NQ_SCOUT_FOUNDATION.md) — implemented observation, labeling, ranking, replay, and provider contracts
 - [Project handoff](docs/PROJECT_HANDOFF.md) — current status, limitations, and exact next step
 - [Rithmic read-only runbook](docs/RITHMIC_READ_ONLY_RUNBOOK.md) — private binding generation, Render configuration, and Test validation
@@ -37,7 +38,7 @@ Execution does not depend on OpenAI, V1 learning, XGBoost, scikit-learn, or Scou
 python -m app.v2.execution.main
 ```
 
-It reports not-ready and submission-disabled. The execution-side Rithmic adapter remains disabled, and the in-memory lease is only a local/test seam. Separately, `app/v2/brokers/rithmic_protocol` and `app/v2/capture` implement direct R|Protocol 0.90 observation with independent Order/PnL sessions, account allowlisting, replay/reconciliation, durable append-only journaling, and sanitized health/readiness. R|API+/.NET is a fallback/conformance reference only.
+It reports not-ready and submission-disabled. The execution-side Rithmic adapter remains disabled, and the in-memory lease is only a local/test seam. The separate V2 Shadow copier planner can calculate stop-defined risk and point-exposure parity for one master and four followers using integer same-expiry NQ/MNQ quantities. It has no event orchestrator or broker submission method. Separately, `app/v2/brokers/rithmic_protocol` and `app/v2/capture` implement direct R|Protocol 0.90 observation with independent Order/PnL sessions, account allowlisting, replay/reconciliation, durable append-only journaling, and sanitized health/readiness. R|API+/.NET is a fallback/conformance reference only.
 
 The dedicated command is:
 
@@ -49,7 +50,7 @@ It is fail-closed unless connectivity is explicitly enabled for `TEST`, external
 
 ### Operator dashboard
 
-`/dashboard` is the authenticated V2 Rithmic observation console. It reads the append-only V2 PostgreSQL projections and displays redacted account aliases, capture counts, connection generations, reconciliation checkpoints, account/P&L state, positions, orders, executions, brackets, RMS state, and contract-reference observations. It exposes no broker mutation control.
+`/dashboard` is the authenticated V2 Rithmic observation console. It reads the append-only V2 PostgreSQL projections and displays redacted account aliases, capture counts, connection generations, reconciliation checkpoints, account/P&L state, positions, orders, executions, brackets, RMS state, contract-reference observations, and the fail-closed Shadow copier readiness state. It exposes no broker mutation control.
 
 The API service can optionally read the capture process's sanitized `/health` endpoint when `RITHMIC_CAPTURE_BASE_URL` is configured. If that value is absent or unreachable, the dashboard reports live health as unavailable but continues to display durable observations from PostgreSQL. There is no active V1 equity/Webull dashboard route.
 
@@ -93,7 +94,7 @@ The Rithmic capture service writes immutable native events and append-only norma
 
 - Rithmic broker mutation of any kind, including order, cancel/modify, flatten, bracket/OCO, or follower submission
 - Completed Rithmic Test conformance and manual R|Trader-to-API visibility validation
-- Real follower order placement
+- Live master-event orchestration and real follower order placement
 - A complete or handcrafted Conner strategy
 - A live Scout/candidate-generation service
 - Trained futures models or a selected XGBoost/ranking objective
@@ -130,6 +131,6 @@ Environment values cannot enable trading. Live V1 mode also requires persisted e
 
 ## Exact next step
 
-Deploy `mooney-rithmic-capture` fail-closed, provide the privately generated licensed bindings and Rithmic Test secrets, then follow the read-only runbook to validate account discovery, manual R|Trader visibility, orders/fills, P&L/RMS, brackets, replay overlap, reconnect, redaction, and reconciliation. That validation must not enable or exercise any API-side broker mutation.
+Configure the Shadow planner with the exact one-master/four-follower topology, owner-approved hard limits, verified current margins, and representative balances; use its preview to identify follower balances that cannot safely fit one MNQ. In parallel, deploy `mooney-rithmic-capture` fail-closed, provide the privately generated licensed bindings and Rithmic Test secrets, then follow the read-only runbook to validate account discovery, manual R|Trader visibility, orders/fills, P&L/RMS, brackets, replay overlap, reconnect, redaction, and reconciliation. That validation must not enable or exercise any API-side broker mutation.
 
 In parallel, configure and validate an authenticated market-data transport, exact NQ/ES provider bindings, and explicit entitlements so point-in-time strategy observations can accumulate. Run ranking contracts in Shadow and collect actual-trade matches, misses, ranks, lead times, and data-quality failures. Train nothing until enough honest chronological labels exist. Production readiness has not been declared; paper and live broker mutation remain separate future gates after read-only conformance.

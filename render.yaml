@@ -145,6 +145,36 @@ services:
         sync: false
       - key: RITHMIC_CAPTURE_HEALTH_TIMEOUT_SECONDS
         value: "2"
+      - key: V2_COPIER_MODE
+        value: SHADOW
+      - key: V2_COPIER_MASTER_ACCOUNT_ID
+        sync: false
+      - key: V2_COPIER_FOLLOWER_ACCOUNT_IDS
+        sync: false
+      - key: V2_COPIER_MAX_RISK_FRACTION
+        value: "0"
+      - key: V2_COPIER_MAX_CONTRACTS
+        value: "0"
+      - key: V2_COPIER_MAX_CONCURRENT_RISK_FRACTION
+        value: "0"
+      - key: V2_COPIER_DAILY_REALIZED_LOSS_FRACTION
+        value: "0"
+      - key: V2_COPIER_DAILY_TOTAL_LOSS_FRACTION
+        value: "0"
+      - key: V2_COPIER_MAX_RELATIVE_PARITY_ERROR
+        value: "0"
+      - key: V2_COPIER_MARGIN_HEADROOM_FRACTION
+        value: "0.20"
+      - key: V2_COPIER_ALLOW_OVER_TARGET
+        value: "0"
+      - key: V2_COPIER_NQ_INITIAL_MARGIN
+        value: "0"
+      - key: V2_COPIER_MNQ_INITIAL_MARGIN
+        value: "0"
+      - key: V2_COPIER_NQ_COST_BUFFER
+        value: "0"
+      - key: V2_COPIER_MNQ_COST_BUFFER
+        value: "0"
 
   - type: worker
     name: trading-agent-worker
