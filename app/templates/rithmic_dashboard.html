@@ -141,12 +141,6 @@
         font-weight: 650;
       }
       .sidebar a:hover { color: var(--ink); background: var(--surface-soft); }
-      .sidebar .legacy {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--line);
-        color: var(--warn);
-      }
       main { min-width: 0; padding: 2rem clamp(1rem, 3vw, 2.4rem) 4rem; }
       .hero {
         display: flex;
@@ -260,13 +254,11 @@
         .sidebar { position: static; height: auto; display: flex; gap: 0.25rem; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 0.55rem 1rem; }
         .sidebar-label { display: none; }
         .sidebar a { flex: 0 0 auto; margin: 0; }
-        .sidebar .legacy { margin: 0 0 0 auto; padding: 0.62rem 0.7rem; border: 0; }
         .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       }
       @media (max-width: 720px) {
         .topbar { padding: 0.7rem 0.85rem; }
         .brand span { display: none; }
-        .header-actions .legacy-header { display: none; }
         main { padding: 1.3rem 0.8rem 3rem; }
         .hero { display: block; }
         .refresh { width: 100%; margin-top: 0.9rem; }
@@ -284,7 +276,6 @@
         <div><strong>Mooney Capital</strong><span>V2 futures operations</span></div>
       </div>
       <div class="header-actions">
-        <a class="header-button legacy-header" href="/dashboard/legacy">Legacy V1</a>
         <button class="header-button" id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
         <form class="logout-form" action="/logout" method="post"><button class="header-button" type="submit">Log out</button></form>
       </div>
@@ -299,7 +290,6 @@
         <a href="#orders">Orders &amp; fills</a>
         <a href="#risk">Risk &amp; brackets</a>
         <a href="#contracts">Contracts</a>
-        <a class="legacy" href="/dashboard/legacy">Legacy V1 reference</a>
       </nav>
 
       <main>

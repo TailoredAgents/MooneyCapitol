@@ -30,7 +30,8 @@ def test_primary_dashboard_is_rithmic_read_only_console() -> None:
     assert "Rithmic Test · read-only" in html
     assert "Broker submission is structurally disabled" in html
     assert "/v2/operations/overview?limit=40" in html
-    assert 'href="/dashboard/legacy"' in html
+    assert "/dashboard/legacy" not in html
+    assert "Legacy V1" not in html
     assert "orders-body" in html
     assert "executions-body" in html
     assert "reconciliation-body" in html

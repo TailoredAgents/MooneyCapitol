@@ -333,10 +333,7 @@ def test_login_success_sets_cookie_and_opens_dashboard(monkeypatch):
     assert "Rithmic Test" in dashboard_resp.text
     assert "Broker observation console" in dashboard_resp.text
 
-    legacy_resp = client.get("/dashboard/legacy")
-    assert legacy_resp.status_code == 200
-    assert "Legacy V1 · Webull equities" in legacy_resp.text
-    assert "Copier Settings" in legacy_resp.text
+    assert client.get("/dashboard/legacy").status_code == 404
 
 
 def test_login_rejects_wrong_password(monkeypatch):

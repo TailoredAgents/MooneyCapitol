@@ -146,7 +146,7 @@ def platform_overview():
                 "heading": "Operator workflow",
                 "items": [
                     "The primary internal console reports V2 capture health, plant generations, reconciliation, accounts, P&L, positions, orders, fills, brackets, RMS, and contract facts.",
-                    "The previous equity console remains available only as an explicitly labeled legacy V1 reference.",
+                    "The retired equity console is no longer exposed by the active application.",
                     "Credentials, raw account identifiers, readiness checks, and captured broker state stay inside authenticated access.",
                 ],
             },
@@ -362,13 +362,5 @@ def dashboard(request: Request):
     if not is_dashboard_authenticated(request):
         return RedirectResponse("/login", status_code=303)
     template = env.get_template("rithmic_dashboard.html")
-    return template.render()
-
-
-@router.get("/dashboard/legacy", response_class=HTMLResponse)
-def legacy_dashboard(request: Request):
-    if not is_dashboard_authenticated(request):
-        return RedirectResponse("/login", status_code=303)
-    template = env.get_template("dashboard.html")
     return template.render()
 

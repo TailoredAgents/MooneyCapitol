@@ -16,7 +16,7 @@ The V2 execution path is not production-ready and cannot submit a broker order. 
 
 ### V1: legacy equity/reference system
 
-The existing API, worker, small-cap scout, Webull copier, P&L monitor, Slack integration, AI Lab, equity learning pipeline, migrations `0001` through `0008`, and V1 tables remain available as legacy/reference code. The old operator console is retained at `/dashboard/legacy`; it is no longer the primary dashboard.
+The existing API, worker, small-cap scout, Webull copier, P&L monitor, Slack integration, AI Lab, equity learning pipeline, migrations `0001` through `0008`, and V1 tables remain available as legacy/reference code. The retired V1 operator console is not served by the application.
 
 V1 is legacy/reference code. Its stock features, `hybrid_target`, thresholds, synthetic rows, XGBoost artifacts, and paper outcomes are not valid V2 futures inputs. The V2 registry and dataset validation quarantine those sources.
 
@@ -51,7 +51,7 @@ It is fail-closed unless connectivity is explicitly enabled for `TEST`, external
 
 `/dashboard` is the authenticated V2 Rithmic observation console. It reads the append-only V2 PostgreSQL projections and displays redacted account aliases, capture counts, connection generations, reconciliation checkpoints, account/P&L state, positions, orders, executions, brackets, RMS state, and contract-reference observations. It exposes no broker mutation control.
 
-The API service can optionally read the capture process's sanitized `/health` endpoint when `RITHMIC_CAPTURE_BASE_URL` is configured. If that value is absent or unreachable, the dashboard reports live health as unavailable but continues to display durable observations from PostgreSQL. `/dashboard/legacy` retains the old V1 equity/Webull console for reference only.
+The API service can optionally read the capture process's sanitized `/health` endpoint when `RITHMIC_CAPTURE_BASE_URL` is configured. If that value is absent or unreachable, the dashboard reports live health as unavailable but continues to display durable observations from PostgreSQL. There is no active V1 equity/Webull dashboard route.
 
 ### `conner_nq_v1`: observation foundation
 
