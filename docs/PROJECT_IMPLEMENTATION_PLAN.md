@@ -53,7 +53,7 @@ Implemented now:
 - persisted event/decision/submission/response/acknowledgement/fill timing and aggregate or per-follower p50/p95/p99 reporting;
 - a separate official-schema R|Protocol write boundary for market, limit, stop, bracket/OCO, modify, cancel, and position-exit requests, limited in code to `OFF`, `SHADOW`, and explicitly authorized Test use;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
-- a read-only operations dashboard that shows capture and Shadow readiness;
+- an authenticated operator dashboard with five-account readiness, revision-checked copy controls, typed flatten confirmation, parity/lifecycle/recovery evidence, redacted immutable audit history, and read-only broker observations;
 - fail-closed environment and Render defaults; and
 - `conner_nq_v1` observation, labeling, replay, ranking-contract, and learning-data foundations with no trained or live model.
 
@@ -64,7 +64,6 @@ Not implemented yet:
 - configured external write bindings/transport and credential-backed Rithmic Test submission;
 - runtime attachment of the implemented recovery/reconciliation worker to real Rithmic snapshots and Test writes;
 - real gateway/region copy-latency measurements;
-- the functional copier control UI; or
 - Rithmic Test, conformance, or live validation.
 
 The current read-only observer remains structurally read-only. The new write capability is a separate execution adapter/service boundary and does not weaken the observer's outbound template denylist. The normal execution process still rejects submission configuration and does not attach the Test writer.
@@ -196,7 +195,7 @@ Implementation note: migration `0014_v2_execution_recovery` atomically pairs eve
 
 ### Phase 7 — Minimal functional operator UI
 
-Status: **planned**
+Status: **complete**
 
 Before the aesthetic redesign, add only the controls and evidence needed to operate and test safely:
 
@@ -207,6 +206,8 @@ Before the aesthetic redesign, add only the controls and evidence needed to oper
 - target versus actual quantity, exposure, stop risk, and parity error;
 - latest copy lifecycle, latency, rejection, block, and reconciliation status; and
 - redacted immutable control/audit history.
+
+Implementation note: the authenticated `/dashboard` merges the fixed five-slot readiness topology with durable broker observations and per-follower copy execution projections. It shows configuration separately from actual Order/PnL plant readiness, leaves unavailable broker facts explicitly unavailable, and links accounts to fixed internal connection labels without exposing broker selectors. Global pause and follower enable/pause/unlock requests use the existing optimistic revisions, session CSRF proof, reason codes, and append-only audit store. Flatten-and-disable remains a separate typed-confirmation flow and results in `FLATTEN_REQUESTED`; the UI never claims an account is flat before the execution system confirms it. The dashboard reads lifecycle, parity, protection-policy, outbox, reconciliation, finding, and latency projections, but it cannot construct an execution adapter or submit to Rithmic. Audit actor/request identifiers and broker object identifiers are deterministic aliases in browser/API output.
 
 ### Phase 8 — Credential-ready acceptance suite
 
@@ -292,8 +293,8 @@ Also finalize owner-approved per-trade risk, concurrent-risk, daily realized-los
 
 ## Progress checkpoint
 
-Current checkpoint: Phase 6 credential-free recovery foundation complete. Cumulative sizing facts flow into committed per-follower intents and atomically enqueued commands before dispatch. Database-time leases and monotonically increasing fences prevent stale owners from completing outbox claims. Ambiguous writes cannot be retried until a complete, fresh broker snapshot explains them; explained progress is adopted and unexplained order, execution, position, or protection state locks that follower. Lifecycle timing supports aggregate and per-follower p50/p95/p99 reporting. The separate official-schema adapter still has no live mode and is not attached to the production execution runtime.
+Current checkpoint: Phase 7 minimal functional operator UI complete. The dashboard now presents the one-master/four-follower topology, configuration versus observed connection readiness, broker-observed equity/margin/P&L/position/protection facts, latest target-versus-known quantity and parity facts, lifecycle/delivery/reconciliation/latency state, safe desired-state controls, explicit flatten confirmation, and redacted immutable control history. The separate official-schema adapter still has no live mode and is not attached to the dashboard or production execution runtime.
 
-Next implementation task: Phase 7, the minimal functional operator UI over the implemented control, lifecycle, recovery, reconciliation, and latency facts.
+Next implementation task: Phase 8, the credential-ready automated simulation and failure-injection acceptance suite.
 
 Do not skip directly to UI polish, learning, AI agents, Rithmic Test, or live activation while an earlier execution milestone remains incomplete.

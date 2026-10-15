@@ -641,12 +641,17 @@ def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
         "supervisor_runtime_health_attached": False,
         "durable_control_plane_implemented": True,
         "control_defaults_fail_closed": True,
-        "operator_control_ui_implemented": False,
+        "operator_control_ui_implemented": True,
         "cumulative_position_sizing_implemented": True,
         "funding_adequacy_reporting_implemented": True,
         "automatic_contract_roll_enabled": False,
-        "master_event_orchestration_implemented": False,
-        "execution_adapter_implemented": False,
+        "master_event_orchestration_implemented": True,
+        "execution_adapter_implemented": True,
+        "durable_recovery_implemented": True,
+        "broker_authoritative_reconciliation_implemented": True,
+        "latency_instrumentation_implemented": True,
+        "test_only_execution": True,
+        "live_submission_possible": False,
         "blockers": list(config.preflight_blockers),
         "connectivity_blockers": list(topology.connectivity_blockers),
     }
@@ -727,11 +732,11 @@ def _serialize_control_profile(profile: CopyProfileSnapshot) -> dict[str, Any]:
 
 def _serialize_control_audit(item: CopyControlAuditSnapshot) -> dict[str, Any]:
     return {
-        "audit_id": item.audit_id,
+        "audit_id": _opaque_alias(item.audit_id, "Audit"),
         "profile_id": item.profile_id,
         "connection_id": item.connection_id,
         "action": item.action,
-        "actor": item.actor,
+        "actor": _opaque_alias(item.actor, "Operator"),
         "auth_method": item.auth_method,
         "expected_revision": item.expected_revision,
         "previous_revision": item.previous_revision,
@@ -739,7 +744,7 @@ def _serialize_control_audit(item: CopyControlAuditSnapshot) -> dict[str, Any]:
         "previous_state": item.previous_state,
         "resulting_state": item.resulting_state,
         "reason_code": item.reason_code,
-        "request_id": item.request_id,
+        "request_id": _opaque_alias(item.request_id, "Request"),
         "occurred_at": item.occurred_at.isoformat(),
     }
 

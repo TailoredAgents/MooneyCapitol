@@ -376,7 +376,7 @@ def test_login_success_sets_cookie_and_opens_dashboard(monkeypatch):
     dashboard_resp = client.get("/dashboard")
     assert dashboard_resp.status_code == 200
     assert "Rithmic Test" in dashboard_resp.text
-    assert "Broker observation console" in dashboard_resp.text
+    assert "Five-account copy operator console" in dashboard_resp.text
 
     assert client.get("/dashboard/legacy").status_code == 404
 

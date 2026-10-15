@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
-    <title>Rithmic Observation Console | Mooney Capital</title>
+    <title>Rithmic Operator Console | Mooney Capital</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
     <link rel="icon" type="image/png" href="/static/favicon.png" />
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
@@ -250,6 +250,36 @@
       .limit-card strong { display: block; margin-bottom: 0.25rem; font-size: 0.82rem; }
       .limit-card span { color: var(--muted); font-size: 0.77rem; line-height: 1.45; }
       .footer-note { margin-top: 1.5rem; color: var(--muted); font-size: 0.74rem; text-align: right; }
+      .account-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(275px, 1fr)); gap: 0.85rem; }
+      .account-card { display: grid; gap: 0.8rem; }
+      .account-card .panel-head { margin-bottom: 0; }
+      .account-role { color: var(--muted); font-size: 0.72rem; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em; }
+      .fact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
+      .fact { padding: 0.65rem; border-radius: 9px; background: var(--surface-soft); min-width: 0; }
+      .fact span { display: block; color: var(--muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+      .fact strong { display: block; margin-top: 0.22rem; font-size: 0.82rem; overflow-wrap: anywhere; }
+      .control-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+      .control-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+      .action-button {
+        border: 1px solid var(--line); border-radius: 8px; padding: 0.48rem 0.68rem;
+        color: var(--ink); background: var(--surface-soft); cursor: pointer; font-size: 0.76rem; font-weight: 750;
+      }
+      .action-button:hover { border-color: var(--brand); }
+      .action-button.primary { border-color: var(--brand); color: #fff; background: var(--brand); }
+      .action-button.danger { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+      .action-button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .control-note { margin: 0.75rem 0 0; color: var(--muted); font-size: 0.78rem; }
+      .control-message { display: none; margin-top: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 8px; font-size: 0.78rem; }
+      .control-message.visible { display: block; background: var(--accent-soft); color: var(--accent); }
+      .control-message.bad { background: var(--danger-soft); color: var(--danger); }
+      dialog { width: min(520px, calc(100vw - 2rem)); border: 1px solid var(--line); border-radius: 12px; padding: 0; color: var(--ink); background: var(--surface); box-shadow: var(--shadow); }
+      dialog::backdrop { background: rgba(6, 14, 24, 0.72); }
+      .dialog-body { padding: 1.15rem; }
+      .dialog-body h2 { margin-bottom: 0.55rem; }
+      .dialog-body p { color: var(--muted); font-size: 0.82rem; }
+      .dialog-body label { display: block; margin: 0.8rem 0 0.3rem; font-size: 0.75rem; font-weight: 750; }
+      .dialog-body input, .dialog-body select { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 0.62rem; color: var(--ink); background: var(--surface-soft); }
+      .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
       @media (max-width: 1100px) {
         .shell { grid-template-columns: 1fr; }
         .sidebar { position: static; height: auto; display: flex; gap: 0.25rem; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 0.55rem 1rem; }
@@ -266,6 +296,7 @@
         .safety-banner { align-items: flex-start; flex-direction: column; }
         .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .grid-two, .limitations { grid-template-columns: 1fr; }
+        .fact-grid { grid-template-columns: 1fr; }
       }
       @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
     </style>
@@ -283,11 +314,14 @@
     </header>
 
     <div class="shell">
-      <nav class="sidebar" aria-label="Observation console navigation">
-        <div class="sidebar-label">Observation Console</div>
+      <nav class="sidebar" aria-label="Operator console navigation">
+        <div class="sidebar-label">Operator Console</div>
         <a href="#overview">Overview</a>
+        <a href="#account-operations">Five accounts</a>
+        <a href="#controls">Copy controls</a>
+        <a href="#copy-evidence">Copy evidence</a>
         <a href="#connectivity">Connectivity</a>
-        <a href="#copier">Shadow copier</a>
+        <a href="#copier">Copier readiness</a>
         <a href="#accounts">Accounts &amp; P&amp;L</a>
         <a href="#orders">Orders &amp; fills</a>
         <a href="#risk">Risk &amp; brackets</a>
@@ -297,16 +331,16 @@
       <main>
         <section class="hero" id="overview">
           <div>
-            <div class="eyebrow">Rithmic Test · read-only</div>
-            <h1>Broker observation console</h1>
-            <p>Live service health and durable Rithmic observations. This console can inspect captured state but cannot place, modify, cancel, or flatten orders.</p>
+            <div class="eyebrow">Rithmic Test / operator controls</div>
+            <h1>Five-account copy operator console</h1>
+            <p>One master and four independent follower connections, with fail-closed copy controls, risk-parity evidence, recovery status, and redacted broker observations.</p>
           </div>
           <button class="refresh" id="refresh" type="button">Refresh observations</button>
         </section>
 
         <div class="safety-banner">
-          <strong>Broker submission is structurally disabled</strong>
-          <span>No execution controls are exposed by this dashboard or the Rithmic capture service.</span>
+          <strong>Live broker submission remains structurally impossible</strong>
+          <span>Controls below update durable desired state. The separate execution service is Test-only and is never run from this HTTP process.</span>
         </div>
         <div class="error-box" id="error-box" role="alert"></div>
 
@@ -318,6 +352,49 @@
           <article class="summary-card"><div class="label">Accounts observed</div><div class="metric" id="account-count">-</div><div class="submetric">Aliases only; IDs are redacted</div></article>
         </section>
 
+        <section class="section" id="account-operations">
+          <div class="section-heading"><div><h2>Master and follower readiness</h2><p>Exactly five fixed internal connection slots. Broker account identifiers and credentials never appear here.</p></div></div>
+          <div class="account-grid" id="account-cards"><article class="panel empty">Loading five-account state...</article></div>
+        </section>
+
+        <section class="section" id="controls">
+          <div class="section-heading"><div><h2>Copy controls</h2><p>Follower state changes are revision-checked and audited. Pause stops new entries; flatten is a separate explicit request.</p></div></div>
+          <article class="panel">
+            <div class="control-toolbar">
+              <div><div class="account-role">Global entry gate</div><div id="global-control-state" class="metric">Loading</div></div>
+              <button class="action-button danger" id="global-pause-toggle" type="button" disabled>Loading controls</button>
+            </div>
+            <p class="control-note">A global pause blocks new follower entries without flattening or abandoning lifecycle management for positions already open.</p>
+            <div class="control-message" id="control-message" role="status"></div>
+          </article>
+          <article class="panel section">
+            <div class="panel-head"><h2>Follower controls</h2><span class="status-chip">Revision checked</span></div>
+            <div class="scroll"><table><thead><tr><th>Follower</th><th>State</th><th>New entries</th><th>Lifecycle</th><th>Reason</th><th>Updated</th><th>Actions</th><th>Flatten</th></tr></thead><tbody id="follower-controls-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div>
+          </article>
+          <article class="panel section">
+            <div class="panel-head"><h2>Immutable control history</h2><span class="status-chip">Redacted / newest first</span></div>
+            <div class="scroll"><table><thead><tr><th>Occurred</th><th>Scope</th><th>Action</th><th>Previous</th><th>Result</th><th>Reason</th><th>Actor</th><th>Request</th></tr></thead><tbody id="control-audit-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="section" id="copy-evidence">
+          <div class="section-heading"><div><h2>Copy lifecycle and parity evidence</h2><p>Latest persisted intent per follower plus recent lifecycle and reconciliation evidence. No row authorizes a broker write.</p></div></div>
+          <article class="panel">
+            <div class="panel-head"><h2>Latest follower targets</h2><span class="status-chip">Target versus known state</span></div>
+            <div class="scroll"><table><thead><tr><th>Follower</th><th>Updated</th><th>Contract</th><th>Status</th><th>Target / known qty</th><th>Exposure target / actual</th><th>Stop risk target / actual</th><th>Parity error</th><th>Protection</th></tr></thead><tbody id="copy-intents-body"><tr><td colspan="9" class="empty">Loading...</td></tr></tbody></table></div>
+          </article>
+          <div class="grid-two section">
+            <article class="panel">
+              <div class="panel-head"><h2>Recent lifecycle</h2><span class="status-chip">Newest first</span></div>
+              <div class="scroll"><table><thead><tr><th>Recorded</th><th>Follower</th><th>Event</th><th>Status</th><th>Fill</th><th>Rejection</th></tr></thead><tbody id="copy-events-body"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody></table></div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>Reconciliation findings</h2><span class="status-chip">Broker authoritative</span></div>
+              <div class="scroll"><table><thead><tr><th>Detected</th><th>Follower</th><th>Severity</th><th>Finding</th></tr></thead><tbody id="copy-findings-body"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody></table></div>
+            </article>
+          </div>
+        </section>
+
         <section class="section" id="connectivity">
           <div class="section-heading"><div><h2>Connectivity and reconciliation</h2><p>Independent plant generations and subscribe-first recovery state.</p></div></div>
           <div class="grid-two">
@@ -327,7 +404,7 @@
             </article>
             <article class="panel">
               <div class="panel-head"><h2>Latest plant generations</h2><span class="status-chip">Durable state</span></div>
-              <div class="scroll"><table><thead><tr><th>Plant</th><th>State</th><th>Ready</th><th>Last message</th><th>Reconnect</th></tr></thead><tbody id="plants-body"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody></table></div>
+              <div class="scroll"><table><thead><tr><th>Connection</th><th>Plant</th><th>State</th><th>Ready</th><th>Last message</th><th>Reconnect</th></tr></thead><tbody id="plants-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div>
             </article>
           </div>
           <article class="panel section">
@@ -337,7 +414,7 @@
         </section>
 
         <section class="section" id="copier">
-          <div class="section-heading"><div><h2>Shadow copier readiness</h2><p>One master, four followers, mandatory stop-defined risk, and same-expiry NQ/MNQ parity planning.</p></div></div>
+          <div class="section-heading"><div><h2>Copier readiness</h2><p>One master, four followers, mandatory stop-defined risk, same-expiry NQ/MNQ parity, and Test-only execution boundaries.</p></div></div>
           <div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Configuration</h2><span id="copier-chip" class="status-chip"><span class="dot"></span>Checking</span></div>
@@ -348,7 +425,7 @@
               <div class="limitations copier-boundaries">
                 <div class="limit-card"><strong>Master-relative sizing</strong><span>Each follower targets the master's actual stop-defined risk and point exposure as a percentage of equity.</span></div>
                 <div class="limit-card"><strong>Whole contracts only</strong><span>An underfunded follower is blocked when NQ/MNQ granularity cannot meet the configured parity tolerance.</span></div>
-                <div class="limit-card"><strong>No broker writes</strong><span>The planner reports intended quantities but cannot submit, modify, cancel, or flatten an order.</span></div>
+                <div class="limit-card"><strong>Test-only write path</strong><span>The fenced execution adapter exists for Rithmic Test validation, but live activation remains impossible.</span></div>
               </div>
             </article>
           </div>
@@ -408,7 +485,7 @@
         <section class="section panel" aria-labelledby="limits-title">
           <div class="panel-head"><h2 id="limits-title">Current V2 boundaries</h2><span class="status-chip warn">Foundation phase</span></div>
           <div class="limitations">
-            <div class="limit-card"><strong>No broker mutations</strong><span>Order entry, cancel/modify, flatten, bracket changes, and follower submission remain structurally absent.</span></div>
+            <div class="limit-card"><strong>No live broker mutations</strong><span>The execution service is outside the dashboard, limited to Rithmic Test, and has no live construction path.</span></div>
             <div class="limit-card"><strong>No live V2 Scout</strong><span>The current Conner NQ work is an observation and learning-data foundation, not a completed strategy or signal service.</span></div>
             <div class="limit-card"><strong>No production claim</strong><span>Rithmic Test conformance and manual R|Trader-to-API visibility validation still have to be completed.</span></div>
           </div>
@@ -418,9 +495,27 @@
       </main>
     </div>
 
+    <dialog id="flatten-dialog" aria-labelledby="flatten-title">
+      <div class="dialog-body">
+        <h2 id="flatten-title">Request flatten and disable</h2>
+        <p>This is not an ordinary off switch. The follower enters <strong>FLATTEN_REQUESTED</strong> until the separate execution system confirms the account is flat. Other followers are unaffected.</p>
+        <label for="flatten-reason">Reason</label>
+        <select id="flatten-reason"><option value="emergency">Emergency</option><option value="operator_requested">Operator requested</option><option value="risk_review">Risk review</option><option value="reconciliation_issue">Reconciliation issue</option></select>
+        <label for="flatten-confirmation">Type <span id="flatten-phrase" class="mono"></span> to confirm</label>
+        <input id="flatten-confirmation" autocomplete="off" spellcheck="false" />
+        <div class="dialog-actions"><button class="action-button" id="flatten-cancel" type="button">Cancel</button><button class="action-button danger" id="flatten-confirm" type="button">Request flatten</button></div>
+      </div>
+    </dialog>
+
     <script>
       const refreshButton = document.getElementById('refresh');
       let loading = false;
+      let mutating = false;
+      let currentControl = null;
+      let currentOperations = null;
+      let currentCopier = null;
+      let csrfToken = null;
+      let pendingFlatten = null;
 
       const escapeHtml = (value) => String(value ?? '')
         .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -428,6 +523,12 @@
       const present = (value, fallback = '—') => value === null || value === undefined || value === '' ? fallback : value;
       const boolText = (value) => value === true ? 'Yes' : value === false ? 'No' : '—';
       const number = (value) => value === null || value === undefined ? '—' : Number(value).toLocaleString();
+      const percent = (value) => {
+        if (value === null || value === undefined || value === '') return '—';
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? `${(parsed * 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}%` : '—';
+      };
+      const milliseconds = (value) => value === null || value === undefined ? '—' : `${number(value)} ms`;
       const money = (value, currency = '') => {
         if (value === null || value === undefined || value === '') return '—';
         const parsed = Number(value);
@@ -442,22 +543,77 @@
       const chip = (label, kind = '') => `<span class="status-chip ${kind}">${escapeHtml(present(label))}</span>`;
       const stateKind = (value) => {
         const text = String(value ?? '').toUpperCase();
-        if (['READY', 'COMPLETE', 'CONNECTED', 'AUTHENTICATED', 'OK', 'LIVE'].some((item) => text.includes(item))) return 'ok';
-        if (['FAILED', 'ERROR', 'REJECT', 'DISCONNECT', 'FORCED'].some((item) => text.includes(item))) return 'bad';
+        if (['FAILED', 'ERROR', 'REJECT', 'DISCONNECT', 'FORCED', 'DIVERGED', 'LOCKED', 'UNCERTAIN'].some((item) => text.includes(item))) return 'bad';
+        if (['NOT READY', 'BLOCK', 'PAUSED', 'DISABLED', 'FLATTEN', 'INCOMPLETE'].some((item) => text.includes(item))) return 'warn';
+        if (['READY', 'COMPLETE', 'CONNECTED', 'AUTHENTICATED', 'OK', 'LIVE', 'ACTIVE', 'ENABLED', 'FILLED', 'ACKNOWLEDGED', 'CLEAN', 'ADOPTED', 'SENT', 'CONFIRMED'].some((item) => text.includes(item))) return 'ok';
         return 'warn';
       };
       const setText = (id, value) => { const node = document.getElementById(id); if (node) node.textContent = present(value); };
       const emptyRow = (columns, message) => `<tr><td colspan="${columns}" class="empty">${escapeHtml(message)}</td></tr>`;
 
-      async function api(path) {
-        const response = await fetch(path, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+      async function api(path, options = {}) {
+        const response = await fetch(path, {
+          ...options,
+          headers: { Accept: 'application/json', ...(options.headers || {}) },
+          credentials: 'same-origin',
+        });
         if (response.status === 401) { window.location.assign('/login'); throw new Error('Authentication required'); }
         if (!response.ok) {
           let message = `Request failed (${response.status})`;
-          try { const body = await response.json(); message = body.detail || message; } catch (_) {}
+          try {
+            const body = await response.json();
+            if (typeof body.detail === 'string') message = body.detail;
+            else if (body.detail && typeof body.detail === 'object') message = body.detail.message || body.detail.code || JSON.stringify(body.detail);
+          } catch (_) {}
           throw new Error(message);
         }
         return response.json();
+      }
+
+      async function csrf() {
+        if (csrfToken !== null) return csrfToken;
+        const payload = await api('/v2/copier/control/csrf');
+        csrfToken = payload.required ? payload.token : '';
+        return csrfToken;
+      }
+
+      async function mutate(path, payload) {
+        if (mutating) return null;
+        mutating = true;
+        renderControlMessage('Saving control change...', false);
+        let failed = false;
+        let result = null;
+        try {
+          const token = await csrf();
+          result = await api(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { 'X-CSRF-Token': token } : {}) },
+            body: JSON.stringify(payload),
+          });
+          currentControl = result;
+          renderControls(result);
+          renderAccountCards(currentOperations || {}, currentCopier || {}, result);
+          renderControlMessage('Control change saved and written to immutable audit history.', false);
+          try { await loadAudit(); } catch (_) {}
+        } catch (error) {
+          failed = true;
+          renderControlMessage(error.message || 'Control change failed.', true);
+        } finally {
+          mutating = false;
+        }
+        if (failed) await loadOverview();
+        return result;
+      }
+
+      function requestId(prefix) {
+        const random = globalThis.crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
+        return `ui-${prefix}-${Date.now()}-${random}`;
+      }
+
+      function renderControlMessage(message, bad) {
+        const node = document.getElementById('control-message');
+        node.textContent = message;
+        node.className = `control-message visible${bad ? ' bad' : ''}`;
       }
 
       function renderSummary(data) {
@@ -517,9 +673,13 @@
           ['Runtime health attached', boolText(copier.supervisor_runtime_health_attached)],
           ['Durable control plane', copier.durable_control_plane_implemented ? 'Implemented' : 'Not implemented'],
           ['Control defaults', copier.control_defaults_fail_closed ? 'Paused / disabled' : 'Unknown'],
-          ['Operator control UI', copier.operator_control_ui_implemented ? 'Implemented' : 'Later phase'],
+          ['Operator control UI', copier.operator_control_ui_implemented ? 'Implemented' : 'Not implemented'],
           ['Cumulative sizing', copier.cumulative_position_sizing_implemented ? 'Implemented' : 'Not implemented'],
           ['Funding adequacy', copier.funding_adequacy_reporting_implemented ? 'Implemented' : 'Not implemented'],
+          ['Durable recovery', copier.durable_recovery_implemented ? 'Implemented' : 'Not implemented'],
+          ['Broker reconciliation', copier.broker_authoritative_reconciliation_implemented ? 'Implemented' : 'Not implemented'],
+          ['Latency instrumentation', copier.latency_instrumentation_implemented ? 'Implemented' : 'Not implemented'],
+          ['Execution adapter', copier.execution_adapter_implemented ? 'Test-only' : 'Not implemented'],
           ['Automatic contract roll', copier.automatic_contract_roll_enabled ? 'Enabled' : 'Disabled'],
           ['Mandatory initial stop', boolText(copier.mandatory_initial_stop)],
           ['Allowed products', (copier.allowed_products || []).join(', ') || 'None'],
@@ -534,14 +694,126 @@
         ].map(([key, value]) => `<div class="key-value"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
       }
 
+      function latestFor(items, connectionId) {
+        return (items || []).find((item) => item.connection_id === connectionId) || null;
+      }
+
+      function dailyReturn(pnl) {
+        if (!pnl) return '—';
+        const balance = Number(pnl.account_balance);
+        const dayPnl = Number(pnl.day_total_pnl);
+        const startingBalance = balance - dayPnl;
+        return Number.isFinite(startingBalance) && startingBalance > 0 && Number.isFinite(dayPnl) ? percent(dayPnl / startingBalance) : '—';
+      }
+
+      function latestLatency(latency) {
+        if (!latency) return '—';
+        if (latency.event_to_ack_ms !== null && latency.event_to_ack_ms !== undefined) return `Ack ${milliseconds(latency.event_to_ack_ms)}`;
+        if (latency.submission_to_response_ms !== null && latency.submission_to_response_ms !== undefined) return `Response ${milliseconds(latency.submission_to_response_ms)}`;
+        if (latency.decision_to_submission_ms !== null && latency.decision_to_submission_ms !== undefined) return `Submit ${milliseconds(latency.decision_to_submission_ms)}`;
+        return 'Pending evidence';
+      }
+
+      function renderAccountCards(data, copier, control) {
+        const execution = data.copy_execution || {};
+        const cards = (copier.accounts || []).map((account) => {
+          const id = account.connection_id;
+          const plants = (data.plants || []).filter((item) => item.connection_id === id);
+          const readyPlants = plants.filter((item) => item.ready).length;
+          const pnl = latestFor(data.account_pnl, id);
+          const position = latestFor(data.positions, id);
+          const bracket = latestFor(data.brackets, id);
+          const intent = latestFor(execution.intents, id);
+          const delivery = latestFor(execution.delivery, id);
+          const reconciliation = latestFor(execution.reconciliation, id);
+          const latency = latestFor(execution.latency, id);
+          const follower = (control?.followers || []).find((item) => item.connection_id === id);
+          const configured = account.ready_for_test_connectivity === true;
+          const ready = configured && readyPlants >= 2;
+          const readiness = ready ? 'Ready' : configured ? 'Awaiting sessions' : 'Not configured';
+          const positionText = position ? `${present(position.symbol)} ${number(position.net_quantity)}` : 'Unavailable';
+          const protection = bracket ? `Broker: ${present(bracket.status)}` : intent?.command?.stop_ticks ? `Planned: ${number(intent.command.stop_ticks)} ticks` : 'Unavailable';
+          const quantity = intent ? `${number(intent.achievable_target_signed_quantity)} / ${number(intent.current_signed_quantity)}` : '—';
+          const controlState = follower ? follower.state : account.role === 'MASTER' ? 'MASTER' : 'Unavailable';
+          return `<article class="panel account-card">
+            <div class="panel-head"><div><div class="account-role">${escapeHtml(account.role === 'MASTER' ? 'Master' : `Follower ${account.follower_number}`)}</div><h2>${escapeHtml(present(account.connection))}</h2></div>${chip(readiness, ready ? 'ok' : 'warn')}</div>
+            <div class="fact-grid">
+              <div class="fact"><span>Control state</span><strong>${escapeHtml(controlState)}</strong></div>
+              <div class="fact"><span>Order / PnL plants</span><strong>${number(readyPlants)} / 2 ready</strong></div>
+              <div class="fact"><span>Equity</span><strong>${money(pnl?.account_balance, pnl?.currency)}</strong></div>
+              <div class="fact"><span>Available margin</span><strong>${money(pnl?.available_buying_power, pnl?.currency)}</strong></div>
+              <div class="fact"><span>Daily return</span><strong>${dailyReturn(pnl)}</strong></div>
+              <div class="fact"><span>Position</span><strong>${escapeHtml(positionText)}</strong></div>
+              <div class="fact"><span>Protection</span><strong>${escapeHtml(protection)}</strong></div>
+              <div class="fact"><span>Target / known qty</span><strong>${escapeHtml(quantity)}</strong></div>
+              <div class="fact"><span>Latest lifecycle</span><strong>${escapeHtml(present(intent?.status))}</strong></div>
+              <div class="fact"><span>Delivery</span><strong>${escapeHtml(present(delivery?.status))}</strong></div>
+              <div class="fact"><span>Reconciliation</span><strong>${escapeHtml(present(reconciliation?.status))}</strong></div>
+              <div class="fact"><span>Latest latency</span><strong>${escapeHtml(latestLatency(latency))}</strong></div>
+            </div>
+          </article>`;
+        });
+        document.getElementById('account-cards').innerHTML = cards.length ? cards.join('') : '<article class="panel empty">The fixed five-account topology is unavailable.</article>';
+      }
+
+      function renderControls(control) {
+        currentControl = control;
+        setText('global-control-state', control.global_paused ? 'Paused' : 'Active');
+        const globalButton = document.getElementById('global-pause-toggle');
+        globalButton.disabled = false;
+        globalButton.textContent = control.global_paused ? 'Clear global pause' : 'Pause all new entries';
+        globalButton.className = `action-button ${control.global_paused ? 'primary' : 'danger'}`;
+        document.getElementById('follower-controls-body').innerHTML = (control.followers || []).map((item) => {
+          let ordinary = '';
+          if (item.state === 'DISABLED' || item.state === 'PAUSED') ordinary = `<button class="action-button primary" data-control-action="ENABLE" data-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}">Enable</button>`;
+          else if (item.state === 'ENABLED') ordinary = `<button class="action-button" data-control-action="PAUSE" data-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}">Pause</button>`;
+          else if (item.state === 'LOCKED') ordinary = `<button class="action-button" data-control-action="UNLOCK_TO_PAUSED" data-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}">Unlock to paused</button>`;
+          else ordinary = '<span class="submetric">Await system</span>';
+          const mayFlatten = ['ENABLED', 'PAUSED', 'LOCKED'].includes(item.state);
+          const flatten = mayFlatten ? `<button class="action-button danger" data-flatten-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}" data-follower="${item.follower_number}">Flatten...</button>` : '<span class="submetric">—</span>';
+          return `<tr><td><strong>Follower ${item.follower_number}</strong></td><td>${chip(item.state, stateKind(item.state))}</td><td>${chip(item.permits_new_entries && !control.global_paused ? 'Allowed' : 'Blocked', item.permits_new_entries && !control.global_paused ? 'ok' : 'warn')}</td><td>${escapeHtml(present(item.restart_directive))}</td><td>${escapeHtml(present(item.reason_code))}</td><td>${time(item.updated_at)}</td><td><div class="control-actions">${ordinary}</div></td><td>${flatten}</td></tr>`;
+        }).join('') || emptyRow(8, 'Follower control state is unavailable.');
+      }
+
+      function renderAudit(items) {
+        document.getElementById('control-audit-body').innerHTML = items.length ? items.map((item) => `<tr>
+          <td>${time(item.occurred_at)}</td><td>${escapeHtml(item.connection_id ? item.connection_id.replace('-', ' ') : 'Global')}</td><td>${escapeHtml(present(item.action))}</td>
+          <td>${escapeHtml(present(item.previous_state))}</td><td>${chip(item.resulting_state, stateKind(item.resulting_state))}</td><td>${escapeHtml(present(item.reason_code))}</td>
+          <td class="mono">${escapeHtml(present(item.actor))}</td><td class="mono">${escapeHtml(present(item.request_id))}</td>
+        </tr>`).join('') : emptyRow(8, 'No control changes have been recorded.');
+      }
+
+      function renderCopyEvidence(execution) {
+        const intents = execution.intents || [];
+        document.getElementById('copy-intents-body').innerHTML = intents.length ? intents.map((item) => {
+          const command = item.command || {};
+          const protection = command.stop_ticks ? `${number(command.stop_ticks)} stop ticks / ${escapeHtml(present(command.status))}` : 'No persisted stop evidence';
+          return `<tr><td>${escapeHtml(present(item.connection_id))}</td><td>${time(item.updated_at)}</td><td><strong>${escapeHtml(present(item.symbol))}</strong> ${escapeHtml(present(item.exchange, ''))}</td>
+            <td>${chip(item.status, stateKind(item.status))}<div class="submetric">${escapeHtml(present(item.reason))}</div></td><td>${number(item.achievable_target_signed_quantity)} / ${number(item.current_signed_quantity)}</td>
+            <td>${percent(item.desired_exposure_fraction)} / ${percent(item.achievable_exposure_fraction)}</td><td>${percent(item.desired_risk_fraction)} / ${percent(item.achievable_risk_fraction)}</td>
+            <td>${percent(item.parity_error)}</td><td>${protection}</td></tr>`;
+        }).join('') : emptyRow(9, 'No copy lifecycle intent has been persisted.');
+
+        const events = execution.lifecycle_events || [];
+        document.getElementById('copy-events-body').innerHTML = events.length ? events.map((item) => `<tr><td>${time(item.recorded_at)}</td><td>${escapeHtml(present(item.connection_id))}</td><td>${escapeHtml(present(item.kind))}</td><td>${chip(item.resulting_status, stateKind(item.resulting_status))}</td><td>${number(item.filled_quantity)} @ ${money(item.fill_price)}</td><td>${escapeHtml(present(item.rejection_code))}</td></tr>`).join('') : emptyRow(6, 'No lifecycle events have been persisted.');
+
+        const findings = execution.findings || [];
+        document.getElementById('copy-findings-body').innerHTML = findings.length ? findings.map((item) => `<tr><td>${time(item.detected_at)}</td><td>${escapeHtml(present(item.connection_id))}</td><td>${chip(item.severity, item.severity === 'BLOCKING' ? 'bad' : 'warn')}</td><td>${escapeHtml(present(item.kind))}</td></tr>`).join('') : emptyRow(4, 'No reconciliation findings have been recorded.');
+      }
+
+      async function loadAudit() {
+        const audit = await api('/v2/copier/control/audit?limit=100');
+        renderAudit(audit.items || []);
+      }
+
       function renderPlants(items) {
         document.getElementById('plants-body').innerHTML = items.length ? items.map((item) => `<tr>
-          <td><strong>${escapeHtml(present(item.plant))}</strong></td>
+          <td>${escapeHtml(present(item.connection_id))}</td><td><strong>${escapeHtml(present(item.plant))}</strong></td>
           <td>${chip(item.state, stateKind(item.state))}</td>
           <td>${chip(item.ready ? 'Ready' : 'Not ready', item.ready ? 'ok' : 'warn')}</td>
           <td>${time(item.last_message_at)}</td>
           <td>${number(item.reconnect_attempt)}</td>
-        </tr>`).join('') : emptyRow(5, 'No durable plant generation has been recorded.');
+        </tr>`).join('') : emptyRow(6, 'No durable plant generation has been recorded.');
       }
 
       function renderReconciliation(items) {
@@ -619,18 +891,24 @@
       }
 
       async function loadOverview() {
-        if (loading) return;
+        if (loading || mutating) return;
         loading = true;
         refreshButton.disabled = true;
         refreshButton.textContent = 'Refreshing…';
         document.getElementById('error-box').classList.remove('visible');
         try {
-          const [data, copier] = await Promise.all([
+          const [data, copier, control, audit] = await Promise.all([
             api('/v2/operations/overview?limit=40'),
             api('/v2/copier/status'),
+            api('/v2/copier/control'),
+            api('/v2/copier/control/audit?limit=100'),
           ]);
+          currentOperations = data;
+          currentCopier = copier;
+          currentControl = control;
           renderSummary(data); renderCapture(data.capture || {}); renderPlants(data.plants || []);
           renderCopier(copier || {});
+          renderAccountCards(data, copier || {}, control || {}); renderControls(control || {}); renderAudit(audit.items || []); renderCopyEvidence(data.copy_execution || {});
           renderReconciliation(data.reconciliation || []); renderAccounts(data.accounts || []); renderAccountPnl(data.account_pnl || []);
           renderPositions(data.positions || []); renderOrders(data.orders || []); renderExecutions(data.executions || []);
           renderRisk(data.risk || []); renderBrackets(data.brackets || []); renderContracts(data.contracts || []);
@@ -647,6 +925,75 @@
       }
 
       const themeToggle = document.getElementById('theme-toggle');
+      const flattenDialog = document.getElementById('flatten-dialog');
+
+      document.getElementById('follower-controls-body').addEventListener('click', async (event) => {
+        const actionButton = event.target.closest('[data-control-action]');
+        if (actionButton) {
+          const action = actionButton.dataset.controlAction;
+          await mutate(`/v2/copier/control/followers/${encodeURIComponent(actionButton.dataset.connection)}/actions`, {
+            action,
+            expected_revision: Number(actionButton.dataset.revision),
+            request_id: requestId(action.toLowerCase()),
+            reason_code: action === 'UNLOCK_TO_PAUSED' ? 'operator_requested' : null,
+          });
+          return;
+        }
+        const flattenButton = event.target.closest('[data-flatten-connection]');
+        if (!flattenButton) return;
+        const followerNumber = Number(flattenButton.dataset.follower);
+        const phrase = `FLATTEN FOLLOWER ${followerNumber}`;
+        pendingFlatten = {
+          connection: flattenButton.dataset.flattenConnection,
+          revision: Number(flattenButton.dataset.revision),
+          phrase,
+        };
+        document.getElementById('flatten-phrase').textContent = phrase;
+        document.getElementById('flatten-confirmation').value = '';
+        document.getElementById('flatten-confirmation').setCustomValidity('');
+        flattenDialog.showModal();
+        document.getElementById('flatten-confirmation').focus();
+      });
+
+      document.getElementById('global-pause-toggle').addEventListener('click', async () => {
+        if (!currentControl) return;
+        const paused = !currentControl.global_paused;
+        if (!paused && !window.confirm('Clear the global pause? Any individually enabled follower may then accept new entries once the separate Test execution service is authorized and running.')) return;
+        await mutate('/v2/copier/control/global-pause', {
+          paused,
+          expected_revision: currentControl.revision,
+          request_id: requestId(paused ? 'global-pause' : 'global-resume'),
+          reason_code: 'operator_requested',
+        });
+      });
+
+      document.getElementById('flatten-cancel').addEventListener('click', () => {
+        pendingFlatten = null;
+        flattenDialog.close();
+      });
+
+      document.getElementById('flatten-confirm').addEventListener('click', async () => {
+        if (!pendingFlatten) return;
+        const confirmationInput = document.getElementById('flatten-confirmation');
+        const confirmation = confirmationInput.value.trim();
+        if (confirmation !== pendingFlatten.phrase) {
+          confirmationInput.setCustomValidity(`Type ${pendingFlatten.phrase} exactly.`);
+          confirmationInput.reportValidity();
+          return;
+        }
+        const selected = pendingFlatten;
+        const reason = document.getElementById('flatten-reason').value;
+        pendingFlatten = null;
+        flattenDialog.close();
+        await mutate(`/v2/copier/control/followers/${encodeURIComponent(selected.connection)}/actions`, {
+          action: 'REQUEST_FLATTEN_AND_DISABLE',
+          expected_revision: selected.revision,
+          request_id: requestId('flatten'),
+          reason_code: reason,
+        });
+      });
+      document.getElementById('flatten-confirmation').addEventListener('input', (event) => event.target.setCustomValidity(''));
+
       function syncThemeButton() {
         const dark = document.documentElement.dataset.theme === 'dark';
         themeToggle.textContent = dark ? 'Light mode' : 'Dark mode';

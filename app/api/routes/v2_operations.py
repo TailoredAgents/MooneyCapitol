@@ -16,6 +16,14 @@ from sqlalchemy.orm import Session
 from app.api.auth import require_operator
 from app.db.session import get_session
 from app.v2.db_models import (
+    V2BrokerAccount,
+    V2CopyLatency,
+    V2CopyLifecycleCommand,
+    V2CopyLifecycleEvent,
+    V2CopyLifecycleIntent,
+    V2CopyOutbox,
+    V2CopyReconciliationFinding,
+    V2CopyReconciliationRun,
     V2RithmicAccountObservation,
     V2RithmicBracketObservation,
     V2RithmicBrokerEvent,
@@ -39,6 +47,7 @@ _CAPTURE_BASE_URL_ENV = "RITHMIC_CAPTURE_BASE_URL"
 _CAPTURE_TIMEOUT_SECONDS_ENV = "RITHMIC_CAPTURE_HEALTH_TIMEOUT_SECONDS"
 _MAX_CAPTURE_TIMEOUT_SECONDS = 5.0
 _DEFAULT_CAPTURE_TIMEOUT_SECONDS = 2.0
+_CONNECTION_IDS = ("master", "follower-1", "follower-2", "follower-3", "follower-4")
 
 
 def db_session():
@@ -76,10 +85,14 @@ def build_operations_snapshot(session: Session, *, limit: int = 40) -> dict[str,
         "pnl": _count(session, V2RithmicPnLObservation),
         "rms": _count(session, V2RithmicRmsObservation),
         "references": _count(session, V2RithmicReferenceObservation),
+        "copy_intents": _count(session, V2CopyLifecycleIntent),
+        "copy_commands": _count(session, V2CopyLifecycleCommand),
+        "copy_reconciliations": _count(session, V2CopyReconciliationRun),
     }
 
     event_rows = _recent(session, V2RithmicBrokerEvent, "received_at", 1)
-    generation_rows = _recent(session, V2RithmicConnectionGeneration, "connected_at", 30)
+    generation_rows = _recent(session, V2RithmicConnectionGeneration, "connected_at", 100)
+    broker_account_rows = list(session.scalars(select(V2BrokerAccount)).all())
     account_rows = _recent(session, V2RithmicAccountObservation, "observed_at", 250)
     order_rows = _recent(session, V2RithmicOrderObservation, "received_at", limit)
     execution_rows = _recent(session, V2RithmicExecutionObservation, "received_at", limit)
@@ -93,6 +106,29 @@ def build_operations_snapshot(session: Session, *, limit: int = 40) -> dict[str,
         250,
     )
     reference_rows = _recent(session, V2RithmicReferenceObservation, "received_at", limit)
+    copy_intent_rows = _recent(session, V2CopyLifecycleIntent, "updated_at", 100)
+    copy_command_rows = _recent(session, V2CopyLifecycleCommand, "updated_at", 250)
+    copy_event_rows = _recent(session, V2CopyLifecycleEvent, "recorded_at", limit)
+    copy_outbox_rows = _recent(session, V2CopyOutbox, "updated_at", 100)
+    copy_reconciliation_rows = _recent(
+        session,
+        V2CopyReconciliationRun,
+        "completed_at",
+        100,
+    )
+    copy_finding_rows = _recent(
+        session,
+        V2CopyReconciliationFinding,
+        "detected_at",
+        limit,
+    )
+    copy_latency_rows = _recent(session, V2CopyLatency, "updated_at", 100)
+
+    account_connections = {
+        row.account_id: connection_id
+        for row in broker_account_rows
+        if (connection_id := _safe_connection_id(row.connection_id)) is not None
+    }
 
     latest_accounts = _latest_by(
         account_rows,
@@ -119,7 +155,38 @@ def build_operations_snapshot(session: Session, *, limit: int = 40) -> dict[str,
         reconciliation_rows,
         lambda row: (row.account_id or row.broker_account_id, row.plant),
     )
-    latest_plants = _latest_by(generation_rows, lambda row: row.plant)
+    latest_plants = _latest_by(
+        generation_rows,
+        lambda row: (row.connection_id, row.plant),
+    )
+    latest_copy_intents = _latest_by(
+        copy_intent_rows,
+        lambda row: row.follower_connection_id,
+    )
+    latest_copy_commands = _latest_by(
+        copy_command_rows,
+        lambda row: row.intent_id,
+    )
+    command_by_intent = {row.intent_id: row for row in latest_copy_commands}
+    copy_intent_connections = {
+        row.intent_id: row.follower_connection_id for row in copy_intent_rows
+    }
+    latest_copy_outbox = _latest_by(
+        copy_outbox_rows,
+        lambda row: row.follower_connection_id,
+    )
+    latest_copy_reconciliation = _latest_by(
+        copy_reconciliation_rows,
+        lambda row: row.follower_connection_id,
+    )
+    reconciliation_connections = {
+        row.reconciliation_run_id: row.follower_connection_id
+        for row in copy_reconciliation_rows
+    }
+    latest_copy_latency = _latest_by(
+        copy_latency_rows,
+        lambda row: row.follower_connection_id,
+    )
     counts["accounts"] = len(latest_accounts)
 
     return {
@@ -135,21 +202,64 @@ def build_operations_snapshot(session: Session, *, limit: int = 40) -> dict[str,
             "last_event_at": _iso(event_rows[0].received_at) if event_rows else None,
         },
         "plants": [_serialize_plant(row) for row in latest_plants],
-        "accounts": [_serialize_account(row) for row in latest_accounts],
-        "orders": [_serialize_order(row) for row in order_rows],
-        "executions": [_serialize_execution(row) for row in execution_rows],
-        "brackets": [_serialize_bracket(row) for row in bracket_rows],
+        "accounts": [
+            _serialize_account(row, account_connections) for row in latest_accounts
+        ],
+        "orders": [
+            _serialize_order(row, account_connections) for row in order_rows
+        ],
+        "executions": [
+            _serialize_execution(row, account_connections) for row in execution_rows
+        ],
+        "brackets": [
+            _serialize_bracket(row, account_connections) for row in bracket_rows
+        ],
         "account_pnl": [
-            _serialize_pnl(row) for row in latest_pnl if row.scope == "ACCOUNT"
+            _serialize_pnl(row, account_connections)
+            for row in latest_pnl
+            if row.scope == "ACCOUNT"
         ],
         "positions": [
-            _serialize_pnl(row) for row in latest_pnl if row.scope == "INSTRUMENT"
+            _serialize_pnl(row, account_connections)
+            for row in latest_pnl
+            if row.scope == "INSTRUMENT"
         ],
-        "risk": [_serialize_rms(row) for row in latest_rms],
+        "risk": [_serialize_rms(row, account_connections) for row in latest_rms],
         "reconciliation": [
-            _serialize_reconciliation(row) for row in latest_reconciliation
+            _serialize_reconciliation(row, account_connections)
+            for row in latest_reconciliation
         ],
         "contracts": [_serialize_reference(row) for row in reference_rows],
+        "copy_execution": {
+            "intents": [
+                _serialize_copy_intent(row, command_by_intent.get(row.intent_id))
+                for row in latest_copy_intents
+            ],
+            "lifecycle_events": [
+                _serialize_copy_event(
+                    row,
+                    copy_intent_connections.get(row.intent_id),
+                )
+                for row in copy_event_rows
+            ],
+            "delivery": [
+                _serialize_copy_outbox(row) for row in latest_copy_outbox
+            ],
+            "latency": [
+                _serialize_copy_latency(row) for row in latest_copy_latency
+            ],
+            "reconciliation": [
+                _serialize_copy_reconciliation(row)
+                for row in latest_copy_reconciliation
+            ],
+            "findings": [
+                _serialize_copy_finding(
+                    row,
+                    reconciliation_connections.get(row.reconciliation_run_id),
+                )
+                for row in copy_finding_rows
+            ],
+        },
     }
 
 
@@ -281,6 +391,7 @@ def _latest_by(rows: Iterable[Any], key) -> list[Any]:
 
 def _serialize_plant(row: V2RithmicConnectionGeneration) -> dict[str, Any]:
     return {
+        "connection_id": _safe_connection_id(row.connection_id),
         "plant": row.plant,
         "state": row.state,
         "connected": row.disconnected_at is None,
@@ -296,8 +407,12 @@ def _serialize_plant(row: V2RithmicConnectionGeneration) -> dict[str, Any]:
     }
 
 
-def _serialize_account(row: V2RithmicAccountObservation) -> dict[str, Any]:
+def _serialize_account(
+    row: V2RithmicAccountObservation,
+    account_connections: dict[str, str] | None = None,
+) -> dict[str, Any]:
     return {
+        "connection_id": _connection_for(row, account_connections),
         "account": _opaque_alias(row.account_id or row.broker_account_id, "Account"),
         "currency": row.currency,
         "access_type": row.access_type,
@@ -308,8 +423,12 @@ def _serialize_account(row: V2RithmicAccountObservation) -> dict[str, Any]:
     }
 
 
-def _serialize_order(row: V2RithmicOrderObservation) -> dict[str, Any]:
+def _serialize_order(
+    row: V2RithmicOrderObservation,
+    account_connections: dict[str, str] | None = None,
+) -> dict[str, Any]:
     return {
+        "connection_id": _connection_for(row, account_connections),
         "account": _opaque_alias(row.account_id or row.broker_account_id, "Account"),
         "order": _opaque_alias(row.basket_id, "Order"),
         "symbol": row.symbol,
@@ -335,8 +454,12 @@ def _serialize_order(row: V2RithmicOrderObservation) -> dict[str, Any]:
     }
 
 
-def _serialize_execution(row: V2RithmicExecutionObservation) -> dict[str, Any]:
+def _serialize_execution(
+    row: V2RithmicExecutionObservation,
+    account_connections: dict[str, str] | None = None,
+) -> dict[str, Any]:
     return {
+        "connection_id": _connection_for(row, account_connections),
         "account": _opaque_alias(row.account_id or row.broker_account_id, "Account"),
         "order": _opaque_alias(row.basket_id, "Order"),
         "execution": _opaque_alias(row.fill_id, "Fill"),
@@ -352,8 +475,12 @@ def _serialize_execution(row: V2RithmicExecutionObservation) -> dict[str, Any]:
     }
 
 
-def _serialize_bracket(row: V2RithmicBracketObservation) -> dict[str, Any]:
+def _serialize_bracket(
+    row: V2RithmicBracketObservation,
+    account_connections: dict[str, str] | None = None,
+) -> dict[str, Any]:
     return {
+        "connection_id": _connection_for(row, account_connections),
         "account": _opaque_alias(row.account_id or row.broker_account_id, "Account"),
         "parent_order": _opaque_alias(row.parent_basket_id, "Order"),
         "bracket_type": row.bracket_type,
@@ -369,8 +496,12 @@ def _serialize_bracket(row: V2RithmicBracketObservation) -> dict[str, Any]:
     }
 
 
-def _serialize_pnl(row: V2RithmicPnLObservation) -> dict[str, Any]:
+def _serialize_pnl(
+    row: V2RithmicPnLObservation,
+    account_connections: dict[str, str] | None = None,
+) -> dict[str, Any]:
     return {
+        "connection_id": _connection_for(row, account_connections),
         "account": _opaque_alias(row.account_id or row.broker_account_id, "Account"),
         "scope": row.scope,
         "symbol": row.symbol,
@@ -400,8 +531,12 @@ def _serialize_pnl(row: V2RithmicPnLObservation) -> dict[str, Any]:
     }
 
 
-def _serialize_rms(row: V2RithmicRmsObservation) -> dict[str, Any]:
+def _serialize_rms(
+    row: V2RithmicRmsObservation,
+    account_connections: dict[str, str] | None = None,
+) -> dict[str, Any]:
     return {
+        "connection_id": _connection_for(row, account_connections),
         "account": _opaque_alias(row.account_id or row.broker_account_id, "Account"),
         "scope": row.scope,
         "product_code": row.product_code,
@@ -423,8 +558,10 @@ def _serialize_rms(row: V2RithmicRmsObservation) -> dict[str, Any]:
 
 def _serialize_reconciliation(
     row: V2RithmicReconciliationCheckpoint,
+    account_connections: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     return {
+        "connection_id": _connection_for(row, account_connections),
         "account": _opaque_alias(row.account_id or row.broker_account_id, "Account"),
         "plant": row.plant,
         "phase": row.phase,
@@ -455,6 +592,154 @@ def _serialize_reference(row: V2RithmicReferenceObservation) -> dict[str, Any]:
         "source_kind": row.source_kind,
         "received_at": _iso(row.received_at),
     }
+
+
+def _serialize_copy_intent(
+    row: V2CopyLifecycleIntent,
+    command: V2CopyLifecycleCommand | None,
+) -> dict[str, Any]:
+    return {
+        "copy": _opaque_alias(row.intent_id, "Copy"),
+        "connection_id": _safe_connection_id(row.follower_connection_id),
+        "master_event_kind": row.master_event_kind,
+        "directive": row.directive,
+        "status": row.status,
+        "allowed": bool(row.allowed),
+        "reason": _safe_text(row.reason, 96),
+        "symbol": row.symbol,
+        "exchange": row.exchange,
+        "current_signed_quantity": row.current_signed_quantity,
+        "evaluated_target_signed_quantity": row.evaluated_target_signed_quantity,
+        "achievable_target_signed_quantity": row.achievable_target_signed_quantity,
+        "delta_signed_quantity": row.delta_signed_quantity,
+        "desired_quantity": _number(row.desired_quantity),
+        "desired_risk_dollars": _number(row.desired_risk_dollars),
+        "achievable_risk_dollars": _number(row.achievable_risk_dollars),
+        "desired_risk_fraction": _number(row.desired_risk_fraction),
+        "achievable_risk_fraction": _number(row.achievable_risk_fraction),
+        "desired_exposure_fraction": _number(row.desired_exposure_fraction),
+        "achievable_exposure_fraction": _number(row.achievable_exposure_fraction),
+        "risk_parity_error": _number(row.risk_parity_error),
+        "exposure_parity_error": _number(row.exposure_parity_error),
+        "parity_error": _number(row.parity_error),
+        "target_margin_required": _number(row.target_margin_required),
+        "updated_at": _iso(row.updated_at),
+        "command": _serialize_copy_command(command) if command is not None else None,
+    }
+
+
+def _serialize_copy_command(row: V2CopyLifecycleCommand) -> dict[str, Any]:
+    return {
+        "command": _opaque_alias(row.command_id, "Command"),
+        "action": row.action,
+        "status": row.status,
+        "side": row.side,
+        "quantity": row.quantity,
+        "filled_quantity": row.cumulative_filled_quantity,
+        "order_type": row.order_type,
+        "stop_ticks": row.stop_ticks,
+        "target_ticks": row.target_ticks,
+        "attempt_count": row.attempt_count,
+        "updated_at": _iso(row.updated_at),
+    }
+
+
+def _serialize_copy_event(
+    row: V2CopyLifecycleEvent,
+    connection_id: str | None,
+) -> dict[str, Any]:
+    return {
+        "event": _opaque_alias(row.lifecycle_event_id, "Event"),
+        "connection_id": _safe_connection_id(connection_id),
+        "kind": row.event_kind,
+        "previous_status": row.previous_status,
+        "resulting_status": row.resulting_status,
+        "filled_quantity": row.cumulative_filled_quantity,
+        "fill_price": _number(row.fill_price),
+        "rejection_code": _safe_text(row.rejection_code, 128),
+        "occurred_at": _iso(row.occurred_at),
+        "recorded_at": _iso(row.recorded_at),
+    }
+
+
+def _serialize_copy_outbox(row: V2CopyOutbox) -> dict[str, Any]:
+    return {
+        "connection_id": _safe_connection_id(row.follower_connection_id),
+        "status": row.status,
+        "attempt_count": row.attempt_count,
+        "last_error_code": _safe_text(row.last_error_code, 128),
+        "submission_started_at": _iso(row.submission_started_at),
+        "dispatch_response_at": _iso(row.dispatch_response_at),
+        "confirmed_at": _iso(row.confirmed_at),
+        "updated_at": _iso(row.updated_at),
+    }
+
+
+def _serialize_copy_latency(row: V2CopyLatency) -> dict[str, Any]:
+    return {
+        "connection_id": _safe_connection_id(row.follower_connection_id),
+        "event_to_receive_ms": _duration_ms(row.event_received_at, row.event_occurred_at),
+        "receive_to_decision_ms": _duration_ms(row.decision_at, row.event_received_at),
+        "decision_to_submission_ms": _duration_ms(
+            row.submission_started_at,
+            row.decision_at,
+        ),
+        "submission_to_response_ms": _duration_ms(
+            row.dispatch_response_at,
+            row.submission_started_at,
+        ),
+        "event_to_ack_ms": _duration_ms(row.acknowledged_at, row.event_occurred_at),
+        "event_to_first_fill_ms": _duration_ms(row.first_fill_at, row.event_occurred_at),
+        "event_to_complete_ms": _duration_ms(row.completed_at, row.event_occurred_at),
+        "updated_at": _iso(row.updated_at),
+    }
+
+
+def _serialize_copy_reconciliation(row: V2CopyReconciliationRun) -> dict[str, Any]:
+    return {
+        "connection_id": _safe_connection_id(row.follower_connection_id),
+        "status": row.status,
+        "adopted_receipt_count": row.adopted_receipt_count,
+        "finding_count": row.finding_count,
+        "snapshot_at": _iso(row.snapshot_at),
+        "completed_at": _iso(row.completed_at),
+    }
+
+
+def _serialize_copy_finding(
+    row: V2CopyReconciliationFinding,
+    connection_id: str | None,
+) -> dict[str, Any]:
+    return {
+        "finding": _opaque_alias(row.finding_id, "Finding"),
+        "connection_id": _safe_connection_id(connection_id),
+        "kind": _safe_text(row.finding_kind, 64),
+        "severity": row.severity,
+        "detected_at": _iso(row.detected_at),
+    }
+
+
+def _connection_for(
+    row: object,
+    account_connections: dict[str, str] | None,
+) -> str | None:
+    if not account_connections:
+        return None
+    return _safe_connection_id(account_connections.get(getattr(row, "account_id", None)))
+
+
+def _safe_connection_id(value: object) -> str | None:
+    text = str(value or "").strip()
+    return text if text in _CONNECTION_IDS else None
+
+
+def _duration_ms(end: datetime | None, start: datetime | None) -> int | None:
+    if end is None or start is None:
+        return None
+    try:
+        return max(0, round((end - start).total_seconds() * 1000))
+    except (TypeError, ValueError):
+        return None
 
 
 def _opaque_alias(value: object, prefix: str) -> str:

@@ -157,12 +157,18 @@ def test_v2_copier_status_requires_auth_and_redacts_configuration(
     assert body["supervisor_runtime_health_attached"] is False
     assert body["durable_control_plane_implemented"] is True
     assert body["control_defaults_fail_closed"] is True
-    assert body["operator_control_ui_implemented"] is False
+    assert body["operator_control_ui_implemented"] is True
     assert body["cumulative_position_sizing_implemented"] is True
     assert body["funding_adequacy_reporting_implemented"] is True
+    assert body["master_event_orchestration_implemented"] is True
+    assert body["execution_adapter_implemented"] is True
+    assert body["durable_recovery_implemented"] is True
+    assert body["broker_authoritative_reconciliation_implemented"] is True
+    assert body["latency_instrumentation_implemented"] is True
+    assert body["test_only_execution"] is True
+    assert body["live_submission_possible"] is False
     assert body["automatic_contract_roll_enabled"] is False
     assert body["accounts"][0]["required_plants"] == ["ORDER", "PNL"]
-    assert body["execution_adapter_implemented"] is False
     assert "raw-private-account" not in response.text
     assert "raw-private-user" not in response.text
     assert "raw-private-password" not in response.text
@@ -308,6 +314,10 @@ def test_v2_copy_control_supports_revisions_global_pause_and_audit(
         assert audit.status_code == 200
         assert audit.json()["count"] == 2
         assert audit.json()["items"][0]["action"] == "CLEAR_GLOBAL_PAUSE"
+        assert audit.json()["items"][0]["actor"].startswith("Operator ")
+        assert audit.json()["items"][0]["request_id"].startswith("Request ")
+        assert "local-operator" not in audit.text
+        assert "api-global-resume" not in audit.text
     finally:
         session.close()
 

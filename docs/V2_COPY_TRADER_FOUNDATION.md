@@ -139,8 +139,8 @@ Low latency must come from a persistent event-driven Rithmic connection and imme
 
 ## Delivery and activation sequence
 
-1. Build the minimal operator UI over the implemented account, supervision, simulation, controls, cumulative-sizing, lifecycle, fenced recovery/reconciliation, latency, and Test-write foundation without waiting for credentials.
-2. Complete the broader automated simulation and failure-injection acceptance suite for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
+1. Completed: build the minimal operator UI over the implemented account, supervision, simulation, controls, cumulative-sizing, lifecycle, fenced recovery/reconciliation, latency, and Test-write foundation without waiting for credentials.
+2. Next: complete the broader automated simulation and failure-injection acceptance suite for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
 3. Obtain the five exact AMP/Rithmic credential bundles and confirm each account's API/session permissions and authorized operators.
 4. Insert credentials only through secret management and complete the existing read-only Rithmic Test runbook for every independent connection.
 5. Run the complete write-path scenario suite in Rithmic Test and verify actual lifecycle semantics, equity/margin facts, reconciliation, and latency.
