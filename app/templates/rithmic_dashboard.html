@@ -10,8 +10,8 @@
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
     <script>
       (() => {
-        const stored = localStorage.getItem('mooney-v2-dashboard-theme');
-        document.documentElement.dataset.theme = stored || 'dark';
+        const stored = localStorage.getItem('mooney-command-center-theme-v1');
+        document.documentElement.dataset.theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
       })();
     </script>
     <style>
@@ -1047,15 +1047,37 @@
       }
       themeToggle.addEventListener('click', () => {
         document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('mooney-v2-dashboard-theme', document.documentElement.dataset.theme);
+        localStorage.setItem('mooney-command-center-theme-v1', document.documentElement.dataset.theme);
         syncThemeButton();
       });
+
+      const technicalDrawers = [...document.querySelectorAll('.technical-stack > details')];
+      function drawerFromHash() {
+        const targetId = window.location.hash.slice(1);
+        const target = targetId ? document.getElementById(targetId) : null;
+        return technicalDrawers.includes(target) ? target : null;
+      }
+      function openTechnicalDrawer(target) {
+        technicalDrawers.forEach((drawer) => { drawer.open = drawer === target; });
+      }
+      technicalDrawers.forEach((drawer) => drawer.addEventListener('toggle', () => {
+        if (!drawer.open) return;
+        technicalDrawers.forEach((other) => {
+          if (other !== drawer) other.open = false;
+        });
+      }));
+      openTechnicalDrawer(drawerFromHash());
+
       const navLinks = [...document.querySelectorAll('.sidebar a[href^="#"]')];
       navLinks.forEach((link) => link.addEventListener('click', () => {
         navLinks.forEach((item) => item.classList.toggle('active', item === link));
         const target = document.querySelector(link.getAttribute('href'));
-        if (target?.tagName === 'DETAILS') target.open = true;
+        if (technicalDrawers.includes(target)) openTechnicalDrawer(target);
       }));
+      window.addEventListener('hashchange', () => {
+        const target = drawerFromHash();
+        if (target) openTechnicalDrawer(target);
+      });
       navLinks[0]?.classList.add('active');
       const observedSections = navLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
       if ('IntersectionObserver' in window) {

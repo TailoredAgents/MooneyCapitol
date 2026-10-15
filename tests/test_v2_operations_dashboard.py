@@ -71,6 +71,10 @@ def test_primary_dashboard_is_rithmic_operator_console() -> None:
     assert 'class="follower-control-grid"' in html
     assert 'class="technical-stack"' in html
     assert '<details class="data-drawer" id="connectivity">' in html
+    assert "mooney-command-center-theme-v1" in html
+    assert "mooney-v2-dashboard-theme" not in html
+    assert "openTechnicalDrawer(drawerFromHash())" in html
+    assert "if (other !== drawer) other.open = false" in html
     assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
     assert "@media (prefers-reduced-motion: reduce)" in css
     assert "Secure credentials and the capture endpoint have not been attached." in html
