@@ -48,6 +48,9 @@ Implemented now:
 - a durable fail-closed copy profile with four follower state machines, global pause, optimistic revisions, CSRF-protected control APIs, restart directives, and append-only audit history;
 - cumulative total-position sizing across adds, reductions, closes, and reversals, with exact-contract pinning and per-follower one-MNQ funding-adequacy reports;
 - durable per-master-event/per-follower lifecycle intents, deterministic command identities, monotonic partial-fill/terminal transitions, and close-before-open reversal ordering;
+- an atomically enqueued durable command outbox, database-backed monotonic execution fence, abandoned-claim recovery, and append-only delivery evidence;
+- broker-authoritative follower reconciliation contracts for positions, working orders, executions, and protection, with automatic follower locking on unexplained divergence;
+- persisted event/decision/submission/response/acknowledgement/fill timing and aggregate or per-follower p50/p95/p99 reporting;
 - a separate official-schema R|Protocol write boundary for market, limit, stop, bracket/OCO, modify, cancel, and position-exit requests, limited in code to `OFF`, `SHADOW`, and explicitly authorized Test use;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
 - a read-only operations dashboard that shows capture and Shadow readiness;
@@ -59,8 +62,8 @@ Not implemented yet:
 - the live Rithmic connection driver and runtime-health attachment for the five supervised account connections;
 - live master-event ingestion and runtime attachment of lifecycle orchestration;
 - configured external write bindings/transport and credential-backed Rithmic Test submission;
-- write-path crash recovery, production fencing, and execution reconciliation;
-- measured copy latency;
+- runtime attachment of the implemented recovery/reconciliation worker to real Rithmic snapshots and Test writes;
+- real gateway/region copy-latency measurements;
 - the functional copier control UI; or
 - Rithmic Test, conformance, or live validation.
 
@@ -175,11 +178,11 @@ Status: **complete**
 - Build the write adapter from the official external Rithmic materials behind `OFF`, `SHADOW`, and Test-only gates.
 - Preserve a compile/runtime boundary that makes live activation impossible until later authorization gates exist.
 
-Implementation note: migration `0013_v2_copy_lifecycle` stores revisioned intents, ordered commands, all broker IDs returned for multi-order requests, and append-only lifecycle events. Deterministic local IDs prevent command recreation on duplicate source events; Rithmic `user_tag`/`user_msg` remain correlation evidence only. A separate external-binding generator covers only the official write request/response schemas. The adapter contains no live mode, Test construction requires an explicit authorization gate plus injected codec/transport, and the production execution entry point remains submission-disabled. Crash recovery, broker-authoritative reconciliation, durable outbox semantics, and runtime fencing intentionally remain Phase 6.
+Implementation note: migration `0013_v2_copy_lifecycle` stores revisioned intents, ordered commands, all broker IDs returned for multi-order requests, and append-only lifecycle events. Deterministic local IDs prevent command recreation on duplicate source events; Rithmic `user_tag`/`user_msg` remain correlation evidence only. A separate external-binding generator covers only the official write request/response schemas. The adapter contains no live mode, Test construction requires an explicit authorization gate plus injected codec/transport, and the production execution entry point remains submission-disabled.
 
 ### Phase 6 — Reconciliation, recovery, fencing, and latency
 
-Status: **planned**
+Status: **complete in credential-free code and deterministic simulation; real gateway/region measurement remains a Phase 9 validation**
 
 - Treat broker state as authoritative after reconnect or uncertainty.
 - Reconcile positions, working orders, protection, executions, and copy-intent revisions.
@@ -188,6 +191,8 @@ Status: **planned**
 - Keep persistent event-driven connections and four-way concurrent follower dispatch off the dashboard/HTTP path.
 - Capture event, decision, submission, acknowledgement, and fill timestamps and report p50/p95/p99 latency.
 - Benchmark deployment regions and keep the execution service and durable store appropriately close to the selected Rithmic gateway.
+
+Implementation note: migration `0014_v2_execution_recovery` atomically pairs every new lifecycle command with a durable outbox record and timing projection, backfills pre-existing commands fail-closed, and protects delivery/reconciliation evidence with append-only PostgreSQL triggers. Claims require the current database-backed lease owner and monotonically increasing fence. A stale owner cannot complete a write after takeover; abandoned or transport-ambiguous commands become `UNCERTAIN` and cannot be resent. The submission-start milestone is committed with the fenced claim immediately before the adapter call, avoiding a second pre-send database round trip; actual socket/write timing remains a Rithmic Test driver measurement. A complete, fresh broker snapshot must explain the order, execution, position, and protective-stop state. Explained broker progress is adopted into the lifecycle; missing, unknown, or conflicting state marks the command divergent and locks only that follower. `python -m app.tools.v2_copy_latency_report` reports persisted p50/p95/p99 milestones without exposing broker account identifiers. Actual gateway/region comparison requires the future five credential bundles and Rithmic Test connectivity and is therefore an external Phase 9 measurement, not a simulated claim.
 
 ### Phase 7 — Minimal functional operator UI
 
@@ -287,8 +292,8 @@ Also finalize owner-approved per-trade risk, concurrent-risk, daily realized-los
 
 ## Progress checkpoint
 
-Current checkpoint: Phase 5 durable lifecycle copier and isolated Rithmic Test-write boundary complete. Cumulative sizing facts flow into committed per-follower intents before dispatch. Deterministic ordered commands and append-only transition facts cover market/limit/stop orders, bracket/OCO, replace/cancel, partial fills, scales, exits, rejects, duplicates, follower-isolated failures, and close-before-open reversals. The separate official-schema adapter has no live mode and is not attached to the production execution runtime.
+Current checkpoint: Phase 6 credential-free recovery foundation complete. Cumulative sizing facts flow into committed per-follower intents and atomically enqueued commands before dispatch. Database-time leases and monotonically increasing fences prevent stale owners from completing outbox claims. Ambiguous writes cannot be retried until a complete, fresh broker snapshot explains them; explained progress is adopted and unexplained order, execution, position, or protection state locks that follower. Lifecycle timing supports aggregate and per-follower p50/p95/p99 reporting. The separate official-schema adapter still has no live mode and is not attached to the production execution runtime.
 
-Next implementation task: Phase 6, broker-authoritative reconciliation, restart/crash recovery, durable outbox and active-instance fencing, plus copy-latency telemetry.
+Next implementation task: Phase 7, the minimal functional operator UI over the implemented control, lifecycle, recovery, reconciliation, and latency facts.
 
 Do not skip directly to UI polish, learning, AI agents, Rithmic Test, or live activation while an earlier execution milestone remains incomplete.

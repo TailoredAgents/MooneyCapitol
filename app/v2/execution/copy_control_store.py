@@ -94,6 +94,14 @@ class CopyControlStore(Protocol):
         limit: int,
     ) -> tuple[CopyControlAuditSnapshot, ...]: ...
 
+    def lock_for_reconciliation(
+        self,
+        *,
+        profile_id: str,
+        connection_id: str,
+        request_id: str,
+    ) -> CopyProfileSnapshot: ...
+
 
 class SqlAlchemyCopyControlStore:
     def __init__(self, session: Session) -> None:
@@ -161,6 +169,46 @@ class SqlAlchemyCopyControlStore:
             auth_method="system",
             request_id=request_id,
             reason_code=reason_code,
+        )
+
+    def lock_for_reconciliation(
+        self,
+        *,
+        profile_id: str,
+        connection_id: str,
+        request_id: str,
+    ) -> CopyProfileSnapshot:
+        """System-only lock used when broker state cannot be explained safely."""
+
+        for _ in range(3):
+            current = self.get_profile(profile_id)
+            follower = next(
+                (
+                    item
+                    for item in current.followers
+                    if item.connection_id == connection_id
+                ),
+                None,
+            )
+            if follower is None:
+                raise FollowerControlNotFound("follower control does not exist")
+            if follower.state == FollowerControlState.LOCKED:
+                return current
+            try:
+                return self._transition_follower(
+                    profile_id=profile_id,
+                    connection_id=connection_id,
+                    action=FollowerControlAction.LOCK,
+                    expected_revision=follower.revision,
+                    actor="execution-system",
+                    auth_method="system",
+                    request_id=request_id,
+                    reason_code="reconciliation_issue",
+                )
+            except ControlRevisionConflict:
+                continue
+        raise CopyControlStoreError(
+            "follower control changed repeatedly during reconciliation lock"
         )
 
     def _transition_follower(

@@ -46,7 +46,7 @@ python -m app.tools.generate_rithmic_write_bindings `
   --output "C:\private\mooney-rithmic\generated-write"
 ```
 
-That output is not loaded by the capture process and must never be placed in its read-only binding directory. The writer is not attached to a deployed runtime, accepts no live mode, and requires explicit Rithmic Test authorization plus an injected Test transport. Generating these bindings does not authorize or activate order submission. A separate write-path activation runbook will be required after Phase 6 recovery/fencing and before credentials are exercised.
+That output is not loaded by the capture process and must never be placed in its read-only binding directory. The writer is not attached to a deployed runtime, accepts no live mode, and requires explicit Rithmic Test authorization plus an injected Test transport. Generating these bindings does not authorize or activate order submission. Phase 6 recovery/fencing is now implemented and simulated, but a separate write-path activation runbook is still required before credentials are exercised.
 
 ## Render deployment
 

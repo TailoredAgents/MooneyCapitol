@@ -1,6 +1,6 @@
 # MooneyCapitol V2 futures architecture
 
-Status: production execution submission disabled; Rithmic read-only capture, durable copy lifecycle, isolated Test-write boundary, and `conner_nq_v1` observation foundations implemented
+Status: production execution submission disabled; Rithmic read-only capture, durable/fenced copy lifecycle recovery, isolated Test-write boundary, and `conner_nq_v1` observation foundations implemented
 Canonical as of: 2026-10-15
 
 ## Purpose and boundary
@@ -37,7 +37,7 @@ Hard constraints include:
 - model output can never weaken a hard risk limit;
 - lifecycle revisions are monotonic and terminal order states cannot roll backward.
 
-The standalone execution process remains fail-closed: immutable configuration rejects submission enablement, readiness remains false, and the execution-side placeholder's submission methods raise. The pure Shadow planner calculates one-master/four-follower NQ/MNQ targets from the master's actual stop-defined risk fraction and point-exposure fraction. The durable lifecycle layer carries a cumulative result into one committed intent per source event and follower, compiles deterministic ordered commands, protects against duplicate/stale revisions, records monotonic partial-fill/terminal transitions, and isolates concurrent follower dispatch. Reversals require the close command to fill before the open command becomes dispatchable.
+The standalone execution process remains fail-closed: immutable configuration rejects submission enablement, readiness remains false, and the execution-side placeholder's submission methods raise. The pure Shadow planner calculates one-master/four-follower NQ/MNQ targets from the master's actual stop-defined risk fraction and point-exposure fraction. The durable lifecycle layer carries a cumulative result into one committed intent and atomically enqueued command per source event and follower, protects against duplicate/stale revisions, records monotonic partial-fill/terminal transitions, and isolates concurrent follower dispatch. Reversals require the close command to fill before the open command becomes dispatchable. Outbox claims require the current database-time lease owner and monotonically increasing fence. A stale owner cannot complete a claim after takeover, and an abandoned or transport-ambiguous command becomes non-retryable until a fresh, complete broker snapshot resolves it. Explained broker progress is adopted; missing/unknown/conflicting order, execution, position, or protection state records divergence and locks only that follower. Timing projections retain event, decision, submission, response, acknowledgement, fill, and completion milestones for p50/p95/p99 reporting.
 
 The separate `rithmic_write` boundary maps commands to the official R|Protocol 0.90 new/modify/cancel/OCO/bracket/exit schemas. Its mode type contains only `OFF`, `SHADOW`, and `TEST`; Test construction additionally requires an explicit authorization boolean, checksum-pinned external write bindings, an injected transport, and a Rithmic Test environment. It is not attached to the standalone execution process. The structurally read-only observer remains unchanged, and no work in `conner_nq_v1` enters this dependency path. See [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md).
 
@@ -165,9 +165,11 @@ Migration `0012_v2_copy_control` adds the fail-closed fixed copy profile, four f
 
 Migration `0013_v2_copy_lifecycle` adds revisioned per-follower intents, ordered commands with deterministic local idempotency keys and broker-order correlation, plus append-only lifecycle events. PostgreSQL rejects updates/deletes of lifecycle event history; application transitions prevent terminal rollback and cumulative-fill regression.
 
-All five V2 migrations are additive. V1 records are not altered or converted. The `0010` constraints encode cutoff ordering, point-in-time availability, explicit missingness, unknown/unlabeled defaults, evidenced positive/pass labels, task isolation, Shadow-only outputs, lead-time rules, and walk-forward chronology.
+Migration `0014_v2_execution_recovery` adds the command outbox, append-only delivery events and reconciliation findings, broker snapshot reconciliation runs, and lifecycle timing projections. It backfills pre-existing dispatching commands as uncertain so deployment cannot silently retry them.
 
-PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and produced zero V2 metadata drift through that revision. Migrations `0011` through `0013` have automated schema/model validation; their live PostgreSQL upgrade remains part of deployment validation.
+All six V2 migrations are additive. V1 records are not altered or converted. The `0010` constraints encode cutoff ordering, point-in-time availability, explicit missingness, unknown/unlabeled defaults, evidenced positive/pass labels, task isolation, Shadow-only outputs, lead-time rules, and walk-forward chronology.
+
+PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and produced zero V2 metadata drift through that revision. Migrations `0011` through `0014` have automated schema/model validation; their live PostgreSQL upgrade remains part of deployment validation.
 
 The Rithmic capture process has a durable journal/projection writer. The schema does not yet provide a durable high-volume strategy market-data ingestion process or production Scout repository/orchestrator; those remain next-phase components.
 
@@ -194,10 +196,12 @@ The repository still has no:
 - model-controlled execution or follower sizing;
 - live Massive stream or permanent market-data-provider lock-in;
 - automatic contract rolling;
-- durable distributed lease, journal worker, or high-volume market-data capture service.
+- runtime attachment of the implemented outbox/fence/reconciler to real Rithmic Test snapshots and writes;
+- real gateway/region latency measurement or automatic protection repair; and
+- a durable high-volume strategy market-data capture service.
 
 ## Exact next step
 
-Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Typed account configuration, deterministic multi-account supervision/simulation, durable controls, cumulative-position parity sizing, funding-adequacy reporting, lifecycle orchestration, and the separate Test-gated write boundary are complete. Next build broker-authoritative reconciliation, crash recovery/outbox/fencing, and latency telemetry, then the minimal operational UI and complete simulated acceptance testing.
+Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Typed account configuration, deterministic multi-account supervision/simulation, durable controls, cumulative-position parity sizing, funding-adequacy reporting, lifecycle orchestration, fenced broker-authoritative recovery, latency telemetry, and the separate Test-gated write boundary are complete. Next build the minimal operational UI, then complete simulated acceptance testing.
 
 When credentials arrive, privately generate the external write bindings, attach an approved Test transport, validate all independent connections against Rithmic Test, complete required conformance and AMP authorization, and use a supervised one-follower minimum-size live canary only after later live gates exist. The dashboard information-architecture/aesthetic pass follows the operational copier. Learning and Conner-focused read-only agents follow later; trustworthy execution and master-lifecycle facts must be retained from day one. Production readiness has not been declared, the current runtime cannot activate writes, and the isolated adapter has no live mode.

@@ -11,7 +11,7 @@ from app.v2.execution.connection_supervisor import (
     SimulatedConnectionFixture,
 )
 from app.v2.execution.journal import JournalQueue
-from app.v2.execution.lease import InMemoryFencedLease, LeaseToken
+from app.v2.execution.lease import FencedLease, InMemoryFencedLease, LeaseToken
 
 
 @dataclass(frozen=True)
@@ -36,7 +36,7 @@ class FuturesExecutionService:
         config: ExecutionConfigSnapshot,
         *,
         adapter: RithmicAdapterPlaceholder | None = None,
-        lease: InMemoryFencedLease | None = None,
+        lease: FencedLease | None = None,
         journal: JournalQueue | None = None,
         connection_supervisor: IndependentAccountConnectionSupervisor | None = None,
         simulation_fixture: SimulatedConnectionFixture | None = None,
@@ -85,11 +85,12 @@ class FuturesExecutionService:
             if self.connection_supervisor is not None
             else None
         )
-        blockers = (
+        blockers = [
             "broker submission is compile-time/config disabled",
             "official Rithmic transport is unresolved",
-            "durable shared lease is not configured",
-        )
+        ]
+        if not self.lease.durable:
+            blockers.append("durable shared lease is not configured")
         return ServiceHealth(
             lifecycle=self._lifecycle,
             live=self._lifecycle not in {"created", "stopped"},
@@ -114,5 +115,5 @@ class FuturesExecutionService:
             ready_follower_connection_count=(
                 supervision.ready_follower_count if supervision is not None else 0
             ),
-            blockers=blockers,
+            blockers=tuple(blockers),
         )

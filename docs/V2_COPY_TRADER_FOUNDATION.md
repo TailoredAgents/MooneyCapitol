@@ -1,6 +1,6 @@
 # V2 copy trader foundation
 
-Status: five-account configuration/simulation, durable controls, cumulative sizing, lifecycle orchestration, and an isolated Test-only write boundary implemented; live driver/runtime attachment and production submission not implemented
+Status: five-account configuration/simulation, durable controls, cumulative sizing, lifecycle orchestration, fenced recovery/reconciliation, latency telemetry, and an isolated Test-only write boundary implemented; live driver/runtime attachment and production submission not implemented
 
 Updated: 2026-10-15
 
@@ -8,7 +8,7 @@ Updated: 2026-10-15
 
 The V2 copy trader is intended to observe one Mooney Capital master futures account and reproduce eligible master trades across exactly four operationally independent follower accounts. All five are separate AMP accounts. The application does not assume AMP subaccounts, one legal entity, one portal, one Rithmic user, or shared credentials. Every account receives its own exact broker selector and independently configurable credential/connection bundle. The initial product set is NQ and MNQ. Account ownership does not replace AMP/Rithmic permissions, credentials, session limits, or conformance requirements.
 
-The implemented sizing phase is deterministic and Shadow-only. It calculates each follower's desired total, evaluated whole-contract target, achievable total, required signed delta, and the reason it would be allowed or blocked. A separate lifecycle layer carries those immutable facts into committed per-follower intents and deterministic ordered commands before any adapter call. The standalone execution process still cannot submit, modify, cancel, or flatten a broker order: requesting `TEST` or `LIVE` through its current configuration makes the effective mode `OFF`. An isolated Rithmic writer exists only as an unattached `OFF`/`SHADOW`/explicit-Test boundary; its enum has no live value.
+The implemented sizing phase is deterministic and Shadow-only. It calculates each follower's desired total, evaluated whole-contract target, achievable total, required signed delta, and the reason it would be allowed or blocked. A separate lifecycle layer carries those immutable facts into committed per-follower intents, deterministic ordered commands, and durable outbox records before any adapter call. Every dispatch claim requires the current database-backed owner/fence. A transport-ambiguous or abandoned claim is never resent blindly: a fresh, complete broker snapshot must explain orders, executions, positions, and protection first, otherwise that follower is locked. The standalone execution process still cannot submit, modify, cancel, or flatten a broker order: requesting `TEST` or `LIVE` through its current configuration makes the effective mode `OFF`. An isolated Rithmic writer exists only as an unattached `OFF`/`SHADOW`/explicit-Test boundary; its enum has no live value.
 
 The forward implementation order is defined in [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md). The immediate target is a credential-ready copier built and simulated without waiting for the five credential bundles. Broker validation and live readiness remain later gates.
 
@@ -72,10 +72,13 @@ The master trade's actual risk fraction must itself be within the follower polic
 - `app/v2/execution/copier_config.py`: fail-closed Shadow/risk configuration composed with the independent account topology.
 - `app/v2/execution/copy_control.py` and `copy_control_store.py`: fixed copy-profile membership, explicit follower transitions, restart directives, optimistic revisions, row-locked serialization, and controlled reason codes.
 - `app/v2/execution/lifecycle.py`, `lifecycle_bridge.py`, `lifecycle_store.py`, and `lifecycle_service.py`: deterministic master/follower correlation, committed revisioned intents, ordered commands, duplicate/stale-event protection, monotonic receipts, follower-isolated concurrent dispatch, and close-before-open reversal sequencing.
+- `app/v2/execution/lease.py`, `recovery.py`, and `reconciliation.py`: database-time durable lease/fencing, transactional outbox claims, no-blind-retry crash recovery, fresh/complete broker snapshot comparison, explained-state adoption, follower-isolated divergence locking, and p50/p95/p99 lifecycle telemetry.
 - `app/v2/brokers/rithmic_write.py`: official R|Protocol 0.90 request mapping for market/limit/stop, bracket/OCO, modify/cancel, and position exit, with no live mode and explicit Test authorization, external-binding, and injected-transport gates.
 - `app/tools/generate_rithmic_write_bindings.py`: separate external-only generation for the official write request/response schemas; licensed schemas and derivatives remain outside Git.
 - migration `0012_v2_copy_control`: globally paused/follower-disabled defaults plus database-enforced append-only audit history.
 - migration `0013_v2_copy_lifecycle`: per-follower intent, command, broker-correlation, and append-only lifecycle-event persistence.
+- migration `0014_v2_execution_recovery`: durable command outbox, append-only delivery/reconciliation evidence, database-fenced recovery state, and lifecycle timing projections.
+- `python -m app.tools.v2_copy_latency_report`: redacted aggregate or per-follower persisted latency report.
 - `GET /v2/copier/status`: authenticated, redacted readiness and blocker status.
 - `POST /v2/copier/preview`: authenticated, non-persisting Shadow calculation for supplied hypothetical state.
 - `POST /v2/copier/cumulative-preview`: authenticated, non-persisting total-position/delta and funding-adequacy calculation for supplied authoritative state.
@@ -126,18 +129,18 @@ The repository does not yet contain:
 - live master-order detection and attachment to the implemented lifecycle orchestration;
 - the live Rithmic driver that feeds the implemented five-account supervisor and publishes its runtime health;
 - configured credential-backed Rithmic Test order submission or production/live order authority;
-- a durable outbox, production active-instance lease/fence, or crash recovery for writes;
-- broker-authoritative reconnect reconciliation, protection repair, or disconnect recovery;
+- runtime feeding of real Rithmic reconnect snapshots into the implemented broker-authoritative recovery service;
+- automatic protection repair after reconciliation (unexplained missing protection currently locks instead of guessing);
 - actual-fill rebalancing or execution-quality reconciliation;
-- measured end-to-end copy latency; or
+- real Rithmic Test/gateway end-to-end latency and deployment-region measurements; or
 - completed Rithmic Test write conformance and production approval.
 
 Low latency must come from a persistent event-driven Rithmic connection and immediate in-process planning, not polling the dashboard. Safety and lifecycle correctness remain release gates even when optimizing speed.
 
 ## Delivery and activation sequence
 
-1. Build recovery/reconciliation/fencing, latency telemetry, and the minimal operator UI on the implemented account, supervision, simulation, controls, cumulative-sizing, lifecycle, and Test-write foundation without waiting for credentials.
-2. Complete automated simulation and failure injection for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
+1. Build the minimal operator UI over the implemented account, supervision, simulation, controls, cumulative-sizing, lifecycle, fenced recovery/reconciliation, latency, and Test-write foundation without waiting for credentials.
+2. Complete the broader automated simulation and failure-injection acceptance suite for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
 3. Obtain the five exact AMP/Rithmic credential bundles and confirm each account's API/session permissions and authorized operators.
 4. Insert credentials only through secret management and complete the existing read-only Rithmic Test runbook for every independent connection.
 5. Run the complete write-path scenario suite in Rithmic Test and verify actual lifecycle semantics, equity/margin facts, reconciliation, and latency.

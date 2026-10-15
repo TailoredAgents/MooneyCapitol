@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Mapping, Protocol, Sequence
 
 from app.v2.execution.lifecycle import (
@@ -12,6 +12,7 @@ from app.v2.execution.lifecycle import (
     ReceiptKind,
 )
 from app.v2.execution.lifecycle_store import LifecycleStore, StoredIntent
+from app.v2.execution.lease import LeaseToken
 
 
 class LifecycleAdapter(Protocol):
@@ -42,6 +43,9 @@ class DurableLifecycleCopier:
         self,
         store: LifecycleStore,
         adapters: Mapping[str, LifecycleAdapter],
+        *,
+        lease_token: LeaseToken | None = None,
+        claim_ttl: timedelta = timedelta(seconds=15),
     ) -> None:
         self.store = store
         self.adapters = dict(adapters)
@@ -52,7 +56,14 @@ class DurableLifecycleCopier:
         ]
         if mismatched:
             raise ValueError("lifecycle adapter key does not match its follower connection")
+        if claim_ttl <= timedelta(0):
+            raise ValueError("claim TTL must be positive")
+        self.lease_token = lease_token
+        self.claim_ttl = claim_ttl
         self._store_lock = asyncio.Lock()
+
+    def update_lease_token(self, token: LeaseToken | None) -> None:
+        self.lease_token = token
 
     def persist_plans(
         self,
@@ -110,13 +121,27 @@ class DurableLifecycleCopier:
                     command_id=pending.command.command_id,
                     error_type="adapter_unavailable",
                 )
-            marked = self.store.mark_dispatching(pending.command.command_id)
-            dispatching = next(
-                item
-                for item in marked.commands
-                if item.command.command_id == pending.command.command_id
+            token = self.lease_token
+            if token is None:
+                return FollowerDispatchOutcome(
+                    follower_connection_id=intent.follower_connection_id,
+                    intent_id=intent.intent_id,
+                    transmitted=False,
+                    command_id=pending.command.command_id,
+                    error_type="execution_fence_unavailable",
+                )
+            dispatching = self.store.claim_dispatch(
+                intent.intent_id,
+                token=token,
+                claim_ttl=self.claim_ttl,
             )
-
+            if dispatching is None:
+                return FollowerDispatchOutcome(
+                    follower_connection_id=intent.follower_connection_id,
+                    intent_id=intent.intent_id,
+                    transmitted=False,
+                    command_id=None,
+                )
         try:
             result = await adapter.dispatch(dispatching.command)
             transmitted = bool(result.transmitted)
@@ -124,24 +149,36 @@ class DurableLifecycleCopier:
             if not transmitted:
                 raise RuntimeError("execution dispatcher requires a transmitting Test adapter")
         except Exception as exc:
-            receipt_kind = (
-                ReceiptKind.REJECTED
-                if getattr(exc, "broker_rejection", False)
-                else ReceiptKind.TRANSPORT_FAILURE
-            )
-            receipt = LifecycleReceipt(
-                receipt_id=_failure_receipt_id(
-                    dispatching.command.command_id,
-                    dispatching.attempt_count,
-                ),
-                command_id=dispatching.command.command_id,
-                kind=receipt_kind,
-                occurred_at=datetime.now(timezone.utc),
-                cumulative_filled_quantity=dispatching.cumulative_filled_quantity,
-                rejection_code=type(exc).__name__,
-            )
             async with self._store_lock:
-                self.store.record_receipt(receipt)
+                if getattr(exc, "broker_rejection", False) or getattr(
+                    exc, "outcome_definitive", False
+                ):
+                    receipt_kind = (
+                        ReceiptKind.REJECTED
+                        if getattr(exc, "broker_rejection", False)
+                        else ReceiptKind.TRANSPORT_FAILURE
+                    )
+                    self.store.record_receipt(
+                        LifecycleReceipt(
+                            receipt_id=_failure_receipt_id(
+                                dispatching.command.command_id,
+                                dispatching.attempt_count,
+                            ),
+                            command_id=dispatching.command.command_id,
+                            kind=receipt_kind,
+                            occurred_at=datetime.now(timezone.utc),
+                            cumulative_filled_quantity=(
+                                dispatching.cumulative_filled_quantity
+                            ),
+                            rejection_code=type(exc).__name__,
+                        )
+                    )
+                else:
+                    self.store.mark_uncertain(
+                        dispatching.command.command_id,
+                        token=token,
+                        error_code=type(exc).__name__,
+                    )
             return FollowerDispatchOutcome(
                 follower_connection_id=intent.follower_connection_id,
                 intent_id=intent.intent_id,
@@ -153,6 +190,7 @@ class DurableLifecycleCopier:
         async with self._store_lock:
             self.store.mark_dispatched(
                 dispatching.command.command_id,
+                token=token,
                 broker_order_ids=broker_order_ids,
             )
         return FollowerDispatchOutcome(

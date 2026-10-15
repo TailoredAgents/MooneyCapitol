@@ -17,10 +17,14 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.models import Base
 from app.v2.db_models import (
+    V2CopyDeliveryEvent,
+    V2CopyLatency,
     V2CopyLifecycleCommand,
     V2CopyLifecycleEvent,
     V2CopyLifecycleIntent,
+    V2CopyOutbox,
     V2CopyProfile,
+    V2ExecutionLease,
 )
 from app.v2.domain.models import Side
 from app.v2.execution.lifecycle import (
@@ -43,6 +47,8 @@ from app.v2.execution.lifecycle_store import (
     SqlAlchemyLifecycleStore,
     StaleMasterEvent,
 )
+from app.v2.execution.lease import SqlAlchemyFencedLease
+from app.v2.execution.recovery import OutboxStatus
 
 
 NOW = datetime(2026, 10, 15, 14, 0, tzinfo=timezone.utc)
@@ -51,6 +57,10 @@ TABLES = (
     V2CopyLifecycleIntent.__table__,
     V2CopyLifecycleCommand.__table__,
     V2CopyLifecycleEvent.__table__,
+    V2CopyOutbox.__table__,
+    V2CopyDeliveryEvent.__table__,
+    V2CopyLatency.__table__,
+    V2ExecutionLease.__table__,
 )
 
 
@@ -76,6 +86,16 @@ def _session() -> Session:
     )
     session.commit()
     return session
+
+
+def _lease(session: Session):
+    token = SqlAlchemyFencedLease(session).acquire(
+        "v2-copy-execution",
+        "test-owner",
+        timedelta(seconds=30),
+    )
+    assert token is not None
+    return token
 
 
 def _event(
@@ -335,8 +355,18 @@ def test_partial_fill_fill_and_duplicate_receipt_are_monotonic() -> None:
         store = SqlAlchemyLifecycleStore(session)
         intent = store.persist_intent(_plan(target=2))
         command_id = intent.commands[0].command.command_id
-        store.mark_dispatching(command_id)
-        store.mark_dispatched(command_id, broker_order_ids=("basket-1",))
+        token = _lease(session)
+        claimed = store.claim_dispatch(
+            intent.intent_id,
+            token=token,
+            claim_ttl=timedelta(seconds=15),
+        )
+        assert claimed is not None
+        store.mark_dispatched(
+            command_id,
+            token=token,
+            broker_order_ids=("basket-1",),
+        )
         partial = LifecycleReceipt(
             receipt_id="receipt-partial-1",
             command_id=command_id,
@@ -398,9 +428,16 @@ def test_reversal_open_is_not_dispatchable_until_close_fill() -> None:
         intent = store.persist_intent(_plan(current=2, target=-1))
         close, opening = intent.commands
         assert intent.next_dispatchable == close
-        store.mark_dispatching(close.command.command_id)
+        token = _lease(session)
+        claimed = store.claim_dispatch(
+            intent.intent_id,
+            token=token,
+            claim_ttl=timedelta(seconds=15),
+        )
+        assert claimed is not None
         store.mark_dispatched(
             close.command.command_id,
+            token=token,
             broker_order_ids=("exit-position",),
         )
         assert store.get_intent(intent.intent_id).next_dispatchable is None
@@ -445,6 +482,7 @@ def test_parallel_dispatch_isolates_one_follower_failure() -> None:
         copier = DurableLifecycleCopier(
             store,
             {"follower-1": first, "follower-2": second},
+            lease_token=_lease(session),
         )
         event = _event("shared-master-event")
         outcomes = asyncio.run(
@@ -460,7 +498,9 @@ def test_parallel_dispatch_isolates_one_follower_failure() -> None:
         assert store.get_intent(outcomes[0].intent_id).status == (
             LifecycleStatus.DISPATCHED
         )
-        assert store.get_intent(outcomes[1].intent_id).status == LifecycleStatus.FAILED
+        failed = store.get_intent(outcomes[1].intent_id)
+        assert failed.status == LifecycleStatus.DISPATCHING
+        assert failed.commands[0].outbox_status == OutboxStatus.UNCERTAIN
         assert len(first.commands) == len(second.commands) == 1
     finally:
         session.close()
@@ -494,7 +534,7 @@ def test_blocked_plan_is_durable_and_never_dispatchable() -> None:
 
 def test_copy_lifecycle_migration_is_single_head_and_event_history_is_append_only() -> None:
     scripts = ScriptDirectory.from_config(Config("alembic.ini"))
-    assert scripts.get_current_head() == "0013_v2_copy_lifecycle"
+    assert scripts.get_current_head() == "0014_v2_execution_recovery"
     source = Path("migrations/versions/0013_v2_copy_lifecycle.py").read_text(
         encoding="utf-8"
     )

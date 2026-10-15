@@ -2038,3 +2038,223 @@ class V2CopyLifecycleEvent(Base):
         Index("ix_v2_copy_event_intent_time", "intent_id", "recorded_at"),
         Index("ix_v2_copy_event_command_time", "command_id", "recorded_at"),
     )
+
+
+class V2CopyOutbox(Base):
+    """Durable, fenced delivery state for one lifecycle command."""
+
+    __tablename__ = "v2_copy_outbox"
+    outbox_id = Column(String(96), primary_key=True)
+    command_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_commands.command_id"),
+        nullable=False,
+        unique=True,
+    )
+    intent_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_intents.intent_id"),
+        nullable=False,
+    )
+    follower_connection_id = Column(String(96), nullable=False)
+    status = Column(String(24), nullable=False)
+    claim_owner_id = Column(String(96), nullable=True)
+    claim_fence = Column(BigInteger, nullable=True)
+    claim_expires_at = Column(DateTime(timezone=True), nullable=True)
+    attempt_count = Column(Integer, nullable=False, default=0)
+    last_error_code = Column(String(128), nullable=True)
+    enqueued_at = Column(DateTime(timezone=True), nullable=False)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    submission_started_at = Column(DateTime(timezone=True), nullable=True)
+    dispatch_response_at = Column(DateTime(timezone=True), nullable=True)
+    confirmed_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PENDING', 'CLAIMED', 'SENT', 'CONFIRMED', "
+            "'UNCERTAIN', 'DIVERGED', 'FAILED')",
+            name="ck_v2_copy_outbox_status",
+        ),
+        CheckConstraint(
+            "follower_connection_id IN "
+            "('follower-1', 'follower-2', 'follower-3', 'follower-4')",
+            name="ck_v2_copy_outbox_follower",
+        ),
+        CheckConstraint(
+            "attempt_count >= 0", name="ck_v2_copy_outbox_attempt_count"
+        ),
+        CheckConstraint(
+            "(claim_owner_id IS NULL AND claim_fence IS NULL "
+            "AND claim_expires_at IS NULL) OR "
+            "(claim_owner_id IS NOT NULL AND claim_fence IS NOT NULL "
+            "AND claim_expires_at IS NOT NULL)",
+            name="ck_v2_copy_outbox_claim_identity",
+        ),
+        Index(
+            "ix_v2_copy_outbox_follower_status",
+            "follower_connection_id",
+            "status",
+            "enqueued_at",
+        ),
+    )
+
+
+class V2CopyDeliveryEvent(Base):
+    """Append-only evidence for durable delivery and recovery transitions."""
+
+    __tablename__ = "v2_copy_delivery_events"
+    delivery_event_id = Column(String(96), primary_key=True)
+    outbox_id = Column(
+        String(96), ForeignKey("v2_copy_outbox.outbox_id"), nullable=False
+    )
+    command_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_commands.command_id"),
+        nullable=False,
+    )
+    event_kind = Column(String(32), nullable=False)
+    previous_status = Column(String(24), nullable=True)
+    resulting_status = Column(String(24), nullable=False)
+    owner_id = Column(String(96), nullable=True)
+    fence = Column(BigInteger, nullable=True)
+    error_code = Column(String(128), nullable=True)
+    occurred_at = Column(DateTime(timezone=True), nullable=False)
+    recorded_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "event_kind IN ('ENQUEUED', 'CLAIMED', 'SUBMISSION_STARTED', "
+            "'SENT', 'CONFIRMED', 'UNCERTAIN', 'DIVERGED', 'FAILED')",
+            name="ck_v2_copy_delivery_event_kind",
+        ),
+        CheckConstraint(
+            "resulting_status IN ('PENDING', 'CLAIMED', 'SENT', 'CONFIRMED', "
+            "'UNCERTAIN', 'DIVERGED', 'FAILED')",
+            name="ck_v2_copy_delivery_event_status",
+        ),
+        CheckConstraint(
+            "fence IS NULL OR fence >= 1", name="ck_v2_copy_delivery_event_fence"
+        ),
+        Index(
+            "ix_v2_copy_delivery_event_outbox_time",
+            "outbox_id",
+            "recorded_at",
+        ),
+    )
+
+
+class V2CopyReconciliationRun(Base):
+    __tablename__ = "v2_copy_reconciliation_runs"
+    reconciliation_run_id = Column(String(96), primary_key=True)
+    profile_id = Column(
+        String(96), ForeignKey("v2_copy_profiles.profile_id"), nullable=False
+    )
+    follower_connection_id = Column(String(96), nullable=False)
+    snapshot_id = Column(String(96), nullable=False, unique=True)
+    connection_generation = Column(String(96), nullable=False)
+    lease_owner_id = Column(String(96), nullable=False)
+    lease_fence = Column(BigInteger, nullable=False)
+    status = Column(String(24), nullable=False)
+    latest_intent_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_intents.intent_id"),
+        nullable=True,
+    )
+    expected_summary_json = Column(Text, nullable=False)
+    actual_summary_json = Column(Text, nullable=False)
+    adopted_receipt_count = Column(Integer, nullable=False, default=0)
+    finding_count = Column(Integer, nullable=False, default=0)
+    snapshot_at = Column(DateTime(timezone=True), nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "follower_connection_id IN "
+            "('follower-1', 'follower-2', 'follower-3', 'follower-4')",
+            name="ck_v2_copy_reconciliation_follower",
+        ),
+        CheckConstraint(
+            "status IN ('CLEAN', 'ADOPTED', 'LOCKED', 'INCOMPLETE')",
+            name="ck_v2_copy_reconciliation_status",
+        ),
+        CheckConstraint(
+            "lease_fence >= 1 AND adopted_receipt_count >= 0 "
+            "AND finding_count >= 0",
+            name="ck_v2_copy_reconciliation_counts",
+        ),
+        Index(
+            "ix_v2_copy_reconciliation_follower_time",
+            "follower_connection_id",
+            "completed_at",
+        ),
+    )
+
+
+class V2CopyReconciliationFinding(Base):
+    """Append-only mismatch evidence; it intentionally carries no secrets."""
+
+    __tablename__ = "v2_copy_reconciliation_findings"
+    finding_id = Column(String(96), primary_key=True)
+    reconciliation_run_id = Column(
+        String(96),
+        ForeignKey("v2_copy_reconciliation_runs.reconciliation_run_id"),
+        nullable=False,
+    )
+    command_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_commands.command_id"),
+        nullable=True,
+    )
+    finding_kind = Column(String(64), nullable=False)
+    severity = Column(String(16), nullable=False)
+    expected_json = Column(Text, nullable=False)
+    actual_json = Column(Text, nullable=False)
+    detected_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "severity IN ('WARNING', 'BLOCKING')",
+            name="ck_v2_copy_reconciliation_finding_severity",
+        ),
+        Index(
+            "ix_v2_copy_reconciliation_finding_run",
+            "reconciliation_run_id",
+            "detected_at",
+        ),
+    )
+
+
+class V2CopyLatency(Base):
+    """One timing projection per command; delivery/lifecycle events remain evidence."""
+
+    __tablename__ = "v2_copy_latency"
+    command_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_commands.command_id"),
+        primary_key=True,
+    )
+    intent_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_intents.intent_id"),
+        nullable=False,
+    )
+    follower_connection_id = Column(String(96), nullable=False)
+    event_occurred_at = Column(DateTime(timezone=True), nullable=False)
+    event_received_at = Column(DateTime(timezone=True), nullable=False)
+    decision_at = Column(DateTime(timezone=True), nullable=False)
+    enqueued_at = Column(DateTime(timezone=True), nullable=False)
+    submission_started_at = Column(DateTime(timezone=True), nullable=True)
+    dispatch_response_at = Column(DateTime(timezone=True), nullable=True)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    first_fill_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "follower_connection_id IN "
+            "('follower-1', 'follower-2', 'follower-3', 'follower-4')",
+            name="ck_v2_copy_latency_follower",
+        ),
+        Index(
+            "ix_v2_copy_latency_follower_event",
+            "follower_connection_id",
+            "event_occurred_at",
+        ),
+    )

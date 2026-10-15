@@ -107,6 +107,10 @@ def next_follower_state(
             FollowerControlAction.CONFIRM_FLAT_AND_DISABLE,
         ): FollowerControlState.DISABLED,
         (
+            FollowerControlState.FLATTEN_REQUESTED,
+            FollowerControlAction.LOCK,
+        ): FollowerControlState.LOCKED,
+        (
             FollowerControlState.LOCKED,
             FollowerControlAction.UNLOCK_TO_PAUSED,
         ): FollowerControlState.PAUSED,
