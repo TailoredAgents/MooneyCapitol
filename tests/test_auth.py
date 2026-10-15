@@ -13,10 +13,12 @@ from app.api.auth import (
     OPERATOR_PASSWORD_ENV,
     OPERATOR_USERNAME_ENV,
     SESSION_COOKIE_NAME,
+    create_csrf_token,
     create_dashboard_session_token,
     login_credentials_match,
     require_dashboard_auth,
     require_operator,
+    require_operator_mutation,
 )
 
 
@@ -30,7 +32,11 @@ def _basic_credentials(user: str, pw: str) -> HTTPBasicCredentials:
     return HTTPBasicCredentials(username=user, password=pw)
 
 
-def _request(cookies: dict[str, str] | None = None) -> Request:
+def _request(
+    cookies: dict[str, str] | None = None,
+    *,
+    method: str = "GET",
+) -> Request:
     headers: list[tuple[bytes, bytes]] = []
     if cookies:
         cookie_value = "; ".join(f"{key}={value}" for key, value in cookies.items())
@@ -38,7 +44,7 @@ def _request(cookies: dict[str, str] | None = None) -> Request:
     return Request(
         {
             "type": "http",
-            "method": "GET",
+            "method": method,
             "path": "/",
             "headers": headers,
             "query_string": b"",
@@ -161,6 +167,45 @@ def test_operator_still_accepts_basic_credentials(monkeypatch):
         credentials=_basic_credentials("op", "secret"),
         x_operator_token=None,
     )
+
+
+def test_dashboard_mutation_requires_session_bound_csrf_token(monkeypatch):
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv(OPERATOR_USERNAME_ENV, "op")
+    monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
+    session_token = create_dashboard_session_token("op", now=int(time.time()))
+    request = _request({SESSION_COOKIE_NAME: session_token}, method="POST")
+
+    with pytest.raises(HTTPException) as missing:
+        require_operator_mutation(
+            request=request,
+            credentials=None,
+            x_operator_token=None,
+            x_csrf_token=None,
+        )
+    assert missing.value.status_code == 403
+
+    identity = require_operator_mutation(
+        request=request,
+        credentials=None,
+        x_operator_token=None,
+        x_csrf_token=create_csrf_token(session_token),
+    )
+    assert identity.actor == "op"
+    assert identity.auth_method == "dashboard_session"
+
+
+def test_api_token_mutation_does_not_require_browser_csrf(monkeypatch):
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv(OPERATOR_API_TOKEN_ENV, "the-token")
+
+    identity = require_operator_mutation(
+        request=_request(method="POST"),
+        credentials=None,
+        x_operator_token="the-token",
+        x_csrf_token=None,
+    )
+    assert identity.auth_method == "api_token"
 
 
 def test_dashboard_route_redirects_to_login_when_configured(monkeypatch):

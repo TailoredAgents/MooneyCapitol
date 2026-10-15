@@ -39,6 +39,7 @@ import json
 import os
 import secrets
 import time
+from dataclasses import dataclass
 from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, Request, Response, status
@@ -50,6 +51,12 @@ OPERATOR_PASSWORD_ENV = "COWORK_OPERATOR_PASSWORD"
 OPERATOR_API_TOKEN_ENV = "COWORK_OPERATOR_API_TOKEN"
 SESSION_COOKIE_NAME = "mooney_operator_session"
 SESSION_MAX_AGE_SECONDS = 12 * 60 * 60
+
+
+@dataclass(frozen=True)
+class OperatorIdentity:
+    actor: str
+    auth_method: str
 
 # auto_error=False so missing credentials hand control back to us; we want to
 # produce a single, consistent 401 instead of FastAPI's default Basic prompt.
@@ -135,6 +142,25 @@ def create_dashboard_session_token(username: str, now: Optional[int] = None) -> 
     if signature is None:
         raise RuntimeError("Operator credentials are not configured")
     return f"{payload}.{signature}"
+
+
+def create_csrf_token(session_token: str) -> str:
+    if not _session_matches(session_token):
+        raise ValueError("valid dashboard session required for CSRF token")
+    signature = _session_signature(f"csrf:{session_token}")
+    if signature is None:
+        raise RuntimeError("Operator credentials are not configured")
+    return signature
+
+
+def _csrf_matches(session_token: str, csrf_token: Optional[str]) -> bool:
+    if not csrf_token:
+        return False
+    try:
+        expected = create_csrf_token(session_token)
+    except (RuntimeError, ValueError):
+        return False
+    return secrets.compare_digest(csrf_token, expected)
 
 
 def _session_matches(token: Optional[str]) -> bool:
@@ -223,7 +249,7 @@ def require_operator(
     request: Request,
     credentials: Optional[HTTPBasicCredentials] = Depends(_basic_scheme),
     x_operator_token: Optional[str] = Header(default=None),
-) -> None:
+) -> OperatorIdentity:
     """Require operator credentials for protected API endpoints.
 
     Accepts EITHER:
@@ -235,14 +261,39 @@ def require_operator(
     method is configured, every request must satisfy one of them.
     """
     if not _any_auth_configured():
-        return
+        return OperatorIdentity("local-operator", "local_unconfigured")
     if _token_matches(x_operator_token):
-        return
-    if _session_matches(request.cookies.get(SESSION_COOKIE_NAME)):
-        return
+        return OperatorIdentity("api-operator", "api_token")
+    session_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if _session_matches(session_token):
+        return OperatorIdentity(_operator_username() or "dashboard-operator", "dashboard_session")
     if _basic_matches(credentials):
-        return
+        return OperatorIdentity(credentials.username, "basic")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Operator authentication required",
     )
+
+
+def require_operator_mutation(
+    request: Request,
+    credentials: Optional[HTTPBasicCredentials] = Depends(_basic_scheme),
+    x_operator_token: Optional[str] = Header(default=None),
+    x_csrf_token: Optional[str] = Header(default=None),
+) -> OperatorIdentity:
+    """Authenticate a mutation and require CSRF proof for cookie sessions."""
+
+    identity = require_operator(
+        request=request,
+        credentials=credentials,
+        x_operator_token=x_operator_token,
+    )
+    if identity.auth_method != "dashboard_session":
+        return identity
+    session_token = request.cookies.get(SESSION_COOKIE_NAME, "")
+    if not _csrf_matches(session_token, x_csrf_token):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Valid X-CSRF-Token required for dashboard mutations",
+        )
+    return identity

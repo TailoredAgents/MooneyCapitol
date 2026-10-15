@@ -1053,6 +1053,158 @@ class V2ScoutEvaluationRun(Base):
     )
 
 
+# The V2 copy-control plane stores only fixed internal connection identifiers.
+# Broker selectors and credentials remain in secret management and never enter
+# these tables.
+
+_COPY_CONTROL_REASON_CODES_SQL = (
+    "'operator_requested', 'simulation', 'scheduled_pause', "
+    "'connection_issue', 'risk_review', 'reconciliation_issue', "
+    "'emergency', 'recovery', 'system_confirmed_flat'"
+)
+
+
+class V2CopyProfile(Base):
+    __tablename__ = "v2_copy_profiles"
+    profile_id = Column(String(96), primary_key=True)
+    name = Column(String(128), nullable=False)
+    master_connection_id = Column(String(96), nullable=False)
+    global_paused = Column(Boolean, nullable=False, default=True)
+    revision = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint("revision >= 1", name="ck_v2_copy_profile_revision"),
+        CheckConstraint(
+            "profile_id = 'mooney-five-account'",
+            name="ck_v2_copy_profile_identity",
+        ),
+        CheckConstraint(
+            "master_connection_id = 'master'",
+            name="ck_v2_copy_profile_master",
+        ),
+    )
+
+
+class V2CopyFollowerControl(Base):
+    __tablename__ = "v2_copy_follower_controls"
+    profile_id = Column(
+        String(96),
+        ForeignKey("v2_copy_profiles.profile_id"),
+        primary_key=True,
+    )
+    connection_id = Column(String(96), primary_key=True)
+    follower_number = Column(Integer, nullable=False)
+    state = Column(String(32), nullable=False)
+    revision = Column(Integer, nullable=False, default=1)
+    reason_code = Column(String(64), nullable=True)
+    flatten_requested_at = Column(DateTime(timezone=True), nullable=True)
+    locked_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "follower_number",
+            name="uq_v2_copy_follower_number",
+        ),
+        CheckConstraint(
+            "follower_number BETWEEN 1 AND 4",
+            name="ck_v2_copy_follower_number",
+        ),
+        CheckConstraint(
+            "(connection_id = 'follower-1' AND follower_number = 1) OR "
+            "(connection_id = 'follower-2' AND follower_number = 2) OR "
+            "(connection_id = 'follower-3' AND follower_number = 3) OR "
+            "(connection_id = 'follower-4' AND follower_number = 4)",
+            name="ck_v2_copy_follower_identity",
+        ),
+        CheckConstraint(
+            "state IN ('DISABLED', 'ENABLED', 'PAUSED', "
+            "'FLATTEN_REQUESTED', 'LOCKED')",
+            name="ck_v2_copy_follower_state",
+        ),
+        CheckConstraint("revision >= 1", name="ck_v2_copy_follower_revision"),
+        CheckConstraint(
+            "reason_code IS NULL OR reason_code IN ("
+            + _COPY_CONTROL_REASON_CODES_SQL
+            + ")",
+            name="ck_v2_copy_follower_reason",
+        ),
+        Index(
+            "ix_v2_copy_follower_profile_state",
+            "profile_id",
+            "state",
+        ),
+    )
+
+
+class V2CopyControlAudit(Base):
+    """Immutable operator/system control history."""
+
+    __tablename__ = "v2_copy_control_audit"
+    audit_id = Column(String(96), primary_key=True)
+    profile_id = Column(
+        String(96),
+        ForeignKey("v2_copy_profiles.profile_id"),
+        nullable=False,
+    )
+    connection_id = Column(String(96), nullable=True)
+    action = Column(String(64), nullable=False)
+    actor = Column(String(128), nullable=False)
+    auth_method = Column(String(32), nullable=False)
+    expected_revision = Column(Integer, nullable=False)
+    previous_revision = Column(Integer, nullable=False)
+    resulting_revision = Column(Integer, nullable=False)
+    previous_state = Column(String(32), nullable=False)
+    resulting_state = Column(String(32), nullable=False)
+    reason_code = Column(String(64), nullable=True)
+    request_id = Column(String(96), nullable=False)
+    occurred_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        UniqueConstraint(
+            "request_id",
+            name="uq_v2_copy_control_audit_request",
+        ),
+        CheckConstraint(
+            "connection_id IS NULL OR connection_id IN "
+            "('follower-1', 'follower-2', 'follower-3', 'follower-4')",
+            name="ck_v2_copy_control_audit_connection",
+        ),
+        CheckConstraint(
+            "action IN ('ENABLE', 'PAUSE', 'REQUEST_FLATTEN_AND_DISABLE', "
+            "'LOCK', 'UNLOCK_TO_PAUSED', 'CONFIRM_FLAT_AND_DISABLE', "
+            "'SET_GLOBAL_PAUSE', 'CLEAR_GLOBAL_PAUSE')",
+            name="ck_v2_copy_control_audit_action",
+        ),
+        CheckConstraint(
+            "auth_method IN ('api_token', 'basic', 'dashboard_session', "
+            "'local_unconfigured', 'system')",
+            name="ck_v2_copy_control_audit_auth",
+        ),
+        CheckConstraint(
+            "reason_code IS NULL OR reason_code IN ("
+            + _COPY_CONTROL_REASON_CODES_SQL
+            + ")",
+            name="ck_v2_copy_control_audit_reason",
+        ),
+        CheckConstraint(
+            "expected_revision >= 1 AND previous_revision >= 1 "
+            "AND resulting_revision > previous_revision",
+            name="ck_v2_copy_control_audit_revisions",
+        ),
+        Index(
+            "ix_v2_copy_control_audit_profile_time",
+            "profile_id",
+            "occurred_at",
+        ),
+        Index(
+            "ix_v2_copy_control_audit_connection_time",
+            "connection_id",
+            "occurred_at",
+        ),
+    )
+
+
 # Rithmic capture persistence is intentionally additive to the broker-neutral V2
 # foundation above.  These tables journal broker observations; none represents a
 # command queue or grants permission to mutate a broker account.

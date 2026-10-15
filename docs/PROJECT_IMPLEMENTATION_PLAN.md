@@ -45,6 +45,7 @@ Implemented now:
 - a pure one-master/four-follower Shadow planner for same-expiry NQ/MNQ stop-risk and point-exposure parity;
 - typed, redacted secret-reference configuration for one master and four independent follower connections;
 - deterministic supervision for five independent discoveries and ten Order/PnL sessions, with generation fencing, heartbeat/staleness tracking, failure isolation, and credential-free simulation;
+- a durable fail-closed copy profile with four follower state machines, global pause, optimistic revisions, CSRF-protected control APIs, restart directives, and append-only audit history;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
 - a read-only operations dashboard that shows capture and Shadow readiness;
 - fail-closed environment and Render defaults; and
@@ -53,7 +54,6 @@ Implemented now:
 Not implemented yet:
 
 - the live Rithmic connection driver and runtime-health attachment for the five supervised account connections;
-- persistent follower enable/pause/flatten controls;
 - live master lifecycle orchestration;
 - durable copy intents and master/follower order correlation;
 - a Rithmic write adapter or any follower broker mutation;
@@ -143,7 +143,7 @@ Status: **complete**
 
 ### Phase 3 — Durable copy control plane
 
-Status: **next**
+Status: **complete**
 
 - Add copy profile, account membership, follower state, control revision, and immutable audit records.
 - Implement authenticated, CSRF-protected, revision-checked control APIs.
@@ -153,7 +153,7 @@ Status: **next**
 
 ### Phase 4 — Production sizing and funding adequacy
 
-Status: **planned**
+Status: **next**
 
 - Extend the current pure Shadow planner rather than duplicating its formulas.
 - Use authoritative current equity, available margin, open stop risk, daily P&L/drawdown, and exact contract facts.
@@ -284,8 +284,8 @@ Also finalize owner-approved per-trade risk, concurrent-risk, daily realized-los
 
 ## Progress checkpoint
 
-Current checkpoint: Phase 2 deterministic multi-account connection supervision complete. The code now models independent discovery and Order/PnL sessions for all five accounts, generation-fences reconnects, tracks authentication/reconciliation/heartbeats/staleness, accepts broker-neutral master events and follower account state only from fresh ready generations, isolates follower failures, blocks globally on master failure, and runs the same state machine through credential-free simulation fixtures.
+Current checkpoint: Phase 3 durable copy control plane complete. PostgreSQL now seeds one globally paused profile and four disabled followers; authenticated APIs apply revision-checked per-follower/global transitions, dashboard-cookie mutations require session-bound CSRF proof, commands serialize under row locks, flatten remains pending until the execution system confirms flat, restart directives fail closed, and audit rows are append-only at the database boundary.
 
-Next implementation task: Phase 3, durable copy profiles, per-follower controls, optimistic revisions, and immutable audit history.
+Next implementation task: Phase 4, cumulative target-position sizing and follower funding-adequacy reporting.
 
 Do not skip directly to UI polish, learning, AI agents, Rithmic Test, or live activation while an earlier execution milestone remains incomplete.

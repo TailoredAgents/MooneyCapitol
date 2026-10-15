@@ -5,10 +5,19 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
-from app.api.auth import require_operator
+from app.api.auth import (
+    OperatorIdentity,
+    SESSION_COOKIE_NAME,
+    create_csrf_token,
+    require_operator,
+    require_operator_mutation,
+)
+from app.db.session import get_session
 from app.v2.domain.models import Side
 from app.v2.execution.copier import (
     CopierMode,
@@ -20,13 +29,28 @@ from app.v2.execution.copier import (
     plan_shadow_copy,
 )
 from app.v2.execution.copier_config import ShadowCopierConfig
+from app.v2.execution.copy_control import (
+    DEFAULT_COPY_PROFILE_ID,
+    CopyControlAuditSnapshot,
+    CopyProfileSnapshot,
+    FollowerControlAction,
+    InvalidControlTransition,
+)
+from app.v2.execution.copy_control_store import (
+    ControlRevisionConflict,
+    CopyControlStore,
+    CopyControlTopologyCorrupt,
+    CopyProfileNotFound,
+    DuplicateControlRequest,
+    FollowerControlNotFound,
+    SqlAlchemyCopyControlStore,
+)
 from app.v2.reference import FuturesContractRegistry
 
 
 router = APIRouter(
     prefix="/v2/copier",
     tags=["v2-copier"],
-    dependencies=[Depends(require_operator)],
 )
 
 Fraction = Annotated[Decimal, Field(ge=Decimal("0"), le=Decimal("1"))]
@@ -109,13 +133,57 @@ class ShadowPreviewRequest(BaseModel):
         return self
 
 
-@router.get("/status")
+OperatorFollowerAction = Literal[
+    "ENABLE",
+    "PAUSE",
+    "REQUEST_FLATTEN_AND_DISABLE",
+    "LOCK",
+    "UNLOCK_TO_PAUSED",
+]
+ControlReasonCode = Literal[
+    "operator_requested",
+    "simulation",
+    "scheduled_pause",
+    "connection_issue",
+    "risk_review",
+    "reconciliation_issue",
+    "emergency",
+    "recovery",
+]
+
+
+class FollowerControlRequest(BaseModel):
+    action: OperatorFollowerAction
+    expected_revision: int = Field(ge=1)
+    request_id: str = Field(min_length=1, max_length=96, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    reason_code: ControlReasonCode | None = None
+
+
+class GlobalPauseRequest(BaseModel):
+    paused: bool
+    expected_revision: int = Field(ge=1)
+    request_id: str = Field(min_length=1, max_length=96, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    reason_code: ControlReasonCode
+
+
+def control_db_session():
+    with get_session() as session:
+        yield session
+
+
+def copy_control_store(
+    session: Session = Depends(control_db_session),
+) -> CopyControlStore:
+    return SqlAlchemyCopyControlStore(session)
+
+
+@router.get("/status", dependencies=[Depends(require_operator)])
 def shadow_copier_status(response: Response) -> dict[str, Any]:
     response.headers["Cache-Control"] = "no-store"
     return build_shadow_copier_status(ShadowCopierConfig.from_mapping())
 
 
-@router.post("/preview")
+@router.post("/preview", dependencies=[Depends(require_operator)])
 def preview_shadow_copy(
     payload: ShadowPreviewRequest,
     response: Response,
@@ -206,6 +274,124 @@ def preview_shadow_copy(
     return _serialize_plan(plan)
 
 
+@router.get("/control/csrf")
+def copy_control_csrf(
+    request: Request,
+    response: Response,
+    identity: OperatorIdentity = Depends(require_operator),
+) -> dict[str, Any]:
+    response.headers["Cache-Control"] = "no-store"
+    if identity.auth_method != "dashboard_session":
+        return {"required": False, "token": None}
+    session_token = request.cookies.get(SESSION_COOKIE_NAME, "")
+    return {"required": True, "token": create_csrf_token(session_token)}
+
+
+@router.get("/control")
+def get_copy_control(
+    response: Response,
+    _identity: OperatorIdentity = Depends(require_operator),
+    store: CopyControlStore = Depends(copy_control_store),
+) -> dict[str, Any]:
+    try:
+        profile = store.get_profile(DEFAULT_COPY_PROFILE_ID)
+    except (CopyProfileNotFound, CopyControlTopologyCorrupt, SQLAlchemyError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="V2 copy control store is unavailable or incomplete",
+        ) from exc
+    response.headers["Cache-Control"] = "no-store"
+    return _serialize_control_profile(profile)
+
+
+@router.post("/control/followers/{connection_id}/actions")
+def update_follower_control(
+    connection_id: str,
+    payload: FollowerControlRequest,
+    response: Response,
+    identity: OperatorIdentity = Depends(require_operator_mutation),
+    store: CopyControlStore = Depends(copy_control_store),
+) -> dict[str, Any]:
+    try:
+        profile = store.transition_follower(
+            profile_id=DEFAULT_COPY_PROFILE_ID,
+            connection_id=connection_id,
+            action=FollowerControlAction(payload.action),
+            expected_revision=payload.expected_revision,
+            actor=identity.actor,
+            auth_method=identity.auth_method,
+            request_id=payload.request_id,
+            reason_code=payload.reason_code,
+        )
+    except (
+        ControlRevisionConflict,
+        DuplicateControlRequest,
+        InvalidControlTransition,
+        FollowerControlNotFound,
+        CopyProfileNotFound,
+        CopyControlTopologyCorrupt,
+        SQLAlchemyError,
+        ValueError,
+    ) as exc:
+        _raise_control_api_error(exc)
+    response.headers["Cache-Control"] = "no-store"
+    return _serialize_control_profile(profile)
+
+
+@router.post("/control/global-pause")
+def update_global_pause(
+    payload: GlobalPauseRequest,
+    response: Response,
+    identity: OperatorIdentity = Depends(require_operator_mutation),
+    store: CopyControlStore = Depends(copy_control_store),
+) -> dict[str, Any]:
+    try:
+        profile = store.set_global_pause(
+            profile_id=DEFAULT_COPY_PROFILE_ID,
+            paused=payload.paused,
+            expected_revision=payload.expected_revision,
+            actor=identity.actor,
+            auth_method=identity.auth_method,
+            request_id=payload.request_id,
+            reason_code=payload.reason_code,
+        )
+    except (
+        ControlRevisionConflict,
+        DuplicateControlRequest,
+        CopyProfileNotFound,
+        CopyControlTopologyCorrupt,
+        SQLAlchemyError,
+        ValueError,
+    ) as exc:
+        _raise_control_api_error(exc)
+    response.headers["Cache-Control"] = "no-store"
+    return _serialize_control_profile(profile)
+
+
+@router.get("/control/audit")
+def get_copy_control_audit(
+    response: Response,
+    limit: int = Query(default=100, ge=1, le=500),
+    _identity: OperatorIdentity = Depends(require_operator),
+    store: CopyControlStore = Depends(copy_control_store),
+) -> dict[str, Any]:
+    try:
+        items = store.list_audit(
+            profile_id=DEFAULT_COPY_PROFILE_ID,
+            limit=limit,
+        )
+    except (CopyProfileNotFound, CopyControlTopologyCorrupt, SQLAlchemyError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="V2 copy control audit store is unavailable",
+        ) from exc
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "count": len(items),
+        "items": [_serialize_control_audit(item) for item in items],
+    }
+
+
 def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
     topology = config.topology
     return {
@@ -268,10 +454,105 @@ def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
         "simulated_connections_implemented": True,
         "required_supervised_session_count": len(topology.accounts) * 2,
         "supervisor_runtime_health_attached": False,
+        "durable_control_plane_implemented": True,
+        "control_defaults_fail_closed": True,
+        "operator_control_ui_implemented": False,
         "master_event_orchestration_implemented": False,
         "execution_adapter_implemented": False,
         "blockers": list(config.preflight_blockers),
         "connectivity_blockers": list(topology.connectivity_blockers),
+    }
+
+
+def _raise_control_api_error(exc: Exception) -> None:
+    if isinstance(exc, ControlRevisionConflict):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "control_revision_conflict",
+                "current_revision": exc.current_revision,
+            },
+        ) from exc
+    if isinstance(exc, DuplicateControlRequest):
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "duplicate_control_request"},
+        ) from exc
+    if isinstance(exc, InvalidControlTransition):
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "invalid_control_transition", "message": str(exc)},
+        ) from exc
+    if isinstance(exc, FollowerControlNotFound):
+        raise HTTPException(status_code=404, detail="Follower control not found") from exc
+    if isinstance(
+        exc,
+        (CopyProfileNotFound, CopyControlTopologyCorrupt, SQLAlchemyError),
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="V2 copy control store is unavailable or incomplete",
+        ) from exc
+    if isinstance(exc, ValueError):
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    raise exc
+
+
+def _serialize_control_profile(profile: CopyProfileSnapshot) -> dict[str, Any]:
+    return {
+        "profile_id": profile.profile_id,
+        "name": profile.name,
+        "master_connection_id": profile.master_connection_id,
+        "global_paused": profile.global_paused,
+        "revision": profile.revision,
+        "entry_enabled_connection_ids": list(
+            profile.entry_enabled_connection_ids
+        ),
+        "created_at": profile.created_at.isoformat(),
+        "updated_at": profile.updated_at.isoformat(),
+        "followers": [
+            {
+                "connection_id": follower.connection_id,
+                "follower_number": follower.follower_number,
+                "state": follower.state.value,
+                "restart_directive": follower.restart_directive.value,
+                "permits_new_entries": follower.state.permits_new_entries,
+                "requires_lifecycle_management": (
+                    follower.state.requires_lifecycle_management
+                ),
+                "revision": follower.revision,
+                "reason_code": follower.reason_code,
+                "flatten_requested_at": (
+                    follower.flatten_requested_at.isoformat()
+                    if follower.flatten_requested_at
+                    else None
+                ),
+                "locked_at": (
+                    follower.locked_at.isoformat() if follower.locked_at else None
+                ),
+                "updated_at": follower.updated_at.isoformat(),
+            }
+            for follower in profile.followers
+        ],
+    }
+
+
+def _serialize_control_audit(item: CopyControlAuditSnapshot) -> dict[str, Any]:
+    return {
+        "audit_id": item.audit_id,
+        "profile_id": item.profile_id,
+        "connection_id": item.connection_id,
+        "action": item.action,
+        "actor": item.actor,
+        "auth_method": item.auth_method,
+        "expected_revision": item.expected_revision,
+        "previous_revision": item.previous_revision,
+        "resulting_revision": item.resulting_revision,
+        "previous_state": item.previous_state,
+        "resulting_state": item.resulting_state,
+        "reason_code": item.reason_code,
+        "request_id": item.request_id,
+        "occurred_at": item.occurred_at.isoformat(),
     }
 
 

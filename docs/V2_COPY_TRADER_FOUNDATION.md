@@ -1,6 +1,6 @@
 # V2 copy trader foundation
 
-Status: five-account configuration, deterministic connection supervision, simulation, and Shadow planner implemented; live connection driver and broker submission not implemented
+Status: five-account configuration, supervision/simulation, durable controls, and Shadow planner implemented; production sizing, live driver, and broker submission not implemented
 
 Updated: 2026-10-14
 
@@ -60,11 +60,17 @@ The master trade's actual risk fraction must itself be within the follower polic
 - `app/v2/execution/account_config.py`: typed master/follower connection slots, per-account secret references, redacted resolution, and fail-closed Test-connectivity readiness.
 - `app/v2/execution/connection_supervisor.py`: independent per-account discovery plus ten generation-fenced Order/PnL session states, heartbeat/staleness checks, broker-neutral fresh-data gates, failure isolation, and deterministic simulation fixtures.
 - `app/v2/execution/copier_config.py`: fail-closed Shadow/risk configuration composed with the independent account topology.
+- `app/v2/execution/copy_control.py` and `copy_control_store.py`: fixed copy-profile membership, explicit follower transitions, restart directives, optimistic revisions, row-locked serialization, and controlled reason codes.
+- migration `0012_v2_copy_control`: globally paused/follower-disabled defaults plus database-enforced append-only audit history.
 - `GET /v2/copier/status`: authenticated, redacted readiness and blocker status.
 - `POST /v2/copier/preview`: authenticated, non-persisting Shadow calculation for supplied hypothetical state.
+- `GET /v2/copier/control` and `/control/audit`: authenticated state and audit reads.
+- `/v2/copier/control/*` mutation endpoints: authenticated, CSRF-protected for dashboard sessions, and revision-checked.
 - `/dashboard`: read-only Shadow copier readiness alongside Rithmic observations.
 
-The preview endpoint is a calculator. It does not read broker credentials, observe a live master event, persist copy intent, or call Rithmic.
+The preview endpoint is a calculator. It does not read broker credentials, observe a live master event, persist copy intent, or call Rithmic. Control mutations change only durable internal intent. In particular, flatten-and-disable becomes `FLATTEN_REQUESTED`; only the future execution system may confirm broker-flat reconciliation and transition it to `DISABLED`.
+
+Control restart behavior is explicit: disabled and locked followers remain held; enabled followers must reconcile before accepting new entries; paused followers resume management without new entries; and pending flatten requests reconcile and resume flattening. Global pause always removes every follower from new-entry eligibility. Audit and control reasons are fixed codes so free-form secrets cannot be written through these endpoints.
 
 ## Configuration
 
@@ -104,7 +110,6 @@ The repository does not yet contain:
 
 - live master-order detection and lifecycle orchestration;
 - the live Rithmic driver that feeds the implemented five-account supervisor and publishes its runtime health;
-- persistent per-follower enable, pause, flatten, lock, and audit state;
 - a Rithmic write adapter or any follower order submission;
 - durable copy intents, an outbox, active-instance lease, or crash recovery for writes;
 - cumulative target-position sizing across adds, reductions, and reversals;
@@ -117,7 +122,7 @@ Low latency must come from a persistent event-driven Rithmic connection and imme
 
 ## Delivery and activation sequence
 
-1. Build persistent controls, production sizing, lifecycle orchestration, the separate write adapter, recovery/fencing, latency telemetry, and the minimal operator UI on the implemented account configuration and simulated connection-supervision foundation without waiting for credentials.
+1. Build production sizing, lifecycle orchestration, the separate write adapter, recovery/fencing, latency telemetry, and the minimal operator UI on the implemented account, supervision, simulation, and durable-control foundation without waiting for credentials.
 2. Complete automated simulation and failure injection for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
 3. Obtain the five exact AMP/Rithmic credential bundles and confirm each account's API/session permissions and authorized operators.
 4. Insert credentials only through secret management and complete the existing read-only Rithmic Test runbook for every independent connection.
