@@ -20,12 +20,17 @@ from app.api.auth import (
 from app.db.session import get_session
 from app.v2.domain.models import Side
 from app.v2.execution.copier import (
+    CopiedPositionState,
     CopierMode,
+    CumulativeCopyPlan,
+    CumulativeFollowerState,
     FollowerContractCandidate,
     FollowerPolicy,
     FollowerState,
+    MasterPositionTarget,
     MasterTrade,
     ShadowCopyPlan,
+    plan_cumulative_copy,
     plan_shadow_copy,
 )
 from app.v2.execution.copier_config import ShadowCopierConfig
@@ -125,6 +130,74 @@ class ShadowPreviewRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_accounts(self) -> "ShadowPreviewRequest":
+        follower_labels = [item.account_label for item in self.followers]
+        if len(set(follower_labels)) != len(follower_labels):
+            raise ValueError("follower labels must be unique")
+        if self.master.account_label in set(follower_labels):
+            raise ValueError("master cannot also be a follower")
+        return self
+
+
+class CumulativePreviewMaster(BaseModel):
+    account_label: str = Field(min_length=1, max_length=128)
+    product_code: Literal["NQ", "MNQ"]
+    expiration: date
+    signed_quantity: int = Field(ge=-10_000, le=10_000)
+    entry_price: PositiveDecimal | None = None
+    stop_price: PositiveDecimal | None = None
+    equity: PositiveDecimal
+    cost_buffer_per_contract: NonNegativeDecimal = Decimal("0")
+
+    @model_validator(mode="after")
+    def validate_position_and_stop(self) -> "CumulativePreviewMaster":
+        if self.signed_quantity == 0:
+            if self.entry_price is not None or self.stop_price is not None:
+                raise ValueError("flat master positions cannot carry entry or stop prices")
+            return self
+        if self.entry_price is None or self.stop_price is None:
+            raise ValueError("open master positions require entry and stop prices")
+        if self.signed_quantity > 0 and self.stop_price >= self.entry_price:
+            raise ValueError("long master positions require a stop below entry")
+        if self.signed_quantity < 0 and self.stop_price <= self.entry_price:
+            raise ValueError("short master positions require a stop above entry")
+        return self
+
+
+class CopiedPositionInput(BaseModel):
+    product_code: Literal["NQ", "MNQ"]
+    expiration: date
+    signed_quantity: int = Field(ge=-100_000, le=100_000)
+    open_risk_dollars: NonNegativeDecimal
+
+    @model_validator(mode="after")
+    def validate_open_position(self) -> "CopiedPositionInput":
+        if self.signed_quantity == 0:
+            raise ValueError("omit copied_position when the follower is flat")
+        return self
+
+
+class CumulativePreviewFollower(ShadowPreviewFollower):
+    copied_position: CopiedPositionInput | None = None
+
+    @model_validator(mode="after")
+    def validate_copied_risk(self) -> "CumulativePreviewFollower":
+        if (
+            self.copied_position is not None
+            and self.copied_position.open_risk_dollars > self.current_open_risk
+        ):
+            raise ValueError("copied position risk cannot exceed total open risk")
+        return self
+
+
+class CumulativePreviewRequest(BaseModel):
+    master: CumulativePreviewMaster
+    followers: list[CumulativePreviewFollower] = Field(min_length=1, max_length=4)
+    policy: ShadowPreviewPolicy
+    contracts: ShadowPreviewContracts
+    global_kill_switch: bool = True
+
+    @model_validator(mode="after")
+    def validate_accounts(self) -> "CumulativePreviewRequest":
         follower_labels = [item.account_label for item in self.followers]
         if len(set(follower_labels)) != len(follower_labels):
             raise ValueError("follower labels must be unique")
@@ -272,6 +345,118 @@ def preview_shadow_copy(
     )
     response.headers["Cache-Control"] = "no-store"
     return _serialize_plan(plan)
+
+
+@router.post("/cumulative-preview", dependencies=[Depends(require_operator)])
+def preview_cumulative_copy(
+    payload: CumulativePreviewRequest,
+    response: Response,
+) -> dict[str, Any]:
+    """Calculate cumulative follower totals and deltas without side effects."""
+
+    registry = FuturesContractRegistry()
+
+    def contract(product_code: str, expiration: date):
+        return registry.register_contract(
+            contract_id=f"PREVIEW:CME:{product_code}:{expiration.isoformat()}",
+            product_code=product_code,
+            expiration=expiration,
+        )
+
+    master_contract = contract(
+        payload.master.product_code,
+        payload.master.expiration,
+    )
+    candidates_by_product = {
+        product: contract(product, payload.master.expiration)
+        for product in ("NQ", "MNQ")
+    }
+    registry.map_same_expiry(
+        candidates_by_product["NQ"].contract_id,
+        candidates_by_product["MNQ"].contract_id,
+    )
+    master = MasterPositionTarget(
+        account_id=payload.master.account_label,
+        contract=master_contract,
+        signed_quantity=payload.master.signed_quantity,
+        equity=payload.master.equity,
+        entry_price=payload.master.entry_price,
+        stop_price=payload.master.stop_price,
+        cost_buffer_per_contract=payload.master.cost_buffer_per_contract,
+    )
+    followers = tuple(
+        CumulativeFollowerState(
+            account=FollowerState(
+                account_id=item.account_label,
+                equity=item.equity,
+                available_margin=item.available_margin,
+                current_open_risk=item.current_open_risk,
+                daily_realized_pnl=item.daily_realized_pnl,
+                daily_total_pnl=item.daily_total_pnl,
+                daily_drawdown=item.daily_drawdown,
+                account_kill_switch=item.account_kill_switch,
+            ),
+            copied_position=(
+                CopiedPositionState(
+                    contract=contract(
+                        item.copied_position.product_code,
+                        item.copied_position.expiration,
+                    ),
+                    signed_quantity=item.copied_position.signed_quantity,
+                    open_risk_dollars=item.copied_position.open_risk_dollars,
+                )
+                if item.copied_position is not None
+                else CopiedPositionState()
+            ),
+        )
+        for item in payload.followers
+    )
+    product_limits = {
+        product: value
+        for product, value in (
+            ("NQ", payload.policy.nq_max_contracts),
+            ("MNQ", payload.policy.mnq_max_contracts),
+        )
+        if value is not None
+    }
+    policy = FollowerPolicy(
+        max_risk_fraction=payload.policy.max_risk_fraction,
+        max_contracts=payload.policy.max_contracts,
+        max_concurrent_open_risk_fraction=(
+            payload.policy.max_concurrent_open_risk_fraction
+        ),
+        daily_realized_loss_fraction=payload.policy.daily_realized_loss_fraction,
+        daily_total_loss_fraction=payload.policy.daily_total_loss_fraction,
+        max_relative_parity_error=payload.policy.max_relative_parity_error,
+        margin_headroom_fraction=payload.policy.margin_headroom_fraction,
+        allow_over_target=payload.policy.allow_over_target,
+        per_product_max_contracts=product_limits,
+    )
+    candidates = (
+        FollowerContractCandidate(
+            candidates_by_product["NQ"],
+            payload.contracts.nq_initial_margin,
+            payload.contracts.nq_cost_buffer,
+        ),
+        FollowerContractCandidate(
+            candidates_by_product["MNQ"],
+            payload.contracts.mnq_initial_margin,
+            payload.contracts.mnq_cost_buffer,
+        ),
+    )
+    try:
+        plan = plan_cumulative_copy(
+            master,
+            followers,
+            candidates,
+            policy,
+            mode=CopierMode.SHADOW,
+            global_kill_switch=payload.global_kill_switch,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    response.headers["Cache-Control"] = "no-store"
+    return _serialize_cumulative_plan(plan)
 
 
 @router.get("/control/csrf")
@@ -457,6 +642,9 @@ def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
         "durable_control_plane_implemented": True,
         "control_defaults_fail_closed": True,
         "operator_control_ui_implemented": False,
+        "cumulative_position_sizing_implemented": True,
+        "funding_adequacy_reporting_implemented": True,
+        "automatic_contract_roll_enabled": False,
         "master_event_orchestration_implemented": False,
         "execution_adapter_implemented": False,
         "blockers": list(config.preflight_blockers),
@@ -553,6 +741,99 @@ def _serialize_control_audit(item: CopyControlAuditSnapshot) -> dict[str, Any]:
         "reason_code": item.reason_code,
         "request_id": item.request_id,
         "occurred_at": item.occurred_at.isoformat(),
+    }
+
+
+def _serialize_cumulative_plan(plan: CumulativeCopyPlan) -> dict[str, Any]:
+    return {
+        "mode": plan.mode.value,
+        "submission_enabled": plan.submission_enabled,
+        "master": {
+            "account": _opaque_alias(plan.master_account_id, "Master"),
+            "contract": plan.master_contract_id,
+            "product": plan.master_product_code,
+            "signed_quantity": plan.master_signed_quantity,
+            "risk_dollars": _decimal_text(plan.master_risk_dollars),
+            "risk_fraction": _decimal_text(plan.master_risk_fraction),
+            "point_exposure_fraction": _decimal_text(
+                plan.master_point_exposure_fraction
+            ),
+        },
+        "followers": [
+            {
+                "account": _opaque_alias(item.account_id, f"Follower {index}"),
+                "allowed": item.allowed,
+                "reason": item.reason,
+                "action": item.action.value,
+                "current_contract": item.current_contract_id,
+                "current_product": item.current_product_code,
+                "current_signed_quantity": item.current_signed_quantity,
+                "evaluated_contract": item.evaluated_contract_id,
+                "evaluated_product": item.evaluated_product_code,
+                "desired_target_quantity": _decimal_text(
+                    item.desired_target_quantity
+                ),
+                "evaluated_target_signed_quantity": (
+                    item.evaluated_target_signed_quantity
+                ),
+                "achievable_target_signed_quantity": (
+                    item.achievable_target_signed_quantity
+                ),
+                "delta_signed_quantity": item.delta_signed_quantity,
+                "delta_side": item.delta_side.value if item.delta_side else None,
+                "delta_quantity": item.delta_quantity,
+                "desired_risk_dollars": _decimal_text(item.desired_risk_dollars),
+                "desired_risk_fraction": _decimal_text(item.desired_risk_fraction),
+                "achievable_risk_dollars": _decimal_text(
+                    item.achievable_risk_dollars
+                ),
+                "achievable_risk_fraction": _decimal_text(
+                    item.achievable_risk_fraction
+                ),
+                "desired_point_exposure_fraction": _decimal_text(
+                    item.desired_point_exposure_fraction
+                ),
+                "achievable_point_exposure_fraction": _decimal_text(
+                    item.achievable_point_exposure_fraction
+                ),
+                "risk_parity_error": _decimal_text(item.risk_parity_error),
+                "exposure_parity_error": _decimal_text(
+                    item.exposure_parity_error
+                ),
+                "parity_error": _decimal_text(item.parity_error),
+                "over_target": item.over_target,
+                "target_margin_required": _decimal_text(
+                    item.target_margin_required
+                ),
+                "funding": {
+                    "mnq_contract": item.funding.mnq_contract_id,
+                    "funding_adequate": item.funding.funding_adequate,
+                    "currently_eligible": item.funding.currently_eligible,
+                    "blockers": list(item.funding.blockers),
+                    "one_mnq_risk_dollars": _decimal_text(
+                        item.funding.one_mnq_risk_dollars
+                    ),
+                    "one_mnq_margin_required": _decimal_text(
+                        item.funding.one_mnq_margin_required
+                    ),
+                    "minimum_equity": _decimal_text(
+                        item.funding.minimum_equity
+                    ),
+                    "equity_shortfall": _decimal_text(
+                        item.funding.equity_shortfall
+                    ),
+                    "minimum_available_margin": _decimal_text(
+                        item.funding.minimum_available_margin
+                    ),
+                    "available_margin_shortfall": _decimal_text(
+                        item.funding.available_margin_shortfall
+                    ),
+                    "usable_margin": _decimal_text(item.funding.usable_margin),
+                },
+                "would_submit": item.would_submit,
+            }
+            for index, item in enumerate(plan.followers, start=1)
+        ],
     }
 
 

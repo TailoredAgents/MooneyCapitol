@@ -1,6 +1,6 @@
 # V2 copy trader foundation
 
-Status: five-account configuration, supervision/simulation, durable controls, and Shadow planner implemented; production sizing, live driver, and broker submission not implemented
+Status: five-account configuration, supervision/simulation, durable controls, cumulative production sizing, and funding adequacy implemented; lifecycle orchestration, live driver, and broker submission not implemented
 
 Updated: 2026-10-14
 
@@ -8,7 +8,7 @@ Updated: 2026-10-14
 
 The V2 copy trader is intended to observe one Mooney Capital master futures account and reproduce eligible master trades across exactly four operationally independent follower accounts. All five are separate AMP accounts. The application does not assume AMP subaccounts, one legal entity, one portal, one Rithmic user, or shared credentials. Every account receives its own exact broker selector and independently configurable credential/connection bundle. The initial product set is NQ and MNQ. Account ownership does not replace AMP/Rithmic permissions, credentials, session limits, or conformance requirements.
 
-The implemented phase is a deterministic Shadow planner. It calculates what each follower trade would be and why it would be allowed or blocked. It cannot submit, modify, cancel, or flatten a broker order. Requesting `TEST` or `LIVE` mode makes the effective mode `OFF` and reports `broker_submission_not_implemented`.
+The implemented sizing phase is deterministic and Shadow-only. It calculates each follower's desired total, evaluated whole-contract target, achievable total, required signed delta, and the reason it would be allowed or blocked. It cannot submit, modify, cancel, or flatten a broker order. Requesting `TEST` or `LIVE` mode makes the effective mode `OFF` and reports `broker_submission_not_implemented`.
 
 The forward implementation order is defined in [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md). The immediate target is a credential-ready copier built and simulated without waiting for the five credential bundles. Broker validation and live readiness remain later gates.
 
@@ -39,6 +39,16 @@ Futures contracts cannot be fractional. One MNQ has one tenth of the point value
 
 If a master has $30,000 and a follower has $500, one NQ on the master implies a target of roughly 0.167 MNQ on the follower. The planner cannot place that fraction. Its default policy reports the nearest one-MNQ result as over target and blocks it. It never rounds an underfunded follower up silently. Over-target planning requires an explicit configuration opt-in and still must satisfy the parity tolerance and all hard risk limits.
 
+## Cumulative targets and funding adequacy
+
+Production sizing starts from the master's authoritative total signed position rather than sizing each fill independently. The planner selects the follower's total whole-contract target and then subtracts the authoritative current copied position. The resulting delta explicitly classifies hold, open, add, reduce, close, or reverse. This prevents repeated scale-in or scale-out events from accumulating rounding error.
+
+An open follower contract is pinned by exact identity until flat. If the best flat-account choice would switch NQ/MNQ, the existing contract is retained or safely closed; it is never converted implicitly. An expiry mismatch is blocked and reported rather than interpreted as permission to roll. Master-flat exposure produces a close delta even when entry gates are active. Other risk-reducing deltas may pass entry-only kill/loss gates, while adds and reversals still require full new-risk eligibility.
+
+Every cumulative result records desired risk/exposure, evaluated whole-contract quantity, achievable risk/exposure, current and target signed quantity, delta, parity error, margin requirement, action, and reason. These immutable plan facts are ready for the durable copy intents introduced in Phase 5; the preview endpoint itself remains non-persisting.
+
+Each follower also receives a one-MNQ funding report. It calculates the stop-defined risk of one exact-expiry MNQ, minimum equity needed to avoid exceeding master-relative risk/exposure, per-trade and concurrent-risk capacity, minimum available margin after headroom, and the current shortfalls. Operational blockers are reported separately from whether the account is economically large enough.
+
 ## Eligibility and safety rules
 
 A Shadow plan requires:
@@ -56,7 +66,7 @@ The master trade's actual risk fraction must itself be within the follower polic
 
 ## Implemented surface
 
-- `app/v2/execution/copier.py`: pure Decimal-based parity planning with no broker dependency or side effect.
+- `app/v2/execution/copier.py`: pure Decimal-based parity and cumulative-position planning, exact-contract pinning, signed deltas, and one-MNQ funding adequacy with no broker dependency or side effect.
 - `app/v2/execution/account_config.py`: typed master/follower connection slots, per-account secret references, redacted resolution, and fail-closed Test-connectivity readiness.
 - `app/v2/execution/connection_supervisor.py`: independent per-account discovery plus ten generation-fenced Order/PnL session states, heartbeat/staleness checks, broker-neutral fresh-data gates, failure isolation, and deterministic simulation fixtures.
 - `app/v2/execution/copier_config.py`: fail-closed Shadow/risk configuration composed with the independent account topology.
@@ -64,6 +74,7 @@ The master trade's actual risk fraction must itself be within the follower polic
 - migration `0012_v2_copy_control`: globally paused/follower-disabled defaults plus database-enforced append-only audit history.
 - `GET /v2/copier/status`: authenticated, redacted readiness and blocker status.
 - `POST /v2/copier/preview`: authenticated, non-persisting Shadow calculation for supplied hypothetical state.
+- `POST /v2/copier/cumulative-preview`: authenticated, non-persisting total-position/delta and funding-adequacy calculation for supplied authoritative state.
 - `GET /v2/copier/control` and `/control/audit`: authenticated state and audit reads.
 - `/v2/copier/control/*` mutation endpoints: authenticated, CSRF-protected for dashboard sessions, and revision-checked.
 - `/dashboard`: read-only Shadow copier readiness alongside Rithmic observations.
@@ -112,7 +123,6 @@ The repository does not yet contain:
 - the live Rithmic driver that feeds the implemented five-account supervisor and publishes its runtime health;
 - a Rithmic write adapter or any follower order submission;
 - durable copy intents, an outbox, active-instance lease, or crash recovery for writes;
-- cumulative target-position sizing across adds, reductions, and reversals;
 - parent/child, partial-fill, replace, cancel, bracket/OCO, flatten, or disconnect handling for copied orders;
 - actual-fill rebalancing or execution-quality reconciliation;
 - measured end-to-end copy latency; or
@@ -122,7 +132,7 @@ Low latency must come from a persistent event-driven Rithmic connection and imme
 
 ## Delivery and activation sequence
 
-1. Build production sizing, lifecycle orchestration, the separate write adapter, recovery/fencing, latency telemetry, and the minimal operator UI on the implemented account, supervision, simulation, and durable-control foundation without waiting for credentials.
+1. Build lifecycle orchestration, the separate write adapter, recovery/fencing, latency telemetry, and the minimal operator UI on the implemented account, supervision, simulation, controls, and cumulative-sizing foundation without waiting for credentials.
 2. Complete automated simulation and failure injection for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
 3. Obtain the five exact AMP/Rithmic credential bundles and confirm each account's API/session permissions and authorized operators.
 4. Insert credentials only through secret management and complete the existing read-only Rithmic Test runbook for every independent connection.

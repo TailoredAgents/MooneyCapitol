@@ -158,6 +158,9 @@ def test_v2_copier_status_requires_auth_and_redacts_configuration(
     assert body["durable_control_plane_implemented"] is True
     assert body["control_defaults_fail_closed"] is True
     assert body["operator_control_ui_implemented"] is False
+    assert body["cumulative_position_sizing_implemented"] is True
+    assert body["funding_adequacy_reporting_implemented"] is True
+    assert body["automatic_contract_roll_enabled"] is False
     assert body["accounts"][0]["required_plants"] == ["ORDER", "PNL"]
     assert body["execution_adapter_implemented"] is False
     assert "raw-private-account" not in response.text
@@ -199,6 +202,49 @@ def test_v2_copier_preview_defaults_fail_closed_and_requires_valid_stop() -> Non
     payload["master"]["stop_price"] = payload["master"]["entry_price"]
     invalid = client.post("/v2/copier/preview", json=payload)
     assert invalid.status_code == 422
+
+
+def test_v2_cumulative_preview_reports_total_delta_and_funding_without_submission() -> None:
+    payload = _preview_payload()
+    payload["master"].pop("side")
+    payload["master"]["signed_quantity"] = 2
+    payload["master"]["equity"] = "10000"
+    payload["followers"][0].update(
+        {
+            "equity": "1000",
+            "available_margin": "1000",
+            "current_open_risk": "40",
+            "account_kill_switch": False,
+            "copied_position": {
+                "product_code": "MNQ",
+                "expiration": "2027-03-19",
+                "signed_quantity": 1,
+                "open_risk_dollars": "40",
+            },
+        }
+    )
+
+    response = _client().post("/v2/copier/cumulative-preview", json=payload)
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body["submission_enabled"] is False
+    assert body["master"]["signed_quantity"] == 2
+    item = body["followers"][0]
+    assert item["allowed"] is True
+    assert item["action"] == "ADD"
+    assert item["current_signed_quantity"] == 1
+    assert item["evaluated_target_signed_quantity"] == 2
+    assert item["achievable_target_signed_quantity"] == 2
+    assert item["delta_side"] == "BUY"
+    assert item["delta_quantity"] == 1
+    assert item["desired_point_exposure_fraction"] == "0.004"
+    assert item["achievable_point_exposure_fraction"] == "0.004"
+    assert item["funding"]["funding_adequate"] is True
+    assert item["would_submit"] is False
+    assert "secret-master-id" not in response.text
+    assert "secret-follower-id" not in response.text
 
 
 def test_v2_copy_control_supports_revisions_global_pause_and_audit(

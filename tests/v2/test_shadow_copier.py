@@ -7,11 +7,16 @@ import pytest
 
 from app.v2.domain.models import Side
 from app.v2.execution.copier import (
+    CopiedPositionState,
     CopierMode,
+    CumulativeFollowerState,
     FollowerContractCandidate,
     FollowerPolicy,
     FollowerState,
     MasterTrade,
+    MasterPositionTarget,
+    PositionPlanAction,
+    plan_cumulative_copy,
     plan_shadow_copy,
 )
 from app.v2.execution.copier_config import ShadowCopierConfig
@@ -323,3 +328,201 @@ def test_shadow_config_has_fixed_topology_and_requires_hard_limits() -> None:
     live = ShadowCopierConfig.from_mapping({"V2_COPIER_MODE": "LIVE"})
     assert live.effective_mode == CopierMode.OFF
     assert "broker_submission_not_implemented" in live.preflight_blockers
+
+
+def _master_position(nq, signed_quantity: int, *, equity: str = "10000"):
+    return MasterPositionTarget(
+        account_id="master",
+        contract=nq,
+        signed_quantity=signed_quantity,
+        equity=D(equity),
+        entry_price=D("20000") if signed_quantity else None,
+        stop_price=(
+            D("19980")
+            if signed_quantity > 0
+            else D("20020")
+            if signed_quantity < 0
+            else None
+        ),
+    )
+
+
+def _cumulative_follower(
+    contract=None,
+    signed_quantity: int = 0,
+    *,
+    equity: str = "1000",
+    available_margin: str = "1000",
+    open_risk: str = "0",
+    account_kill_switch: bool = False,
+):
+    copied_risk = D(open_risk)
+    return CumulativeFollowerState(
+        account=FollowerState(
+            account_id="follower",
+            equity=D(equity),
+            available_margin=D(available_margin),
+            current_open_risk=copied_risk,
+            account_kill_switch=account_kill_switch,
+        ),
+        copied_position=CopiedPositionState(
+            contract=contract,
+            signed_quantity=signed_quantity,
+            open_risk_dollars=copied_risk,
+        ),
+    )
+
+
+def test_cumulative_sizing_plans_total_position_deltas_for_add_and_reduction() -> None:
+    nq, mnq = _contracts()
+    candidates = _candidates(nq, mnq)
+    added = plan_cumulative_copy(
+        _master_position(nq, 2),
+        [_cumulative_follower(mnq, 1, open_risk="40")],
+        candidates,
+        _policy(),
+        global_kill_switch=False,
+    ).followers[0]
+    reduced = plan_cumulative_copy(
+        _master_position(nq, 1),
+        [_cumulative_follower(mnq, 2, open_risk="80")],
+        candidates,
+        _policy(),
+        global_kill_switch=False,
+    ).followers[0]
+
+    assert added.allowed is True
+    assert added.action == PositionPlanAction.ADD
+    assert added.achievable_target_signed_quantity == 2
+    assert added.delta_signed_quantity == 1
+    assert added.delta_side == Side.BUY
+    assert reduced.allowed is True
+    assert reduced.action == PositionPlanAction.REDUCE
+    assert reduced.achievable_target_signed_quantity == 1
+    assert reduced.delta_signed_quantity == -1
+    assert reduced.delta_side == Side.SELL
+
+
+def test_cumulative_sizing_plans_reversal_from_total_not_event_delta() -> None:
+    nq, mnq = _contracts()
+    item = plan_cumulative_copy(
+        _master_position(nq, -1),
+        [_cumulative_follower(mnq, 1, open_risk="40")],
+        _candidates(nq, mnq),
+        _policy(),
+        global_kill_switch=False,
+    ).followers[0]
+
+    assert item.allowed is True
+    assert item.action == PositionPlanAction.REVERSE
+    assert item.evaluated_target_signed_quantity == -1
+    assert item.achievable_target_signed_quantity == -1
+    assert item.delta_signed_quantity == -2
+    assert item.delta_side == Side.SELL
+    assert item.delta_quantity == 2
+
+
+def test_cumulative_sizing_closes_but_never_converts_an_open_contract() -> None:
+    nq, mnq = _contracts()
+    item = plan_cumulative_copy(
+        _master_position(nq, 1),
+        [
+            _cumulative_follower(
+                nq,
+                1,
+                equity="3000",
+                open_risk="400",
+            )
+        ],
+        _candidates(nq, mnq),
+        _policy(max_risk_fraction=D("0.20")),
+        global_kill_switch=False,
+    ).followers[0]
+
+    assert item.allowed is True
+    assert item.reason == "no_safe_nonzero_target_close"
+    assert item.action == PositionPlanAction.CLOSE
+    assert item.evaluated_product_code == "NQ"
+    assert item.achievable_target_signed_quantity == 0
+    assert item.delta_signed_quantity == -1
+
+
+def test_cumulative_sizing_closes_followers_when_master_is_flat() -> None:
+    nq, mnq = _contracts()
+    item = plan_cumulative_copy(
+        _master_position(nq, 0),
+        [_cumulative_follower(mnq, -2, open_risk="80")],
+        _candidates(nq, mnq),
+        _policy(),
+        global_kill_switch=True,
+    ).followers[0]
+
+    assert item.allowed is True
+    assert item.reason == "master_flat_close"
+    assert item.action == PositionPlanAction.CLOSE
+    assert item.delta_signed_quantity == 2
+    assert item.delta_side == Side.BUY
+
+
+def test_risk_gate_still_allows_a_cumulative_reduction() -> None:
+    nq, mnq = _contracts()
+    item = plan_cumulative_copy(
+        _master_position(nq, 1),
+        [_cumulative_follower(mnq, 2, open_risk="80")],
+        _candidates(nq, mnq),
+        _policy(),
+        global_kill_switch=True,
+    ).followers[0]
+
+    assert item.allowed is True
+    assert item.reason == "risk_reducing_plan_allowed"
+    assert item.action == PositionPlanAction.REDUCE
+    assert item.delta_signed_quantity == -1
+
+
+def test_funding_report_quantifies_one_mnq_equity_and_margin_shortfalls() -> None:
+    nq, mnq = _contracts()
+    item = plan_cumulative_copy(
+        _master_position(nq, 1, equity="30000"),
+        [
+            _cumulative_follower(
+                equity="500",
+                available_margin="50",
+            )
+        ],
+        _candidates(nq, mnq),
+        _policy(),
+        global_kill_switch=False,
+    ).followers[0]
+
+    report = item.funding
+    assert report.funding_adequate is False
+    assert report.currently_eligible is False
+    assert report.one_mnq_risk_dollars == D("40")
+    assert report.minimum_equity == D("3000")
+    assert report.equity_shortfall == D("2500")
+    assert report.minimum_available_margin == D("125")
+    assert report.available_margin_shortfall == D("75")
+    assert "equity_below_one_mnq_parity" in report.blockers
+    assert "one_mnq_margin_capacity_insufficient" in report.blockers
+
+
+def test_cumulative_sizing_blocks_expiry_changes_until_position_is_flat() -> None:
+    nq, mnq = _contracts()
+    later_mnq = FuturesContractRegistry().register_contract(
+        contract_id="CME:MNQ:2027-06-18",
+        product_code="MNQ",
+        expiration=date(2027, 6, 18),
+    )
+    item = plan_cumulative_copy(
+        _master_position(nq, 1),
+        [_cumulative_follower(later_mnq, 1, open_risk="40")],
+        _candidates(nq, mnq),
+        _policy(),
+        global_kill_switch=False,
+    ).followers[0]
+
+    assert item.allowed is False
+    assert item.reason == "open_position_expiry_mismatch_no_auto_roll"
+    assert item.action == PositionPlanAction.BLOCKED
+    assert item.delta_signed_quantity == 0

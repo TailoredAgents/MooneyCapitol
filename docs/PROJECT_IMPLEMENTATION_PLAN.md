@@ -46,6 +46,7 @@ Implemented now:
 - typed, redacted secret-reference configuration for one master and four independent follower connections;
 - deterministic supervision for five independent discoveries and ten Order/PnL sessions, with generation fencing, heartbeat/staleness tracking, failure isolation, and credential-free simulation;
 - a durable fail-closed copy profile with four follower state machines, global pause, optimistic revisions, CSRF-protected control APIs, restart directives, and append-only audit history;
+- cumulative total-position sizing across adds, reductions, closes, and reversals, with exact-contract pinning and per-follower one-MNQ funding-adequacy reports;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
 - a read-only operations dashboard that shows capture and Shadow readiness;
 - fail-closed environment and Render defaults; and
@@ -57,7 +58,6 @@ Not implemented yet:
 - live master lifecycle orchestration;
 - durable copy intents and master/follower order correlation;
 - a Rithmic write adapter or any follower broker mutation;
-- cumulative target-position sizing across adds and reductions;
 - write-path crash recovery, production fencing, and execution reconciliation;
 - measured copy latency;
 - the functional copier control UI; or
@@ -153,18 +153,18 @@ Status: **complete**
 
 ### Phase 4 — Production sizing and funding adequacy
 
-Status: **next**
+Status: **complete**
 
 - Extend the current pure Shadow planner rather than duplicating its formulas.
 - Use authoritative current equity, available margin, open stop risk, daily P&L/drawdown, and exact contract facts.
 - Plan cumulative target positions and follower deltas across adds, reductions, and reversals.
 - Preserve same-expiry NQ/MNQ mapping and never roll an open copied position automatically.
 - Produce a funding-adequacy report showing when a follower cannot safely trade one MNQ.
-- Store target versus achievable exposure and the reason for every skip or block.
+- Record target versus achievable exposure and the reason for every skip or block in each immutable sizing result; Phase 5 persists those facts with durable copy intents.
 
 ### Phase 5 — Durable lifecycle copier and Rithmic write boundary
 
-Status: **planned**
+Status: **next**
 
 - Create durable, revisioned copy intents before follower actions.
 - Correlate each master lifecycle with each independent follower lifecycle.
@@ -284,8 +284,8 @@ Also finalize owner-approved per-trade risk, concurrent-risk, daily realized-los
 
 ## Progress checkpoint
 
-Current checkpoint: Phase 3 durable copy control plane complete. PostgreSQL now seeds one globally paused profile and four disabled followers; authenticated APIs apply revision-checked per-follower/global transitions, dashboard-cookie mutations require session-bound CSRF proof, commands serialize under row locks, flatten remains pending until the execution system confirms flat, restart directives fail closed, and audit rows are append-only at the database boundary.
+Current checkpoint: Phase 4 cumulative production sizing and funding adequacy complete. The pure Decimal planner now sizes toward total follower positions, derives only the required signed delta for adds/reductions/closes/reversals, pins every open copied contract until flat, blocks expiry mismatch rather than auto-rolling, permits safe reductions through entry risk gates, records desired/evaluated/achievable exposure plus exact reason codes, and quantifies the equity, risk-capacity, and available-margin shortfall for one MNQ.
 
-Next implementation task: Phase 4, cumulative target-position sizing and follower funding-adequacy reporting.
+Next implementation task: Phase 5, durable master/follower lifecycle orchestration and the separate Test-gated Rithmic write boundary.
 
 Do not skip directly to UI polish, learning, AI agents, Rithmic Test, or live activation while an earlier execution milestone remains incomplete.

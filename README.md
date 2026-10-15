@@ -2,7 +2,7 @@
 
 MooneyCapitol is transitioning from a legacy Webull/equity research and copier application (V1) to a broker-neutral futures platform (V2). Both systems remain in this repository, but their runtime responsibilities, data, labels, and model artifacts are deliberately isolated.
 
-The V2 execution path is not production-ready and cannot submit a broker order. A production-shaped direct R|Protocol read-only transport and capture service now exist for Rithmic Test observation. A one-master/four-follower NQ/MNQ Shadow planner now calculates master-relative percentage risk and exposure, but every broker mutation remains structurally disabled. The target topology is five operationally independent AMP accounts with separately configurable credentials: one master and four followers. The software does not depend on AMP subaccounts, a shared entity, or one Rithmic user. The `conner_nq_v1` code is still an observation and learning-data foundation only: it contains no trained model, live Scout service, complete Conner strategy, or execution connection.
+The V2 execution path is not production-ready and cannot submit a broker order. A production-shaped direct R|Protocol read-only transport and capture service now exist for Rithmic Test observation. A one-master/four-follower NQ/MNQ Shadow planner calculates master-relative percentage risk/exposure, cumulative follower targets and deltas, and one-MNQ funding adequacy, but every broker mutation remains structurally disabled. The target topology is five operationally independent AMP accounts with separately configurable credentials: one master and four followers. The software does not depend on AMP subaccounts, a shared entity, or one Rithmic user. The `conner_nq_v1` code is still an observation and learning-data foundation only: it contains no trained model, live Scout service, complete Conner strategy, or execution connection.
 
 ## Start here
 
@@ -39,7 +39,7 @@ Execution does not depend on OpenAI, V1 learning, XGBoost, scikit-learn, or Scou
 python -m app.v2.execution.main
 ```
 
-It reports not-ready and submission-disabled. The execution-side Rithmic adapter remains disabled, and the in-memory lease is only a local/test seam. The V2 foundation now includes the pure NQ/MNQ Shadow parity planner, five typed independent credential references, deterministic discovery plus ten supervised Order/PnL session states, and durable revision-checked follower/global controls with append-only audit. It still has no live connection driver, event orchestrator, durable copy intent, or broker submission method. Separately, `app/v2/brokers/rithmic_protocol` and `app/v2/capture` implement direct R|Protocol 0.90 observation with independent Order/PnL sessions, account allowlisting, replay/reconciliation, durable append-only journaling, and sanitized health/readiness. The planned write path will be a separate execution boundary and will not weaken this observer's structural read-only guard. R|API+/.NET is a fallback/conformance reference only.
+It reports not-ready and submission-disabled. The execution-side Rithmic adapter remains disabled, and the in-memory lease is only a local/test seam. The V2 foundation now includes pure NQ/MNQ parity and cumulative-position sizing, follower funding-adequacy reporting, five typed independent credential references, deterministic discovery plus ten supervised Order/PnL session states, and durable revision-checked follower/global controls with append-only audit. It still has no live connection driver, event orchestrator, durable copy intent, or broker submission method. Separately, `app/v2/brokers/rithmic_protocol` and `app/v2/capture` implement direct R|Protocol 0.90 observation with independent Order/PnL sessions, account allowlisting, replay/reconciliation, durable append-only journaling, and sanitized health/readiness. The planned write path will be a separate execution boundary and will not weaken this observer's structural read-only guard. R|API+/.NET is a fallback/conformance reference only.
 
 The dedicated command is:
 
@@ -86,6 +86,7 @@ Migrations are additive:
 - `0009_v2_futures_foundation` adds 23 V2 execution/reference tables.
 - `0010_conner_nq_scout` adds 13 observation, candidate measurement, learning, ranking, Shadow, and evaluation tables.
 - `0011_rithmic_read_capture` adds 11 append-only connection, event, replay, account, order, execution, bracket, reference, P&L/RMS, and reconciliation tables.
+- `0012_v2_copy_control` adds the fail-closed copy profile, four follower controls, and immutable control audit.
 
 V1 records are neither altered nor converted. Monetary, price, tick, and R values use `NUMERIC(24,10)` where applicable; futures quantities remain integers.
 
@@ -132,6 +133,6 @@ Environment values cannot enable trading. Live V1 mode also requires persisted e
 
 ## Exact next step
 
-Follow [the implementation plan](docs/PROJECT_IMPLEMENTATION_PLAN.md) to make the copier credential-ready without waiting for account credentials. Independent account configuration, simulated five-account supervision, and the durable fail-closed control plane are complete. The next implementation task is cumulative target-position sizing and follower funding-adequacy reporting, followed by lifecycle copying, recovery/fencing, a minimal operational UI, and the complete simulated acceptance suite.
+Follow [the implementation plan](docs/PROJECT_IMPLEMENTATION_PLAN.md) to make the copier credential-ready without waiting for account credentials. Independent account configuration, simulated five-account supervision, durable fail-closed controls, cumulative target-position sizing, and follower funding-adequacy reporting are complete. The next implementation task is the durable lifecycle copier and separate Test-gated Rithmic write boundary, followed by recovery/fencing, a minimal operational UI, and the complete simulated acceptance suite.
 
 When the five credential bundles become available, insert them through secret management and complete Rithmic Test, conformance, measured latency, and a staged one-follower live canary. The dashboard structure/aesthetic pass follows the working copier. Learning and Conner-focused read-only AI agents come later, while the execution foundation records trustworthy lifecycle and execution-quality facts from day one. Production readiness has not been declared.

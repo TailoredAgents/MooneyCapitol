@@ -161,7 +161,7 @@ Migration `0011_rithmic_read_capture` adds 11 tables for independent connection 
 
 All three migrations are additive. V1 records are not altered or converted. The `0010` constraints encode cutoff ordering, point-in-time availability, explicit missingness, unknown/unlabeled defaults, evidenced positive/pass labels, task isolation, Shadow-only outputs, lead-time rules, and walk-forward chronology.
 
-PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and produced zero V2 metadata drift through that revision. Migration `0011` currently has automated schema/model and targeted offline-SQL validation; its live PostgreSQL upgrade remains part of deployment validation.
+PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and produced zero V2 metadata drift through that revision. Migrations `0011` and `0012` have automated schema/model validation; their live PostgreSQL upgrade remains part of deployment validation.
 
 The Rithmic capture process has a durable journal/projection writer. The schema does not yet provide a durable high-volume strategy market-data ingestion process or production Scout repository/orchestrator; those remain next-phase components.
 
@@ -172,6 +172,8 @@ Supported sizing modes are `FIXED_DOLLAR`, `PERCENT_EQUITY`, `MASTER_RISK_MULTIP
 `AUTO_NQ_MNQ` accepts only exact same-expiry NQ/MNQ candidates. ES context and every Scout/model output are outside this sizing decision.
 
 The Shadow copy planner adds master-relative parity selection for the fixed one-master/four-follower topology. It minimizes the larger of stop-risk percentage error and dollars-per-point exposure percentage error across integer same-expiry NQ/MNQ candidates. By default it does not consider a quantity above the master's percentage target; if even one MNQ exceeds that target, it reports the nearest granularity result but blocks the follower. Broker margin is a separate feasibility ceiling, not the risk denominator.
+
+The cumulative planner applies that same parity engine to the master's authoritative total signed position, then subtracts each follower's authoritative copied position to produce only the required signed delta. It records desired fractional quantity, evaluated whole-contract target, achievable target, risk/exposure mismatch, action, and reason. Open follower contracts are pinned by exact identity until flat: no NQ/MNQ conversion or expiry roll is inferred from a sizing event. Risk-reducing deltas may proceed through entry-only gates, while reversals still require new-risk eligibility. A separate one-MNQ report quantifies minimum equity, risk capacity, minimum available margin after headroom, and current shortfalls.
 
 ## Intentionally absent
 
@@ -190,6 +192,6 @@ The repository still has no:
 
 ## Exact next step
 
-Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Typed account configuration, deterministic multi-account supervision/simulation, and durable revisioned follower/global controls are complete. Next build cumulative-position parity sizing and funding-adequacy reporting, then lifecycle orchestration, a separate Test-gated write adapter, reconciliation/recovery/fencing, latency telemetry, the minimal operational UI, and complete simulated acceptance testing.
+Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Typed account configuration, deterministic multi-account supervision/simulation, durable controls, cumulative-position parity sizing, and funding-adequacy reporting are complete. Next build durable lifecycle orchestration and the separate Test-gated write adapter, then reconciliation/recovery/fencing, latency telemetry, the minimal operational UI, and complete simulated acceptance testing.
 
 When credentials arrive, validate all independent connections against Rithmic Test, complete required conformance and AMP authorization, and use a supervised one-follower minimum-size live canary before staged expansion. The dashboard information-architecture/aesthetic pass follows the operational copier. Learning and Conner-focused read-only agents follow later; trustworthy execution and master-lifecycle facts must be retained from day one. Production readiness has not been declared, and all Rithmic broker mutation remains disabled in the current code.
