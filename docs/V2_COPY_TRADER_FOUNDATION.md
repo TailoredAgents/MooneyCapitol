@@ -6,9 +6,11 @@ Updated: 2026-10-14
 
 ## What this is
 
-The V2 copy trader is intended to observe one Mooney Capital master futures account and reproduce eligible master trades across exactly four follower accounts owned by the same operator. The initial product set is NQ and MNQ. All accounts are expected to be AMP accounts connected through an authorized Rithmic API setup, but account ownership does not replace AMP/Rithmic permissions, credentials, session limits, or conformance requirements.
+The V2 copy trader is intended to observe one Mooney Capital master futures account and reproduce eligible master trades across exactly four operationally independent follower accounts. All five are separate AMP accounts. The application does not assume AMP subaccounts, one legal entity, one portal, one Rithmic user, or shared credentials. Every account receives its own exact broker selector and independently configurable credential/connection bundle. The initial product set is NQ and MNQ. Account ownership does not replace AMP/Rithmic permissions, credentials, session limits, or conformance requirements.
 
 The implemented phase is a deterministic Shadow planner. It calculates what each follower trade would be and why it would be allowed or blocked. It cannot submit, modify, cancel, or flatten a broker order. Requesting `TEST` or `LIVE` mode makes the effective mode `OFF` and reports `broker_submission_not_implemented`.
+
+The forward implementation order is defined in [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md). The immediate target is a credential-ready copier built and simulated without waiting for the five credential bundles. Broker validation and live readiness remain later gates.
 
 ## Sizing objective
 
@@ -84,13 +86,18 @@ The preview endpoint is a calculator. It does not read broker credentials, obser
 
 The repository deliberately does not hard-code website margin figures. The operator must verify and provide current account-specific values before each deployment or whenever the broker changes them. Account IDs and credentials must remain in secret management, not Git.
 
+This environment shape is the implemented interim Shadow configuration, not the final five-connection secret model. The credential-ready implementation will use one typed master connection and four typed follower connections with independent secret references and readiness state.
+
 ## Still required before copied orders
 
 The repository does not yet contain:
 
 - live master-order detection and lifecycle orchestration;
+- independently supervised credential/connection bundles for all five accounts;
+- persistent per-follower enable, pause, flatten, lock, and audit state;
 - a Rithmic write adapter or any follower order submission;
 - durable copy intents, an outbox, active-instance lease, or crash recovery for writes;
+- cumulative target-position sizing across adds, reductions, and reversals;
 - parent/child, partial-fill, replace, cancel, bracket/OCO, flatten, or disconnect handling for copied orders;
 - actual-fill rebalancing or execution-quality reconciliation;
 - measured end-to-end copy latency; or
@@ -98,14 +105,14 @@ The repository does not yet contain:
 
 Low latency must come from a persistent event-driven Rithmic connection and immediate in-process planning, not polling the dashboard. Safety and lifecycle correctness remain release gates even when optimizing speed.
 
-## Activation sequence
+## Delivery and activation sequence
 
-1. Obtain the five exact account IDs under the approved Rithmic user and confirm API/session permissions with AMP/Rithmic.
-2. Complete the existing read-only Rithmic Test runbook and prove master orders, fills, brackets, RMS, P&L, reconnect, and reconciliation are observed correctly.
-3. Record owner-approved hard risk/loss limits, current margin requirements, cost buffers, and acceptable parity error; keep over-target copying disabled unless explicitly accepted.
-4. Run the Shadow planner against representative master/follower balances and reject funding combinations that cannot fit one MNQ safely.
-5. Build the separate master-event orchestrator, durable intent/outbox/lease layer, and write adapter behind a new fail-closed Test gate.
-6. Validate entry, stop, target, partial-fill, cancel/replace, flatten, rejection, reconnect, and kill-switch scenarios in Rithmic Test.
-7. Complete any required Rithmic conformance and AMP approval, then use a deliberately small live canary before broader operation.
+1. Build the independent account/secret configuration, simulated connection supervision, persistent controls, production sizing, lifecycle orchestrator, separate write adapter, recovery/fencing, latency telemetry, and minimal operator UI without waiting for credentials.
+2. Complete automated simulation and failure injection for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
+3. Obtain the five exact AMP/Rithmic credential bundles and confirm each account's API/session permissions and authorized operators.
+4. Insert credentials only through secret management and complete the existing read-only Rithmic Test runbook for every independent connection.
+5. Run the complete write-path scenario suite in Rithmic Test and verify actual lifecycle semantics, equity/margin facts, reconciliation, and latency.
+6. Complete required Rithmic conformance and AMP approval.
+7. Use one follower, MNQ, and the minimum accepted size for a supervised live canary before adding followers individually.
 
 The official integration starting points are [Rithmic APIs and conformance](https://www.rithmic.com/apis), [AMP's Rithmic API page](https://www.ampfutures.com/trading-platform/rithmic-r-api), and the [read-only project runbook](RITHMIC_READ_ONLY_RUNBOOK.md).

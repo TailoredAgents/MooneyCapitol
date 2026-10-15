@@ -2,10 +2,11 @@
 
 MooneyCapitol is transitioning from a legacy Webull/equity research and copier application (V1) to a broker-neutral futures platform (V2). Both systems remain in this repository, but their runtime responsibilities, data, labels, and model artifacts are deliberately isolated.
 
-The V2 execution path is not production-ready and cannot submit a broker order. A production-shaped direct R|Protocol read-only transport and capture service now exist for Rithmic Test observation. A one-master/four-follower NQ/MNQ Shadow planner now calculates master-relative percentage risk and exposure, but every broker mutation remains structurally disabled. The `conner_nq_v1` code is still an observation and learning-data foundation only: it contains no trained model, live Scout service, complete Conner strategy, or execution connection.
+The V2 execution path is not production-ready and cannot submit a broker order. A production-shaped direct R|Protocol read-only transport and capture service now exist for Rithmic Test observation. A one-master/four-follower NQ/MNQ Shadow planner now calculates master-relative percentage risk and exposure, but every broker mutation remains structurally disabled. The target topology is five operationally independent AMP accounts with separately configurable credentials: one master and four followers. The software does not depend on AMP subaccounts, a shared entity, or one Rithmic user. The `conner_nq_v1` code is still an observation and learning-data foundation only: it contains no trained model, live Scout service, complete Conner strategy, or execution connection.
 
 ## Start here
 
+- [Project implementation plan](docs/PROJECT_IMPLEMENTATION_PLAN.md) — canonical direction, sequence, readiness gates, and progress checkpoint
 - [V2 architecture](docs/V2_FUTURES_ARCHITECTURE.md) — canonical plane boundaries and safety rules
 - [V2 copy trader foundation](docs/V2_COPY_TRADER_FOUNDATION.md) — one-master/four-follower parity sizing, safety gates, and activation path
 - [Conner NQ Scout foundation](docs/CONNER_NQ_SCOUT_FOUNDATION.md) — implemented observation, labeling, ranking, replay, and provider contracts
@@ -38,7 +39,7 @@ Execution does not depend on OpenAI, V1 learning, XGBoost, scikit-learn, or Scou
 python -m app.v2.execution.main
 ```
 
-It reports not-ready and submission-disabled. The execution-side Rithmic adapter remains disabled, and the in-memory lease is only a local/test seam. The separate V2 Shadow copier planner can calculate stop-defined risk and point-exposure parity for one master and four followers using integer same-expiry NQ/MNQ quantities. It has no event orchestrator or broker submission method. Separately, `app/v2/brokers/rithmic_protocol` and `app/v2/capture` implement direct R|Protocol 0.90 observation with independent Order/PnL sessions, account allowlisting, replay/reconciliation, durable append-only journaling, and sanitized health/readiness. R|API+/.NET is a fallback/conformance reference only.
+It reports not-ready and submission-disabled. The execution-side Rithmic adapter remains disabled, and the in-memory lease is only a local/test seam. The separate V2 Shadow copier planner can calculate stop-defined risk and point-exposure parity for one master and four followers using integer same-expiry NQ/MNQ quantities. It has no multi-credential supervisor, event orchestrator, durable copy intent, follower control persistence, or broker submission method. Separately, `app/v2/brokers/rithmic_protocol` and `app/v2/capture` implement direct R|Protocol 0.90 observation with independent Order/PnL sessions, account allowlisting, replay/reconciliation, durable append-only journaling, and sanitized health/readiness. The planned write path will be a separate execution boundary and will not weaken this observer's structural read-only guard. R|API+/.NET is a fallback/conformance reference only.
 
 The dedicated command is:
 
@@ -131,6 +132,6 @@ Environment values cannot enable trading. Live V1 mode also requires persisted e
 
 ## Exact next step
 
-Configure the Shadow planner with the exact one-master/four-follower topology, owner-approved hard limits, verified current margins, and representative balances; use its preview to identify follower balances that cannot safely fit one MNQ. In parallel, deploy `mooney-rithmic-capture` fail-closed, provide the privately generated licensed bindings and Rithmic Test secrets, then follow the read-only runbook to validate account discovery, manual R|Trader visibility, orders/fills, P&L/RMS, brackets, replay overlap, reconnect, redaction, and reconciliation. That validation must not enable or exercise any API-side broker mutation.
+Follow [the implementation plan](docs/PROJECT_IMPLEMENTATION_PLAN.md) to make the copier credential-ready without waiting for account credentials. The next implementation task is independent secret-reference/account configuration for one master and four separately connected followers, followed by multi-account supervision, durable controls, cumulative-position sizing, lifecycle copying, recovery/fencing, a minimal operational UI, and the complete simulated acceptance suite.
 
-In parallel, configure and validate an authenticated market-data transport, exact NQ/ES provider bindings, and explicit entitlements so point-in-time strategy observations can accumulate. Run ranking contracts in Shadow and collect actual-trade matches, misses, ranks, lead times, and data-quality failures. Train nothing until enough honest chronological labels exist. Production readiness has not been declared; paper and live broker mutation remain separate future gates after read-only conformance.
+When the five credential bundles become available, insert them through secret management and complete Rithmic Test, conformance, measured latency, and a staged one-follower live canary. The dashboard structure/aesthetic pass follows the working copier. Learning and Conner-focused read-only AI agents come later, while the execution foundation records trustworthy lifecycle and execution-quality facts from day one. Production readiness has not been declared.

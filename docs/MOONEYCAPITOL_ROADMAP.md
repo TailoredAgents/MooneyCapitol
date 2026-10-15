@@ -1,6 +1,6 @@
 # MooneyCapitol Roadmap
 
-> Legacy V1 history. This document is retained for reference and does not define V2 futures architecture, readiness, strategy, features, labels, or provider choices. See `docs/V2_FUTURES_ARCHITECTURE.md`.
+> Legacy V1 history. This document is retained for reference and does not define V2 futures architecture, readiness, strategy, features, labels, provider choices, or implementation order. See `docs/PROJECT_IMPLEMENTATION_PLAN.md` and `docs/V2_FUTURES_ARCHITECTURE.md`.
 
 ## 1. Product Vision
 

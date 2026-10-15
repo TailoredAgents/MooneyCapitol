@@ -1,4 +1,6 @@
-# Hybrid XGBoost Learning Upgrade Plan
+# Hybrid XGBoost Learning Upgrade Plan (legacy V1)
+
+> Historical V1 learning plan. Retained for reference only. It does not define V2 futures labels, artifacts, objectives, implementation order, or production status. Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md) for the current direction.
 
 ## Goal
 

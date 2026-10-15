@@ -4,6 +4,8 @@
 
 MooneyCapitol implements a direct R|Protocol 0.90 read-only capture adapter. R|API+/.NET is retained only as a fallback and conformance reference. The next gate is Rithmic Test validation; production readiness has not been declared.
 
+This runbook describes the **currently implemented one-credential-bundle observer**, not the final copier topology. The target copier uses one independent AMP master and four independent AMP followers with separately configurable credential/connection bundles and makes no shared-user or subaccount assumption. Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) for that delivery sequence. When credentials exist, apply the validation principles in this runbook to every independent connection.
+
 The deployed observer has no order-submission, modification, cancellation, flatten, exit, bracket-send, OCO, link, target-change, stop-change, or follower-execution method. A default-deny transport guard checks every outbound protobuf template immediately before WebSocket send and rejects all known mutation templates. This runbook never enables broker mutation.
 
 The capture process is isolated from the API, workers, Scout, ML, OpenAI, Shadow Trader, and follower execution. It starts offline unless every TEST-only preflight condition is satisfied.

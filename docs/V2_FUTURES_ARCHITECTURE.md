@@ -9,7 +9,7 @@ V2 supplies broker-neutral futures execution boundaries and provider-neutral mar
 
 The strategy-specific work implemented so far is an observational namespace named `conner_nq_v1`. It represents synchronized NQ/ES state, research measurements, honest learning labels, Shadow rankings, and evaluation. It is not a hand-coded implementation of Conner's discretionary strategy and does not affect execution.
 
-See [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md) for the detailed strategy-observation contract and [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md) for capture deployment and Test validation.
+See [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) for the canonical delivery order, [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md) for copy-sizing behavior, [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md) for the detailed strategy-observation contract, and [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md) for current capture deployment and Test validation.
 
 ## Dependency direction
 
@@ -24,6 +24,8 @@ Execution may consume validated contract/session facts and write immutable opera
 ## Execution plane
 
 The execution plane owns broker connections/accounts, normalized lifecycle events, deterministic sizing, copy intent, follower lifecycle, positions, account risk, reconciliation, journal enqueueing, account serialization, and active-instance fencing.
+
+The target account topology is one operationally independent AMP master plus four operationally independent AMP followers. Each account has an exact broker selector and independently configurable credential/connection bundle. V2 must not depend on shared AMP subaccounts, legal entity, portal, Rithmic user, or credentials. Account discovery is not authorization.
 
 Hard constraints include:
 
@@ -48,6 +50,8 @@ Order Plant and PnL Plant have independent sockets, authentication, heartbeat, g
 For each new connection generation, the service subscribes to live Order/bracket/RMS/PnL streams for every allowlisted account before requesting current orders, execution replay, order/fill history, brackets/stops, RMS, and PnL snapshots. Live events are buffered during recovery, all inputs are durably journaled and deduplicated, and readiness requires clean checkpoints for every configured account on both required plants. Failed recovery is not repeatedly polled in the same generation.
 
 The observer has no order, modify, cancel, flatten, exit, bracket/OCO send, link, target/stop change, or follower method. A default-deny outbound template guard runs at the final transport boundary and rejects all known broker-mutation templates. This is a structural boundary, not an operator convention or environment flag.
+
+The implemented observer currently consumes one configured credential bundle and an exact account allowlist. That is a description of current code, not the final copier topology. The planned copier will supervise an independent Order/PnL connection bundle for each distinct credential while preserving the observer as a separate structurally read-only component.
 
 Optional Ticker Plant request/response support provides exact symbol, exchange/product, expiration, tick-table, point-value, and tradability facts. Normal capture requires only Order and PnL once exact contract mappings are validated. Continuous Rithmic market-data streaming, History Plant strategy data, and Scout integration are outside this phase.
 
@@ -174,6 +178,7 @@ The Shadow copy planner adds master-relative parity selection for the fixed one-
 The repository still has no:
 
 - completed Rithmic Test conformance or any broker order submission/mutation;
+- five independently supervised account credential/connection bundles or persistent follower controls;
 - live master-event orchestration, durable copy intents, or real follower order placement;
 - complete Conner strategy or handcrafted trade rule;
 - live Scout service or live candidate-generation loop;
@@ -185,6 +190,6 @@ The repository still has no:
 
 ## Exact next step
 
-Configure and exercise the one-master/four-follower Shadow planner with approved hard limits, verified current margins, and representative account balances. Use it to identify follower funding levels that cannot fit one MNQ within the accepted risk/exposure parity tolerance. In parallel, deploy the dedicated Rithmic capture service offline, deliver the externally generated licensed bindings through secret management, and follow the read-only runbook against Rithmic Test. Validate independent Order/PnL health, account allowlisting, manual R|Trader-to-API visibility, lifecycle/fill/P&L/RMS/bracket facts, replay overlap, reconnect, redaction, and reconciliation before implementing the separate master-event orchestrator and Test write adapter.
+Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Begin with typed independent account/secret configuration, then multi-account connection supervision, durable follower controls, cumulative-position parity sizing, lifecycle orchestration, a separate Test-gated write adapter, reconciliation/recovery/fencing, latency telemetry, the minimal operational UI, and complete simulated acceptance testing.
 
-In parallel, configure and validate an authenticated strategy market-data transport, exact NQ/ES provider bindings, and explicit entitlements. Begin durable point-in-time NQ/ES capture; the historical Massive REST adapter must retain its finalized-history semantics rather than being presented as live behavior evidence. Once prospective data is accumulating, run Shadow ranking records and attach observed master actions, misses, lead times, ranks, and data-quality failures. Only after enough trustworthy labels exist should chronological behavior/outcome baselines be trained and evaluated. Production readiness has not been declared, and all Rithmic broker mutation remains disabled.
+When credentials arrive, validate all independent connections against Rithmic Test, complete required conformance and AMP authorization, and use a supervised one-follower minimum-size live canary before staged expansion. The dashboard information-architecture/aesthetic pass follows the operational copier. Learning and Conner-focused read-only agents follow later; trustworthy execution and master-lifecycle facts must be retained from day one. Production readiness has not been declared, and all Rithmic broker mutation remains disabled in the current code.

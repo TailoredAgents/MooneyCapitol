@@ -1,4 +1,6 @@
-# OpenAI AI Features Plan
+# OpenAI AI Features Plan (legacy V1)
+
+> Historical V1 plan. Retained for reference only. It does not define current V2 priorities or product scope. The canonical direction is [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md): finish the copier, complete the dashboard structural/aesthetic pass, develop learning from trustworthy prospective data, and only then add read-only Conner-focused AI agents. AI remains outside execution and deterministic risk.
 
 ## Purpose
 
@@ -20,7 +22,7 @@ The explicitly excluded feature is:
 
 - Chat-style or assistant-style dashboard Q&A.
 
-The trader does not want a dashboard assistant. Do not build an interactive chat surface unless this product decision changes later.
+This was the V1 product decision when this document was written. It is superseded for future V2 work by the later decision to consider read-only Conner-focused agents after the copier, dashboard redesign, and learning milestones. Nothing in this historical plan authorizes an agent to enter execution or alter risk.
 
 ## Model Routing
 

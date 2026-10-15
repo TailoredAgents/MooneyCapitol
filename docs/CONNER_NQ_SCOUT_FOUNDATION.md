@@ -2,11 +2,13 @@
 
 Status: observation and learning-data foundation implemented; no trained or live Scout
 Namespace: `conner_nq_v1`
-Updated: 2026-10-05
+Updated: 2026-10-14
 
 ## Purpose
 
 This phase creates the contracts, validation, provider boundary, replay behavior, and persistence needed to learn from Conner's future NQ decisions. It does not turn the partial strategy description into a hand-coded trading system.
+
+The foundation remains valid, but active Scout/model development is scheduled after the credential-ready copier and dashboard structure/aesthetic phases. The copier must preserve trustworthy master lifecycle, follower execution, timing, and data-quality facts from day one so later learning starts with prospective evidence. See [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md).
 
 The eventual research question is: which developing NQ opportunities most resemble situations Conner chooses to trade, and what outcomes have followed comparable market states? The current code can represent and evaluate the evidence needed to answer that question later. It does not yet produce a live ranking or train a model.
 
@@ -157,6 +159,6 @@ This phase does not add:
 
 ## Exact next step
 
-Configure and validate an authenticated market-data transport, exact NQ/ES provider bindings, and explicit entitlements. Then begin durable point-in-time capture of synchronized NQ and ES market facts without reclassifying finalized REST history. In parallel, deploy the isolated direct R|Protocol observer fail-closed and complete the documented Rithmic Test validation so real master lifecycle facts can begin accumulating without enabling broker mutation.
+Complete the credential-ready copier milestones in [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) before beginning new Scout/model work. Preserve master lifecycle, plan, fill, follower variance, latency, outcome, skip, and data-quality facts during copier development and operation.
 
-After enough trustworthy prospective observations exist, run the ranking contracts in Shadow and collect actual-trade matches, misses, lead time, ranks, and data-quality failures. Only then define a chronological training dataset and evaluate behavior/outcome baselines. Do not train on finalized history as Conner behavior, and do not enable order submission.
+After the copier is validated and the dashboard structure/aesthetic pass is complete, configure an authenticated market-data transport, exact NQ/ES provider bindings, and explicit entitlements. Begin durable point-in-time capture without reclassifying finalized REST history. Once enough trustworthy prospective observations exist, run rankings in Shadow, collect actual-trade matches/misses/lead time/ranks/data-quality failures, and only then define chronological behavior/outcome baselines. Scout output and later agents remain outside execution.

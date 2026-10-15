@@ -2,11 +2,13 @@
 
 Updated: 2026-10-14
 
-Read [V2_FUTURES_ARCHITECTURE.md](V2_FUTURES_ARCHITECTURE.md) first. The fixed-topology Shadow copy contract is in [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md), the detailed strategy-observation contract is in [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md), and deployment/validation is in [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md). Older roadmap and learning documents describe V1 history and must not define V2 futures behavior, labels, or features.
+Read [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) first for the current product direction and work order, then [V2_FUTURES_ARCHITECTURE.md](V2_FUTURES_ARCHITECTURE.md) for plane boundaries. The implemented Shadow copy contract is in [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md), the detailed strategy-observation contract is in [CONNER_NQ_SCOUT_FOUNDATION.md](CONNER_NQ_SCOUT_FOUNDATION.md), and current read-only deployment/validation is in [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md). Older roadmap and learning documents describe V1 history and must not define V2 futures behavior, labels, or features.
 
 ## Direction
 
 MooneyCapitol V2 combines a broker-neutral, strategy-neutral execution foundation with a provider-neutral futures intelligence boundary. V1's equity scout, Webull copier, AI Lab, learning pipeline, APIs, dashboard, and tables remain legacy/reference code.
+
+The locked execution topology is one independent AMP master and four independent AMP followers. Every account receives an exact account selector and independently configurable credential/connection bundle. The system does not depend on shared AMP subaccounts, entity, portal, Rithmic user, or credentials. The immediate priority is a fully simulated credential-ready copier, followed by credential insertion and broker validation, the dashboard structural/aesthetic pass, learning, and later read-only Conner-focused AI agents.
 
 V1 equity artifacts, randomized sandbox data, synthetic labels, and `hybrid_target` cannot enter V2 futures datasets or artifact selection. V2 execution cannot import intelligence, OpenAI, or ML packages.
 
@@ -25,7 +27,7 @@ The first strategy-specific observation namespace is `conner_nq_v1`. It learns n
 - `app/v2/capture`: isolated TEST-only capture, subscribe-first recovery, durable journaling, and sanitized health/readiness/metrics.
 - `app/v2/execution`: separate disabled process with immutable config, health, actor, journal queue, fencing seam, graceful shutdown, and a pure one-master/four-follower Shadow parity planner.
 
-The execution skeleton is intentionally not ready: order submission always raises and `submission_enabled=True` is rejected. The Shadow planner calculates stop-risk and point-exposure percentage parity across integer same-expiry NQ/MNQ candidates, with mandatory stops, margin headroom, loss ceilings, kill switches, and fail-closed configuration. It neither observes a live master event nor submits a follower order. The separate read-only observer is production-shaped for the next Rithmic Test gate. It implements secure WSS, discovery, independent Order/PnL authentication and heartbeat generations, exact account allowlisting, order/fill/P&L/RMS/bracket/reference observation, replay/reconnect reconciliation, and append-only persistence. R|API+/.NET is only a fallback/conformance reference. Production readiness has not been declared.
+The execution skeleton is intentionally not ready: order submission always raises and `submission_enabled=True` is rejected. The Shadow planner calculates stop-risk and point-exposure percentage parity across integer same-expiry NQ/MNQ candidates, with mandatory stops, margin headroom, loss ceilings, kill switches, and fail-closed configuration. It neither observes a live master event nor submits a follower order. The separate read-only observer is production-shaped for the next Rithmic Test gate. It implements secure WSS, discovery, independent Order/PnL authentication and heartbeat generations, exact account allowlisting, order/fill/P&L/RMS/bracket/reference observation, replay/reconnect reconciliation, and append-only persistence. The observer currently consumes one credential bundle; the planned copier must supervise each distinct credential independently and must not weaken the observer's outbound mutation denylist. R|API+/.NET is only a fallback/conformance reference. Production readiness has not been declared.
 
 ### Market-data foundation
 
@@ -143,6 +145,7 @@ Current verification is 478 passing repository tests with one skipped test. Comp
 - A complete/handcrafted Conner strategy
 - Automatic trading from Scout output or any model-controlled sizing
 - Rithmic Test conformance, including manual R|Trader-to-API visibility and observed edge cases
+- Five independently supervised account credential/connection bundles and persistent follower controls
 - Live master-event orchestration, durable copy intents, or any Rithmic/V2 broker mutation and follower submission
 - Automatic contract rolling
 - A production distributed lease or durable execution journal worker
@@ -164,12 +167,6 @@ Current verification is 478 passing repository tests with one skipped test. Comp
 
 ## Exact next step
 
-Configure the Shadow copier with the exact master/four-follower account topology, owner-approved hard limits, verified current margin requirements, and representative balances. Use authenticated previews to determine which follower balances can and cannot fit one MNQ inside the accepted parity tolerance; keep over-target planning disabled unless the owner explicitly accepts it.
+Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md). The next code task is Phase 1: replace the interim account-ID list with typed secret-reference configuration for one master and four independently connected followers. Continue through simulated connection supervision, durable follower controls, cumulative-position sizing, lifecycle orchestration, the separate write adapter, recovery/fencing, latency telemetry, minimal operational UI, and failure-injected acceptance testing without waiting for credentials.
 
-In parallel, deploy `mooney-rithmic-capture` with its committed offline defaults. Privately generate the checksum-verified read-only Python bindings from the official external 0.90 SDK, upload them through a license-approved Render Secret File, and add only authorized Rithmic Test credentials/settings through secret management.
-
-Follow [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md): activate TEST connectivity last, verify both plants and the account allowlist, reconcile, then validate manual R|Trader orders/fills, P&L/RMS, brackets, replay overlap, and reconnect without API-side mutation. Only then implement the separate event-driven master orchestrator, durable intent/outbox/lease layer, and Rithmic Test write adapter. Production readiness has not been declared, and paper/live order submission remains disabled until that later explicit phase.
-
-In parallel, configure and validate an authenticated strategy market-data transport, exact NQ/ES provider-symbol bindings, and explicit capability/history entitlements. Then implement durable point-in-time capture of synchronized NQ and ES facts; do not reclassify finalized REST responses as point-in-time observations. After prospective data begins accumulating, run the candidate/ranking contracts in Shadow and store rankings, unmatched candidates, matched master trades, ranks, lead times, outcomes, and data-quality failures. Only after enough honest chronological labels exist should behavior and outcome baselines be trained and evaluated.
-
-Rithmic paper/live execution remains a separate gate after documented Test observation conformance. No environment variable in this phase can enable broker mutation.
+When the credential bundles arrive, privately generate/deliver the licensed bindings, insert secrets through secret management, and follow [RITHMIC_READ_ONLY_RUNBOOK.md](RITHMIC_READ_ONLY_RUNBOOK.md) for every independent connection before exercising the Test write path. Rithmic Test, conformance, actual latency validation, and a one-follower minimum-size live canary remain distinct later gates. The broader dashboard redesign follows the proven copier; learning and Conner-focused read-only AI agents follow later. No environment variable in the current code can enable broker mutation.
