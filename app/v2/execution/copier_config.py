@@ -5,17 +5,11 @@ from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Mapping
 
+from app.v2.execution.account_config import IndependentAccountTopology
 from app.v2.execution.copier import CopierMode, FollowerPolicy
 
 
 _TRUE = {"1", "true", "yes", "on"}
-_EXPECTED_FOLLOWERS = 4
-
-
-def _items(value: str | None) -> tuple[str, ...]:
-    return tuple(item.strip() for item in (value or "").split(",") if item.strip())
-
-
 def _decimal(
     source: Mapping[str, str],
     name: str,
@@ -43,8 +37,10 @@ def _integer(
 @dataclass(frozen=True)
 class ShadowCopierConfig:
     requested_mode: str = CopierMode.SHADOW.value
-    master_account_id: str | None = field(default=None, repr=False)
-    follower_account_ids: tuple[str, ...] = field(default_factory=tuple, repr=False)
+    topology: IndependentAccountTopology = field(
+        default_factory=lambda: IndependentAccountTopology.from_mapping({}),
+        repr=False,
+    )
     max_risk_fraction: Decimal = Decimal("0")
     max_contracts: int = 0
     max_concurrent_open_risk_fraction: Decimal = Decimal("0")
@@ -110,11 +106,7 @@ class ShadowCopierConfig:
                 "V2_COPIER_MODE",
                 CopierMode.SHADOW.value,
             ).strip().upper(),
-            master_account_id=source.get("V2_COPIER_MASTER_ACCOUNT_ID", "").strip()
-            or None,
-            follower_account_ids=_items(
-                source.get("V2_COPIER_FOLLOWER_ACCOUNT_IDS")
-            ),
+            topology=IndependentAccountTopology.from_mapping(source),
             max_contracts=max_contracts,
             allow_over_target=(
                 source.get("V2_COPIER_ALLOW_OVER_TARGET", "0").strip().lower()
@@ -139,14 +131,7 @@ class ShadowCopierConfig:
             blockers.append("broker_submission_not_implemented")
         elif self.requested_mode == CopierMode.OFF.value:
             blockers.append("copier_off")
-        if not self.master_account_id:
-            blockers.append("master_account_required")
-        if len(self.follower_account_ids) != _EXPECTED_FOLLOWERS:
-            blockers.append("exactly_four_followers_required")
-        if len(set(self.follower_account_ids)) != len(self.follower_account_ids):
-            blockers.append("follower_accounts_must_be_unique")
-        if self.master_account_id in set(self.follower_account_ids):
-            blockers.append("master_cannot_be_follower")
+        blockers.extend(self.topology.simulation_blockers)
         if self.invalid_values:
             blockers.append("invalid_numeric_configuration")
         if not Decimal("0") < self.max_risk_fraction <= Decimal("1"):

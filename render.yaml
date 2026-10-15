@@ -147,9 +147,69 @@ services:
         value: "2"
       - key: V2_COPIER_MODE
         value: SHADOW
-      - key: V2_COPIER_MASTER_ACCOUNT_ID
+      - key: V2_COPIER_CONNECTIVITY_ENABLED
+        value: "0"
+      - key: V2_COPIER_ENVIRONMENT
+        value: DISABLED
+      - key: V2_RITHMIC_MASTER_ACCOUNT_ID
         sync: false
-      - key: V2_COPIER_FOLLOWER_ACCOUNT_IDS
+      - key: V2_RITHMIC_MASTER_USERNAME
+        sync: false
+      - key: V2_RITHMIC_MASTER_PASSWORD
+        sync: false
+      - key: V2_COPIER_MASTER_DISCOVERY_URI
+        sync: false
+      - key: V2_COPIER_MASTER_SYSTEM_NAME
+        sync: false
+      - key: V2_COPIER_MASTER_GATEWAY_NAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_1_ACCOUNT_ID
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_1_USERNAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_1_PASSWORD
+        sync: false
+      - key: V2_COPIER_FOLLOWER_1_DISCOVERY_URI
+        sync: false
+      - key: V2_COPIER_FOLLOWER_1_SYSTEM_NAME
+        sync: false
+      - key: V2_COPIER_FOLLOWER_1_GATEWAY_NAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_2_ACCOUNT_ID
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_2_USERNAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_2_PASSWORD
+        sync: false
+      - key: V2_COPIER_FOLLOWER_2_DISCOVERY_URI
+        sync: false
+      - key: V2_COPIER_FOLLOWER_2_SYSTEM_NAME
+        sync: false
+      - key: V2_COPIER_FOLLOWER_2_GATEWAY_NAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_3_ACCOUNT_ID
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_3_USERNAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_3_PASSWORD
+        sync: false
+      - key: V2_COPIER_FOLLOWER_3_DISCOVERY_URI
+        sync: false
+      - key: V2_COPIER_FOLLOWER_3_SYSTEM_NAME
+        sync: false
+      - key: V2_COPIER_FOLLOWER_3_GATEWAY_NAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_4_ACCOUNT_ID
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_4_USERNAME
+        sync: false
+      - key: V2_RITHMIC_FOLLOWER_4_PASSWORD
+        sync: false
+      - key: V2_COPIER_FOLLOWER_4_DISCOVERY_URI
+        sync: false
+      - key: V2_COPIER_FOLLOWER_4_SYSTEM_NAME
+        sync: false
+      - key: V2_COPIER_FOLLOWER_4_GATEWAY_NAME
         sync: false
       - key: V2_COPIER_MAX_RISK_FRACTION
         value: "0"

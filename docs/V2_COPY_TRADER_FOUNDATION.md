@@ -1,6 +1,6 @@
 # V2 copy trader foundation
 
-Status: one-master/four-follower Shadow planner implemented; broker submission not implemented
+Status: five-account secret-reference configuration and Shadow planner implemented; connection supervision and broker submission not implemented
 
 Updated: 2026-10-14
 
@@ -43,7 +43,7 @@ If a master has $30,000 and a follower has $500, one NQ on the master implies a 
 
 A Shadow plan requires:
 
-- one configured master and exactly four unique followers;
+- the fixed structural topology of one master and exactly four followers;
 - an initial protective stop on the master trade, on the protective side of entry;
 - an exact NQ or MNQ contract and a same-exchange, same-expiry follower mapping;
 - positive, current account equity and operator-supplied broker margin facts;
@@ -57,7 +57,8 @@ The master trade's actual risk fraction must itself be within the follower polic
 ## Implemented surface
 
 - `app/v2/execution/copier.py`: pure Decimal-based parity planning with no broker dependency or side effect.
-- `app/v2/execution/copier_config.py`: fail-closed environment configuration for the fixed topology and hard limits.
+- `app/v2/execution/account_config.py`: typed master/follower connection slots, per-account secret references, redacted resolution, and fail-closed Test-connectivity readiness.
+- `app/v2/execution/copier_config.py`: fail-closed Shadow/risk configuration composed with the independent account topology.
 - `GET /v2/copier/status`: authenticated, redacted readiness and blocker status.
 - `POST /v2/copier/preview`: authenticated, non-persisting Shadow calculation for supplied hypothetical state.
 - `/dashboard`: read-only Shadow copier readiness alongside Rithmic observations.
@@ -69,8 +70,16 @@ The preview endpoint is a calculator. It does not read broker credentials, obser
 | Environment variable | Meaning | Safe committed value |
 | --- | --- | --- |
 | `V2_COPIER_MODE` | `OFF` or `SHADOW` in this phase | `SHADOW` |
-| `V2_COPIER_MASTER_ACCOUNT_ID` | Exact opaque Rithmic master account ID | unset secret |
-| `V2_COPIER_FOLLOWER_ACCOUNT_IDS` | Four comma-separated exact follower IDs | unset secret |
+| `V2_COPIER_CONNECTIVITY_ENABLED` | Explicit external-connectivity gate | `0` / disabled |
+| `V2_COPIER_ENVIRONMENT` | Shared default for the five connection environments | `DISABLED` |
+| `V2_COPIER_{SLOT}_ENVIRONMENT` | Optional per-account override; all five must match | unset / inherit |
+| `V2_COPIER_{SLOT}_ACCOUNT_ID_SECRET_REF` | Name of the environment secret containing the exact account selector | fixed non-secret reference |
+| `V2_COPIER_{SLOT}_USERNAME_SECRET_REF` | Name of the environment secret containing that connection's username | fixed non-secret reference |
+| `V2_COPIER_{SLOT}_PASSWORD_SECRET_REF` | Name of the environment secret containing that connection's password | fixed non-secret reference |
+| `V2_COPIER_{SLOT}_DISCOVERY_URI` | Account connection's secure Rithmic discovery endpoint | unset / blocked |
+| `V2_COPIER_{SLOT}_SYSTEM_NAME` | Account connection's Rithmic system | unset / blocked |
+| `V2_COPIER_{SLOT}_GATEWAY_NAME` | Optional explicit gateway selection | unset |
+| `V2_RITHMIC_{SLOT}_{ACCOUNT_ID\|USERNAME\|PASSWORD}` | Default referenced secrets | unset secret |
 | `V2_COPIER_MAX_RISK_FRACTION` | Hard per-trade equity-risk ceiling | `0` / blocked |
 | `V2_COPIER_MAX_CONTRACTS` | Hard total quantity ceiling per follower plan | `0` / blocked |
 | `V2_COPIER_MAX_CONCURRENT_RISK_FRACTION` | Maximum aggregate open stop risk | `0` / blocked |
@@ -84,16 +93,16 @@ The preview endpoint is a calculator. It does not read broker credentials, obser
 | `V2_COPIER_NQ_COST_BUFFER` | Conservative NQ cost allowance per contract | `0` |
 | `V2_COPIER_MNQ_COST_BUFFER` | Conservative MNQ cost allowance per contract | `0` |
 
-The repository deliberately does not hard-code website margin figures. The operator must verify and provide current account-specific values before each deployment or whenever the broker changes them. Account IDs and credentials must remain in secret management, not Git.
+`{SLOT}` is `MASTER`, `FOLLOWER_1`, `FOLLOWER_2`, `FOLLOWER_3`, or `FOLLOWER_4`. The status API reports only presence/readiness booleans and fixed connection labels; it never returns secret-reference names, selectors, usernames, passwords, or endpoint values. Shadow simulation does not require credentials. External connectivity requires all five complete, unique bundles, valid secret-free `wss://` discovery endpoints, matching `TEST` environments, and the explicit connectivity gate.
 
-This environment shape is the implemented interim Shadow configuration, not the final five-connection secret model. The credential-ready implementation will use one typed master connection and four typed follower connections with independent secret references and readiness state.
+The repository deliberately does not hard-code website margin figures. The operator must verify and provide current account-specific values before each deployment or whenever the broker changes them. Account IDs and credentials must remain in secret management, not Git.
 
 ## Still required before copied orders
 
 The repository does not yet contain:
 
 - live master-order detection and lifecycle orchestration;
-- independently supervised credential/connection bundles for all five accounts;
+- independent connection/session supervision for all five configured bundles;
 - persistent per-follower enable, pause, flatten, lock, and audit state;
 - a Rithmic write adapter or any follower order submission;
 - durable copy intents, an outbox, active-instance lease, or crash recovery for writes;

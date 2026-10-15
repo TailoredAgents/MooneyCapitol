@@ -498,11 +498,19 @@
         chipNode.className = `status-chip ${ready ? 'ok' : 'warn'}`;
         chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(ready ? 'Shadow ready' : 'Configuration blocked')}`;
         const blockers = (copier.blockers || []).length ? copier.blockers.join(', ') : 'None reported';
+        const connectivityBlockers = (copier.connectivity_blockers || []).length ? copier.connectivity_blockers.join(', ') : 'None reported';
         document.getElementById('copier-details').className = 'key-values';
         document.getElementById('copier-details').innerHTML = [
+          ['Architecture', copier.architecture === 'five_independent_account_connections' ? '5 independent connections' : present(copier.architecture)],
           ['Effective mode', present(copier.effective_mode)],
+          ['Simulation topology', boolText(copier.ready_for_simulation)],
           ['Master configured', boolText(copier.master_configured)],
           ['Followers', `${number(copier.configured_follower_count)} / ${number(copier.expected_follower_count)}`],
+          ['Credential bundles', `${number(copier.credential_complete_account_count)} / ${number(copier.connection_slot_count)}`],
+          ['Connection settings', `${number(copier.connection_settings_complete_account_count)} / ${number(copier.connection_slot_count)}`],
+          ['External connectivity', boolText(copier.connectivity_enabled)],
+          ['Connectivity environment', present(copier.environment)],
+          ['Test connectivity ready', boolText(copier.ready_for_test_connectivity)],
           ['Mandatory initial stop', boolText(copier.mandatory_initial_stop)],
           ['Allowed products', (copier.allowed_products || []).join(', ') || 'None'],
           ['Same-expiry mapping', boolText(copier.same_expiry_mapping_required)],
@@ -511,7 +519,8 @@
           ['Parity tolerance', present(copier.max_relative_parity_error)],
           ['Current margins configured', boolText(copier.broker_margins_configured)],
           ['Broker submission', 'Disabled'],
-          ['Blockers', blockers],
+          ['Shadow blockers', blockers],
+          ['Connectivity blockers', connectivityBlockers],
         ].map(([key, value]) => `<div class="key-value"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
       }
 

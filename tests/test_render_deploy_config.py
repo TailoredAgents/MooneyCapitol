@@ -45,8 +45,11 @@ def test_render_runs_migrations_before_api_and_worker_start():
     capture_block = text.split("name: mooney-rithmic-capture", 1)[1]
     copier_keys = (
         "V2_COPIER_MODE",
-        "V2_COPIER_MASTER_ACCOUNT_ID",
-        "V2_COPIER_FOLLOWER_ACCOUNT_IDS",
+        "V2_COPIER_CONNECTIVITY_ENABLED",
+        "V2_COPIER_ENVIRONMENT",
+        "V2_RITHMIC_MASTER_ACCOUNT_ID",
+        "V2_RITHMIC_MASTER_USERNAME",
+        "V2_RITHMIC_MASTER_PASSWORD",
         "V2_COPIER_MAX_RISK_FRACTION",
         "V2_COPIER_MAX_CONTRACTS",
         "V2_COPIER_MAX_CONCURRENT_RISK_FRACTION",
@@ -63,6 +66,11 @@ def test_render_runs_migrations_before_api_and_worker_start():
     assert all(text.count(key) == 1 for key in copier_keys)
     assert all(key in api_block for key in copier_keys)
     assert all(key not in capture_block for key in copier_keys)
+    for slot in ("MASTER", "FOLLOWER_1", "FOLLOWER_2", "FOLLOWER_3", "FOLLOWER_4"):
+        for suffix in ("DISCOVERY_URI", "SYSTEM_NAME", "GATEWAY_NAME"):
+            assert f"V2_COPIER_{slot}_{suffix}" in api_block
+        for suffix in ("ACCOUNT_ID", "USERNAME", "PASSWORD"):
+            assert f"V2_RITHMIC_{slot}_{suffix}" in api_block
 
 
 def test_shadow_copier_environment_templates_are_fail_closed():
@@ -70,9 +78,19 @@ def test_shadow_copier_environment_templates_are_fail_closed():
         text = Path(filename).read_text(encoding="utf-8")
 
         assert "V2_COPIER_MODE=SHADOW" in text
+        assert "V2_COPIER_CONNECTIVITY_ENABLED=0" in text
+        assert "V2_COPIER_ENVIRONMENT=DISABLED" in text
         assert "V2_COPIER_ALLOW_OVER_TARGET=0" in text
-        assert "V2_COPIER_MASTER_ACCOUNT_ID=\n" in text
-        assert "V2_COPIER_FOLLOWER_ACCOUNT_IDS=\n" in text
+        assert "V2_COPIER_MASTER_ACCOUNT_ID=" not in text
+        assert "V2_COPIER_FOLLOWER_ACCOUNT_IDS=" not in text
+        for slot in ("MASTER", "FOLLOWER_1", "FOLLOWER_2", "FOLLOWER_3", "FOLLOWER_4"):
+            assert (
+                f"V2_COPIER_{slot}_ACCOUNT_ID_SECRET_REF="
+                f"V2_RITHMIC_{slot}_ACCOUNT_ID"
+            ) in text
+            assert f"V2_RITHMIC_{slot}_ACCOUNT_ID=\n" in text
+            assert f"V2_RITHMIC_{slot}_USERNAME=\n" in text
+            assert f"V2_RITHMIC_{slot}_PASSWORD=\n" in text
         for name in (
             "V2_COPIER_MAX_RISK_FRACTION",
             "V2_COPIER_MAX_CONTRACTS",

@@ -178,7 +178,7 @@ The Shadow copy planner adds master-relative parity selection for the fixed one-
 The repository still has no:
 
 - completed Rithmic Test conformance or any broker order submission/mutation;
-- five independently supervised account credential/connection bundles or persistent follower controls;
+- five independently supervised account connection sessions or persistent follower controls (typed secret-reference bundles are implemented);
 - live master-event orchestration, durable copy intents, or real follower order placement;
 - complete Conner strategy or handcrafted trade rule;
 - live Scout service or live candidate-generation loop;
@@ -190,6 +190,6 @@ The repository still has no:
 
 ## Exact next step
 
-Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Begin with typed independent account/secret configuration, then multi-account connection supervision, durable follower controls, cumulative-position parity sizing, lifecycle orchestration, a separate Test-gated write adapter, reconciliation/recovery/fencing, latency telemetry, the minimal operational UI, and complete simulated acceptance testing.
+Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Typed independent account/secret configuration is complete. Next build deterministic multi-account connection supervision and simulated connections, then durable follower controls, cumulative-position parity sizing, lifecycle orchestration, a separate Test-gated write adapter, reconciliation/recovery/fencing, latency telemetry, the minimal operational UI, and complete simulated acceptance testing.
 
 When credentials arrive, validate all independent connections against Rithmic Test, complete required conformance and AMP authorization, and use a supervised one-follower minimum-size live canary before staged expansion. The dashboard information-architecture/aesthetic pass follows the operational copier. Learning and Conner-focused read-only agents follow later; trustworthy execution and master-lifecycle facts must be retained from day one. Production readiness has not been declared, and all Rithmic broker mutation remains disabled in the current code.

@@ -293,19 +293,17 @@ def test_master_stop_and_same_expiry_are_mandatory() -> None:
         )
 
 
-def test_shadow_config_requires_one_master_four_followers_and_hard_limits() -> None:
+def test_shadow_config_has_fixed_topology_and_requires_hard_limits() -> None:
     empty = ShadowCopierConfig.from_mapping({})
     assert empty.effective_mode == CopierMode.SHADOW
     assert empty.ready_for_shadow is False
-    assert "master_account_required" in empty.preflight_blockers
-    assert "exactly_four_followers_required" in empty.preflight_blockers
+    assert empty.topology.ready_for_simulation is True
+    assert len(empty.topology.followers) == 4
     assert "current_broker_margins_required" in empty.preflight_blockers
 
     ready = ShadowCopierConfig.from_mapping(
         {
             "V2_COPIER_MODE": "SHADOW",
-            "V2_COPIER_MASTER_ACCOUNT_ID": "master-secret",
-            "V2_COPIER_FOLLOWER_ACCOUNT_IDS": "f1,f2,f3,f4",
             "V2_COPIER_MAX_RISK_FRACTION": "0.02",
             "V2_COPIER_MAX_CONTRACTS": "5",
             "V2_COPIER_MAX_CONCURRENT_RISK_FRACTION": "0.05",
@@ -320,14 +318,8 @@ def test_shadow_config_requires_one_master_four_followers_and_hard_limits() -> N
     assert ready.ready_for_shadow is True
     assert ready.preflight_blockers == ()
     assert ready.follower_policy().max_contracts == 5
-    assert "master-secret" not in repr(ready)
+    assert ready.topology.ready_for_test_connectivity is False
 
-    live = ShadowCopierConfig.from_mapping(
-        {**{
-            "V2_COPIER_MODE": "LIVE",
-            "V2_COPIER_MASTER_ACCOUNT_ID": "master",
-            "V2_COPIER_FOLLOWER_ACCOUNT_IDS": "f1,f2,f3,f4",
-        }}
-    )
+    live = ShadowCopierConfig.from_mapping({"V2_COPIER_MODE": "LIVE"})
     assert live.effective_mode == CopierMode.OFF
     assert "broker_submission_not_implemented" in live.preflight_blockers

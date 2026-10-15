@@ -52,11 +52,20 @@ def test_v2_copier_status_requires_auth_and_redacts_configuration(
     monkeypatch,
 ) -> None:
     monkeypatch.setenv(OPERATOR_API_TOKEN_ENV, "operator-token")
-    monkeypatch.setenv("V2_COPIER_MASTER_ACCOUNT_ID", "raw-master-account")
-    monkeypatch.setenv(
-        "V2_COPIER_FOLLOWER_ACCOUNT_IDS",
-        "raw-follower-1,raw-follower-2,raw-follower-3,raw-follower-4",
-    )
+    slots = ("MASTER", "FOLLOWER_1", "FOLLOWER_2", "FOLLOWER_3", "FOLLOWER_4")
+    for number, slot in enumerate(slots, start=1):
+        monkeypatch.setenv(
+            f"V2_RITHMIC_{slot}_ACCOUNT_ID",
+            f"raw-private-account-{number}",
+        )
+        monkeypatch.setenv(
+            f"V2_RITHMIC_{slot}_USERNAME",
+            f"raw-private-user-{number}",
+        )
+        monkeypatch.setenv(
+            f"V2_RITHMIC_{slot}_PASSWORD",
+            f"raw-private-password-{number}",
+        )
     client = _client()
 
     assert client.get("/v2/copier/status").status_code == 401
@@ -68,13 +77,18 @@ def test_v2_copier_status_requires_auth_and_redacts_configuration(
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
     body = response.json()
+    assert body["architecture"] == "five_independent_account_connections"
     assert body["submission_enabled"] is False
     assert body["master_configured"] is True
     assert body["configured_follower_count"] == 4
+    assert body["credential_complete_account_count"] == 5
+    assert len(body["accounts"]) == 5
+    assert body["accounts"][0]["connection"] == "Master"
     assert body["planner_implemented"] is True
     assert body["execution_adapter_implemented"] is False
-    assert "raw-master-account" not in response.text
-    assert "raw-follower-1" not in response.text
+    assert "raw-private-account" not in response.text
+    assert "raw-private-user" not in response.text
+    assert "raw-private-password" not in response.text
 
 
 def test_v2_copier_preview_is_exact_shadow_only_and_redacts_accounts(

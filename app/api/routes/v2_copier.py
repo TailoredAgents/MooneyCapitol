@@ -207,14 +207,51 @@ def preview_shadow_copy(
 
 
 def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
+    topology = config.topology
     return {
+        "architecture": "five_independent_account_connections",
         "requested_mode": config.requested_mode,
         "effective_mode": config.effective_mode.value,
         "ready_for_shadow": config.ready_for_shadow,
+        "ready_for_simulation": topology.ready_for_simulation,
+        "ready_for_test_connectivity": topology.ready_for_test_connectivity,
         "submission_enabled": False,
-        "master_configured": bool(config.master_account_id),
-        "configured_follower_count": len(config.follower_account_ids),
+        "connectivity_enabled": topology.connectivity_enabled,
+        "environment": topology.environment,
+        "connection_slot_count": len(topology.accounts),
+        "master_configured": topology.master.account_id_present,
+        "configured_follower_count": sum(
+            follower.account_id_present for follower in topology.followers
+        ),
         "expected_follower_count": 4,
+        "credential_complete_account_count": (
+            topology.credential_complete_account_count
+        ),
+        "connection_settings_complete_account_count": (
+            topology.connection_settings_complete_account_count
+        ),
+        "accounts": [
+            {
+                "connection": account.display_name,
+                "connection_id": account.connection_id,
+                "role": account.role.value,
+                "follower_number": account.follower_number,
+                "environment": account.environment,
+                "account_selector_present": account.account_id_present,
+                "credentials_present": account.credentials_present,
+                "connection_settings_present": (
+                    account.connection_settings_present
+                    and account.discovery_uri_valid
+                ),
+                "ready_for_test_connectivity": bool(
+                    account.environment == "TEST"
+                    and account.secrets_present
+                    and account.connection_settings_present
+                    and account.discovery_uri_valid
+                ),
+            }
+            for account in topology.accounts
+        ],
         "mandatory_initial_stop": True,
         "allowed_products": ["NQ", "MNQ"],
         "same_expiry_mapping_required": True,
@@ -229,6 +266,7 @@ def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
         "master_event_orchestration_implemented": False,
         "execution_adapter_implemented": False,
         "blockers": list(config.preflight_blockers),
+        "connectivity_blockers": list(topology.connectivity_blockers),
     }
 
 
