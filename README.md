@@ -51,7 +51,7 @@ It is fail-closed unless connectivity is explicitly enabled for `TEST`, external
 
 ### Operator dashboard
 
-`/dashboard` is the authenticated V2 Rithmic observation console. It reads the append-only V2 PostgreSQL projections and displays redacted account aliases, capture counts, connection generations, reconciliation checkpoints, account/P&L state, positions, orders, executions, brackets, RMS state, contract-reference observations, and the fail-closed Shadow copier readiness state. It exposes no broker mutation control.
+`/dashboard` is the authenticated V2 Rithmic command-center overview. Its URL-backed workspaces are `/dashboard/copier`, `/dashboard/accounts`, `/dashboard/activity`, `/dashboard/risk`, and `/dashboard/system`. Together they read the append-only V2 PostgreSQL projections and display redacted account aliases, capture counts, connection generations, reconciliation checkpoints, account/P&L state, positions, orders, executions, brackets, RMS state, contract-reference observations, and the fail-closed Shadow copier readiness state. Copy Control can update durable desired control state with the existing protected APIs, but no dashboard route can construct a broker writer or submit an order.
 
 The API service can optionally read the capture process's sanitized `/health` endpoint when `RITHMIC_CAPTURE_BASE_URL` is configured. If that value is absent or unreachable, the dashboard reports live health as unavailable but continues to display durable observations from PostgreSQL. There is no active V1 equity/Webull dashboard route.
 

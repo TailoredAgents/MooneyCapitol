@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
-    <title>Rithmic Operator Console | Mooney Capital</title>
+    <title>{{ active_page.title }} | Mooney Capital</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
     <link rel="icon" type="image/png" href="/static/favicon.png" />
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
@@ -301,8 +301,8 @@
     </style>
     <link rel="stylesheet" href="/static/rithmic_console.css" />
   </head>
-  <body>
-    <a class="skip-link" href="#overview">Skip to operations</a>
+  <body data-dashboard-view="{{ active_view }}">
+    <a class="skip-link" href="#workspace">Skip to workspace</a>
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">MC</span>
@@ -322,16 +322,9 @@
     <div class="shell">
       <nav class="sidebar" aria-label="Operator console navigation">
         <div class="sidebar-label">Operator Console</div>
-        <a href="#overview">Overview</a>
-        <a href="#account-operations">Five accounts</a>
-        <a href="#controls">Copy controls</a>
-        <a href="#copy-evidence">Copy evidence</a>
-        <a href="#connectivity">Connectivity</a>
-        <a href="#copier">Copier readiness</a>
-        <a href="#accounts">Accounts &amp; P&amp;L</a>
-        <a href="#orders">Orders &amp; fills</a>
-        <a href="#risk">Risk &amp; brackets</a>
-        <a href="#contracts">Contracts</a>
+        {% for page_key, page in dashboard_pages.items() %}
+        <a href="{{ page.path }}"{% if active_view == page_key %} class="active" aria-current="page"{% endif %}>{{ page.title }}</a>
+        {% endfor %}
         <div class="sidebar-status">
           <div class="sidebar-label">System posture</div>
           <strong id="sidebar-posture">Checking system</strong>
@@ -339,7 +332,8 @@
         </div>
       </nav>
 
-      <main>
+      <main id="workspace" tabindex="-1">
+        {% if active_view == "overview" %}
         <section class="hero" id="overview">
           <div class="hero-copy">
             <div class="eyebrow">Rithmic Test / operator controls</div>
@@ -359,13 +353,27 @@
             </div>
           </aside>
         </section>
+        {% else %}
+        <section class="page-header">
+          <div>
+            <div class="eyebrow">{{ active_page.eyebrow }}</div>
+            <h1>{{ active_page.title }}</h1>
+            <p>{{ active_page.description }}</p>
+          </div>
+          <aside class="page-marker" aria-label="Current workspace">
+            <span>Workspace</span>
+            <strong>{{ active_page.number }}</strong>
+          </aside>
+        </section>
+        {% endif %}
 
         <div class="safety-banner">
           <strong>Live broker submission remains structurally impossible</strong>
-          <span>Controls below update durable desired state. The separate execution service is Test-only and is never run from this HTTP process.</span>
+          <span>{% if active_view == "copier" %}Controls below update durable desired state.{% else %}This workspace observes durable state and cannot route an order.{% endif %} The separate execution service is Test-only and is never run from this HTTP process.</span>
         </div>
         <div class="error-box" id="error-box" role="alert"></div>
 
+        {% if active_view == "overview" %}
         <section class="summary-grid" aria-label="Observation summary">
           <article class="summary-card"><div class="label">Capture</div><div class="metric" id="capture-state">Loading</div><div class="submetric" id="capture-detail">Checking health endpoint</div></article>
           <article class="summary-card"><div class="label">Journal events</div><div class="metric" id="event-count">-</div><div class="submetric" id="last-event">No event timestamp</div></article>
@@ -373,12 +381,27 @@
           <article class="summary-card"><div class="label">Executions observed</div><div class="metric" id="execution-count">-</div><div class="submetric">Fills, busts, and corrections</div></article>
           <article class="summary-card"><div class="label">Accounts observed</div><div class="metric" id="account-count">-</div><div class="submetric">Aliases only; IDs are redacted</div></article>
         </section>
+        {% endif %}
 
+        {% if active_view in ["overview", "accounts"] %}
         <section class="section" id="account-operations">
-          <div class="section-heading"><div><div class="section-kicker">Account network</div><h2>Master and follower readiness</h2><p>Exactly five fixed internal connection slots. Broker account identifiers and credentials never appear here.</p></div></div>
+          <div class="section-heading"><div><div class="section-kicker">Account network</div><h2>{% if active_view == "overview" %}Master and follower readiness{% else %}Five-account capital overview{% endif %}</h2><p>Exactly five fixed internal connection slots. Broker account identifiers and credentials never appear here.</p></div></div>
           <div class="account-grid" id="account-cards"><article class="panel empty">Loading five-account state...</article></div>
         </section>
+        {% endif %}
 
+        {% if active_view == "overview" %}
+        <section class="section" aria-labelledby="command-routes-title">
+          <div class="section-heading"><div><div class="section-kicker">Command routes</div><h2 id="command-routes-title">Move directly to the work</h2><p>Each workspace is focused on one operational responsibility.</p></div></div>
+          <div class="route-grid">
+            <a class="route-card" href="/dashboard/copier"><span>02 / Authority</span><strong>Copy control</strong><small>Pause, enable, disable, or request a verified flatten.</small></a>
+            <a class="route-card" href="/dashboard/activity"><span>04 / Evidence</span><strong>Activity</strong><small>Trace lifecycle events, orders, fills, and findings.</small></a>
+            <a class="route-card" href="/dashboard/risk"><span>05 / Protection</span><strong>Risk &amp; protection</strong><small>Inspect parity, RMS state, and broker brackets.</small></a>
+          </div>
+        </section>
+        {% endif %}
+
+        {% if active_view == "copier" %}
         <section class="section" id="controls">
           <div class="section-heading"><div><div class="section-kicker">Operator authority</div><h2>Copy controls</h2><p>Follower state changes are revision-checked and audited. Pause stops new entries; flatten remains a separate explicit request.</p></div></div>
           <div class="operations-grid">
@@ -395,18 +418,22 @@
               <div class="follower-control-grid" id="follower-controls-body"><div class="empty">Loading follower controls...</div></div>
             </article>
           </div>
-          <details class="data-drawer section">
-            <summary><div><h2>Immutable control history</h2><p>Redacted, append-only operator and system actions.</p></div><span class="status-chip">Newest first</span></summary>
-            <div class="drawer-content"><div class="scroll"><table><thead><tr><th>Occurred</th><th>Scope</th><th>Action</th><th>Previous</th><th>Result</th><th>Reason</th><th>Actor</th><th>Request</th></tr></thead><tbody id="control-audit-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div></div>
-          </details>
+          <article class="panel section">
+            <div class="panel-head"><div><h2>Immutable control history</h2><p>Redacted, append-only operator and system actions.</p></div><span class="status-chip">Newest first</span></div>
+            <div class="scroll"><table><thead><tr><th>Occurred</th><th>Scope</th><th>Action</th><th>Previous</th><th>Result</th><th>Reason</th><th>Actor</th><th>Request</th></tr></thead><tbody id="control-audit-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div>
+          </article>
         </section>
+        {% endif %}
 
+        {% if active_view in ["activity", "risk"] %}
         <section class="section" id="copy-evidence">
-          <div class="section-heading"><div><div class="section-kicker">Execution evidence</div><h2>Copy lifecycle and parity evidence</h2><p>Latest persisted intent per follower plus recent lifecycle and reconciliation evidence. No row authorizes a broker write.</p></div></div>
+          <div class="section-heading"><div><div class="section-kicker">Execution evidence</div><h2>{% if active_view == "risk" %}Follower parity targets{% else %}Copy lifecycle and reconciliation{% endif %}</h2><p>Persisted, broker-authoritative evidence only. No row authorizes a broker write.</p></div></div>
+          {% if active_view == "risk" %}
           <article class="panel">
             <div class="panel-head"><h2>Latest follower targets</h2><span class="status-chip">Target versus known state</span></div>
             <div class="scroll"><table><thead><tr><th>Follower</th><th>Updated</th><th>Contract</th><th>Status</th><th>Target / known qty</th><th>Exposure target / actual</th><th>Stop risk target / actual</th><th>Parity error</th><th>Protection</th></tr></thead><tbody id="copy-intents-body"><tr><td colspan="9" class="empty">Loading...</td></tr></tbody></table></div>
           </article>
+          {% else %}
           <div class="grid-two copy-overview-grid section">
             <article class="panel">
               <div class="panel-head"><h2>Recent lifecycle</h2><span class="status-chip">Newest first</span></div>
@@ -417,12 +444,16 @@
               <div class="scroll"><table><thead><tr><th>Detected</th><th>Follower</th><th>Severity</th><th>Finding</th></tr></thead><tbody id="copy-findings-body"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody></table></div>
             </article>
           </div>
+          {% endif %}
         </section>
+        {% endif %}
 
-        <div class="technical-stack" aria-label="Technical operations detail">
-        <details class="data-drawer" id="connectivity">
-          <summary><div><h2>Connectivity and reconciliation</h2><p>Independent plant generations and subscribe-first recovery state.</p></div><span class="status-chip">System detail</span></summary>
-          <div class="drawer-content"><div class="grid-two">
+        {% if active_view in ["accounts", "activity", "risk", "system"] %}
+        <div class="workspace-stack" aria-label="{{ active_page.title }} workspace detail">
+        {% if active_view == "system" %}
+        <section class="workspace-section" id="connectivity">
+          <div class="workspace-section-heading"><div><h2>Connectivity and reconciliation</h2><p>Independent plant generations and subscribe-first recovery state.</p></div><span class="status-chip">System detail</span></div>
+          <div class="workspace-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Capture service</h2><span id="capture-chip" class="status-chip"><span class="dot"></span>Checking</span></div>
               <div id="capture-details" class="key-values loading">Loading capture health…</div>
@@ -436,11 +467,11 @@
             <div class="panel-head"><h2>Latest reconciliation checkpoints</h2><span class="status-chip">Per account and plant</span></div>
             <div class="scroll"><table><thead><tr><th>Account</th><th>Plant</th><th>Phase</th><th>Status</th><th>Ready</th><th>Discrepancies</th><th>Recorded</th></tr></thead><tbody id="reconciliation-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
           </article></div>
-        </details>
+        </section>
 
-        <details class="data-drawer" id="copier">
-          <summary><div><h2>Copier readiness</h2><p>Configuration, parity policy, and Test-only execution boundaries.</p></div><span class="status-chip">Readiness detail</span></summary>
-          <div class="drawer-content"><div class="grid-two">
+        <section class="workspace-section" id="copier-readiness">
+          <div class="workspace-section-heading"><div><h2>Copier readiness</h2><p>Configuration, parity policy, and Test-only execution boundaries.</p></div><span class="status-chip">Readiness detail</span></div>
+          <div class="workspace-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Configuration</h2><span id="copier-chip" class="status-chip"><span class="dot"></span>Checking</span></div>
               <div id="copier-details" class="key-values loading">Loading shadow copier statusâ€¦</div>
@@ -454,11 +485,13 @@
               </div>
             </article>
           </div></div>
-        </details>
+        </section>
+        {% endif %}
 
-        <details class="data-drawer" id="accounts">
-          <summary><div><h2>Accounts, balances, and positions</h2><p>Latest append-only observations with stable redacted aliases.</p></div><span class="status-chip">Broker facts</span></summary>
-          <div class="drawer-content"><div class="grid-two">
+        {% if active_view == "accounts" %}
+        <section class="workspace-section" id="accounts-detail">
+          <div class="workspace-section-heading"><div><h2>Balances and positions</h2><p>Latest append-only observations with stable redacted aliases.</p></div><span class="status-chip">Broker facts</span></div>
+          <div class="workspace-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Observed accounts</h2><span class="status-chip" id="accounts-chip">0 latest</span></div>
               <div class="scroll"><table><thead><tr><th>Account</th><th>Status</th><th>Access</th><th>Currency</th><th>Allowlisted</th><th>Observed</th></tr></thead><tbody id="accounts-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div>
@@ -472,11 +505,13 @@
             <div class="panel-head"><h2>Instrument positions</h2><span class="status-chip">Latest per account / contract</span></div>
             <div class="scroll"><table><thead><tr><th>Account</th><th>Contract</th><th>Net qty</th><th>Average open</th><th>Open P&amp;L</th><th>Day P&amp;L</th><th>Working buy / sell</th><th>Received</th></tr></thead><tbody id="positions-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody></table></div>
           </article></div>
-        </details>
+        </section>
+        {% endif %}
 
-        <details class="data-drawer" id="orders">
-          <summary><div><h2>Orders and executions</h2><p>Observed broker lifecycle only; no row authorizes action.</p></div><span class="status-chip">Activity ledger</span></summary>
-          <div class="drawer-content"><article class="panel">
+        {% if active_view == "activity" %}
+        <section class="workspace-section" id="orders">
+          <div class="workspace-section-heading"><div><h2>Orders and executions</h2><p>Observed broker lifecycle only; no row authorizes action.</p></div><span class="status-chip">Activity ledger</span></div>
+          <div class="workspace-content"><article class="panel">
             <div class="panel-head"><h2>Recent order observations</h2><span class="status-chip">Newest first</span></div>
             <div class="scroll"><table><thead><tr><th>Received</th><th>Account</th><th>Order</th><th>Contract</th><th>Side</th><th>Type</th><th>Qty</th><th>Filled</th><th>State</th><th>Price</th><th>Source</th></tr></thead><tbody id="orders-body"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody></table></div>
           </article>
@@ -484,11 +519,13 @@
             <div class="panel-head"><h2>Recent execution observations</h2><span class="status-chip">Fills and corrections</span></div>
             <div class="scroll"><table><thead><tr><th>Executed</th><th>Account</th><th>Order</th><th>Fill</th><th>Kind</th><th>Side</th><th>Qty</th><th>Effective Δ</th><th>Price</th><th>Commission</th><th>Source</th></tr></thead><tbody id="executions-body"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody></table></div>
           </article></div>
-        </details>
+        </section>
+        {% endif %}
 
-        <details class="data-drawer" id="risk">
-          <summary><div><h2>RMS and bracket observations</h2><p>Read-only risk and protective-order facts reported by the broker.</p></div><span class="status-chip">Protection detail</span></summary>
-          <div class="drawer-content"><div class="grid-two">
+        {% if active_view == "risk" %}
+        <section class="workspace-section" id="risk-observations">
+          <div class="workspace-section-heading"><div><h2>RMS and bracket observations</h2><p>Read-only risk and protective-order facts reported by the broker.</p></div><span class="status-chip">Protection detail</span></div>
+          <div class="workspace-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Risk management state</h2><span class="status-chip">Latest per scope</span></div>
               <div class="scroll"><table><thead><tr><th>Account</th><th>Scope</th><th>Product</th><th>Status</th><th>Loss limit</th><th>Auto-liquidate</th><th>Max qty</th><th>Received</th></tr></thead><tbody id="risk-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody></table></div>
@@ -498,29 +535,34 @@
               <div class="scroll"><table><thead><tr><th>Received</th><th>Account</th><th>Parent</th><th>Type</th><th>Status</th><th>Target qty</th><th>Stop qty</th></tr></thead><tbody id="brackets-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
             </article>
           </div></div>
-        </details>
+        </section>
+        {% endif %}
 
-        <details class="data-drawer" id="contracts">
-          <summary><div><h2>Contract reference observations</h2><p>Exact symbol, exchange, expiry, tick, and point-value facts.</p></div><span class="status-chip">Reference data</span></summary>
-          <div class="drawer-content"><article class="panel">
+        {% if active_view == "system" %}
+        <section class="workspace-section" id="contracts">
+          <div class="workspace-section-heading"><div><h2>Contract reference observations</h2><p>Exact symbol, exchange, expiry, tick, and point-value facts.</p></div><span class="status-chip">Reference data</span></div>
+          <div class="workspace-content"><article class="panel">
             <div class="scroll"><table><thead><tr><th>Received</th><th>Symbol</th><th>Exchange</th><th>Product</th><th>Expiration</th><th>Type</th><th>Tick</th><th>Point value</th><th>Tradable</th><th>Source</th></tr></thead><tbody id="contracts-body"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody></table></div>
           </article></div>
-        </details>
+        </section>
 
-        <details class="data-drawer" aria-labelledby="limits-title">
-          <summary><div><h2 id="limits-title">Current V2 boundaries</h2><p>What this milestone intentionally cannot do.</p></div><span class="status-chip warn">Credential-ready</span></summary>
-          <div class="drawer-content"><div class="limitations">
+        <section class="workspace-section" aria-labelledby="limits-title">
+          <div class="workspace-section-heading"><div><h2 id="limits-title">Current V2 boundaries</h2><p>What this milestone intentionally cannot do.</p></div><span class="status-chip warn">Credential-ready</span></div>
+          <div class="workspace-content"><div class="limitations">
             <div class="limit-card"><strong>No live broker mutations</strong><span>The execution service is outside the dashboard, limited to Rithmic Test, and has no live construction path.</span></div>
             <div class="limit-card"><strong>No live V2 Scout</strong><span>The current Conner NQ work is an observation and learning-data foundation, not a completed strategy or signal service.</span></div>
             <div class="limit-card"><strong>No production claim</strong><span>Rithmic Test conformance and manual R|Trader-to-API visibility validation still have to be completed.</span></div>
           </div></div>
-        </details>
+        </section>
+        {% endif %}
         </div>
+        {% endif %}
 
         <div class="footer-note">Last dashboard refresh: <span id="last-refresh">never</span> · automatic refresh every 15 seconds</div>
       </main>
     </div>
 
+    {% if active_view == "copier" %}
     <dialog id="flatten-dialog" aria-labelledby="flatten-title">
       <div class="dialog-body">
         <h2 id="flatten-title">Request flatten and disable</h2>
@@ -532,9 +574,11 @@
         <div class="dialog-actions"><button class="action-button" id="flatten-cancel" type="button">Cancel</button><button class="action-button danger" id="flatten-confirm" type="button">Request flatten</button></div>
       </div>
     </dialog>
+    {% endif %}
 
     <script>
       const refreshButton = document.getElementById('refresh');
+      const dashboardView = document.body.dataset.dashboardView;
       let loading = false;
       let mutating = false;
       let currentControl = null;
@@ -574,7 +618,9 @@
         if (['READY', 'COMPLETE', 'CONNECTED', 'AUTHENTICATED', 'OK', 'LIVE', 'ACTIVE', 'ENABLED', 'FILLED', 'ACKNOWLEDGED', 'CLEAN', 'ADOPTED', 'SENT', 'CONFIRMED'].some((item) => text.includes(item))) return 'ok';
         return 'warn';
       };
-      const setText = (id, value) => { const node = document.getElementById(id); if (node) node.textContent = present(value); };
+      const byId = (id) => document.getElementById(id);
+      const setText = (id, value) => { const node = byId(id); if (node) node.textContent = present(value); };
+      const setHtml = (id, value) => { const node = byId(id); if (node) node.innerHTML = value; };
       const emptyRow = (columns, message) => `<tr><td colspan="${columns}" class="empty">${escapeHtml(message)}</td></tr>`;
 
       async function api(path, options = {}) {
@@ -637,7 +683,8 @@
       }
 
       function renderControlMessage(message, bad) {
-        const node = document.getElementById('control-message');
+        const node = byId('control-message');
+        if (!node) return;
         node.textContent = message;
         node.className = `control-message visible${bad ? ' bad' : ''}`;
       }
@@ -663,12 +710,16 @@
 
       function renderCapture(capture) {
         const status = capture.ready ? ['Ready', 'ok'] : capture.live ? ['Live, not ready', 'warn'] : capture.reachable ? ['Blocked', 'warn'] : ['Unavailable', 'bad'];
-        const chipNode = document.getElementById('capture-chip');
-        chipNode.className = `status-chip ${status[1]}`;
-        chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(status[0])}`;
+        const chipNode = byId('capture-chip');
+        if (chipNode) {
+          chipNode.className = `status-chip ${status[1]}`;
+          chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(status[0])}`;
+        }
         const blockers = (capture.blockers || []).length ? capture.blockers.join(', ') : 'None reported';
-        document.getElementById('capture-details').className = 'key-values';
-        document.getElementById('capture-details').innerHTML = [
+        const details = byId('capture-details');
+        if (!details) return;
+        details.className = 'key-values';
+        details.innerHTML = [
           ['Health endpoint', capture.configured ? (capture.reachable ? 'Reachable' : 'Unavailable') : 'Not configured'],
           ['Lifecycle', present(capture.lifecycle)],
           ['Connectivity gate', boolText(capture.connectivity_enabled)],
@@ -683,14 +734,18 @@
 
       function renderCopier(copier) {
         const ready = copier.ready_for_shadow === true;
-        const chipNode = document.getElementById('copier-chip');
-        chipNode.className = `status-chip ${ready ? 'ok' : 'warn'}`;
-        chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(ready ? 'Shadow ready' : 'Configuration blocked')}`;
+        const chipNode = byId('copier-chip');
+        if (chipNode) {
+          chipNode.className = `status-chip ${ready ? 'ok' : 'warn'}`;
+          chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(ready ? 'Shadow ready' : 'Configuration blocked')}`;
+        }
         setText('hero-mode-state', present(copier.effective_mode, 'SHADOW'));
         const blockers = (copier.blockers || []).length ? copier.blockers.join(', ') : 'None reported';
         const connectivityBlockers = (copier.connectivity_blockers || []).length ? copier.connectivity_blockers.join(', ') : 'None reported';
-        document.getElementById('copier-details').className = 'key-values';
-        document.getElementById('copier-details').innerHTML = [
+        const details = byId('copier-details');
+        if (!details) return;
+        details.className = 'key-values';
+        details.innerHTML = [
           ['Architecture', copier.architecture === 'five_independent_account_connections' ? '5 independent connections' : present(copier.architecture)],
           ['Effective mode', present(copier.effective_mode)],
           ['Simulation topology', boolText(copier.ready_for_simulation)],
@@ -785,19 +840,21 @@
             <div class="account-status-line"><span>Latency</span><strong>${escapeHtml(latestLatency(latency))}</strong></div>
           </article>`;
         });
-        document.getElementById('account-cards').innerHTML = cards.length ? cards.join('') : '<article class="panel empty">The fixed five-account topology is unavailable.</article>';
+        setHtml('account-cards', cards.length ? cards.join('') : '<article class="panel empty">The fixed five-account topology is unavailable.</article>');
       }
 
       function renderControls(control) {
         currentControl = control;
         setText('global-control-state', control.global_paused ? 'Paused' : 'Active');
         setText('hero-gate-state', control.global_paused ? 'Paused' : 'Active');
-        const globalButton = document.getElementById('global-pause-toggle');
-        globalButton.disabled = false;
-        globalButton.textContent = control.global_paused ? 'Clear global pause' : 'Pause all new entries';
-        globalButton.className = `action-button ${control.global_paused ? 'primary' : 'danger'}`;
+        const globalButton = byId('global-pause-toggle');
+        if (globalButton) {
+          globalButton.disabled = false;
+          globalButton.textContent = control.global_paused ? 'Clear global pause' : 'Pause all new entries';
+          globalButton.className = `action-button ${control.global_paused ? 'primary' : 'danger'}`;
+        }
         document.querySelector('.gate-visual')?.classList.toggle('active', !control.global_paused);
-        document.getElementById('follower-controls-body').innerHTML = (control.followers || []).map((item) => {
+        const followerCards = (control.followers || []).map((item) => {
           let ordinary = '';
           if (item.state === 'DISABLED' || item.state === 'PAUSED') ordinary = `<button class="action-button primary" data-control-action="ENABLE" data-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}">Enable</button>`;
           else if (item.state === 'ENABLED') ordinary = `<button class="action-button" data-control-action="PAUSE" data-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}">Pause</button>`;
@@ -817,32 +874,33 @@
             <div class="control-actions">${ordinary}${flatten}</div>
           </article>`;
         }).join('') || '<div class="empty">Follower control state is unavailable.</div>';
+        setHtml('follower-controls-body', followerCards);
       }
 
       function renderAudit(items) {
-        document.getElementById('control-audit-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('control-audit-body', items.length ? items.map((item) => `<tr>
           <td>${time(item.occurred_at)}</td><td>${escapeHtml(item.connection_id ? item.connection_id.replace('-', ' ') : 'Global')}</td><td>${escapeHtml(present(item.action))}</td>
           <td>${escapeHtml(present(item.previous_state))}</td><td>${chip(item.resulting_state, stateKind(item.resulting_state))}</td><td>${escapeHtml(present(item.reason_code))}</td>
           <td class="mono">${escapeHtml(present(item.actor))}</td><td class="mono">${escapeHtml(present(item.request_id))}</td>
-        </tr>`).join('') : emptyRow(8, 'No control changes have been recorded.');
+        </tr>`).join('') : emptyRow(8, 'No control changes have been recorded.'));
       }
 
       function renderCopyEvidence(execution) {
         const intents = execution.intents || [];
-        document.getElementById('copy-intents-body').innerHTML = intents.length ? intents.map((item) => {
+        setHtml('copy-intents-body', intents.length ? intents.map((item) => {
           const command = item.command || {};
           const protection = command.stop_ticks ? `${number(command.stop_ticks)} stop ticks / ${escapeHtml(present(command.status))}` : 'No persisted stop evidence';
           return `<tr><td>${escapeHtml(present(item.connection_id))}</td><td>${time(item.updated_at)}</td><td><strong>${escapeHtml(present(item.symbol))}</strong> ${escapeHtml(present(item.exchange, ''))}</td>
             <td>${chip(item.status, stateKind(item.status))}<div class="submetric">${escapeHtml(present(item.reason))}</div></td><td>${number(item.achievable_target_signed_quantity)} / ${number(item.current_signed_quantity)}</td>
             <td>${percent(item.desired_exposure_fraction)} / ${percent(item.achievable_exposure_fraction)}</td><td>${percent(item.desired_risk_fraction)} / ${percent(item.achievable_risk_fraction)}</td>
             <td>${percent(item.parity_error)}</td><td>${protection}</td></tr>`;
-        }).join('') : emptyRow(9, 'No copy lifecycle intent has been persisted.');
+        }).join('') : emptyRow(9, 'No copy lifecycle intent has been persisted.'));
 
         const events = execution.lifecycle_events || [];
-        document.getElementById('copy-events-body').innerHTML = events.length ? events.map((item) => `<tr><td>${time(item.recorded_at)}</td><td>${escapeHtml(present(item.connection_id))}</td><td>${escapeHtml(present(item.kind))}</td><td>${chip(item.resulting_status, stateKind(item.resulting_status))}</td><td>${number(item.filled_quantity)} @ ${money(item.fill_price)}</td><td>${escapeHtml(present(item.rejection_code))}</td></tr>`).join('') : emptyRow(6, 'No lifecycle events have been persisted.');
+        setHtml('copy-events-body', events.length ? events.map((item) => `<tr><td>${time(item.recorded_at)}</td><td>${escapeHtml(present(item.connection_id))}</td><td>${escapeHtml(present(item.kind))}</td><td>${chip(item.resulting_status, stateKind(item.resulting_status))}</td><td>${number(item.filled_quantity)} @ ${money(item.fill_price)}</td><td>${escapeHtml(present(item.rejection_code))}</td></tr>`).join('') : emptyRow(6, 'No lifecycle events have been persisted.'));
 
         const findings = execution.findings || [];
-        document.getElementById('copy-findings-body').innerHTML = findings.length ? findings.map((item) => `<tr><td>${time(item.detected_at)}</td><td>${escapeHtml(present(item.connection_id))}</td><td>${chip(item.severity, item.severity === 'BLOCKING' ? 'bad' : 'warn')}</td><td>${escapeHtml(present(item.kind))}</td></tr>`).join('') : emptyRow(4, 'No reconciliation findings have been recorded.');
+        setHtml('copy-findings-body', findings.length ? findings.map((item) => `<tr><td>${time(item.detected_at)}</td><td>${escapeHtml(present(item.connection_id))}</td><td>${chip(item.severity, item.severity === 'BLOCKING' ? 'bad' : 'warn')}</td><td>${escapeHtml(present(item.kind))}</td></tr>`).join('') : emptyRow(4, 'No reconciliation findings have been recorded.'));
       }
 
       async function loadAudit() {
@@ -851,87 +909,87 @@
       }
 
       function renderPlants(items) {
-        document.getElementById('plants-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('plants-body', items.length ? items.map((item) => `<tr>
           <td>${escapeHtml(present(item.connection_id))}</td><td><strong>${escapeHtml(present(item.plant))}</strong></td>
           <td>${chip(item.state, stateKind(item.state))}</td>
           <td>${chip(item.ready ? 'Ready' : 'Not ready', item.ready ? 'ok' : 'warn')}</td>
           <td>${time(item.last_message_at)}</td>
           <td>${number(item.reconnect_attempt)}</td>
-        </tr>`).join('') : emptyRow(6, 'No durable plant generation has been recorded.');
+        </tr>`).join('') : emptyRow(6, 'No durable plant generation has been recorded.'));
       }
 
       function renderReconciliation(items) {
-        document.getElementById('reconciliation-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('reconciliation-body', items.length ? items.map((item) => `<tr>
           <td class="mono">${escapeHtml(item.account)}</td><td>${escapeHtml(present(item.plant))}</td><td>${escapeHtml(present(item.phase))}</td>
           <td>${chip(item.status, stateKind(item.status))}</td><td>${chip(item.ready ? 'Ready' : 'Blocked', item.ready ? 'ok' : 'warn')}</td>
           <td>${number(item.discrepancy_count)}</td><td>${time(item.recorded_at)}</td>
-        </tr>`).join('') : emptyRow(7, 'No reconciliation checkpoint has been recorded.');
+        </tr>`).join('') : emptyRow(7, 'No reconciliation checkpoint has been recorded.'));
       }
 
       function renderAccounts(items) {
         setText('accounts-chip', `${items.length} latest`);
-        document.getElementById('accounts-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('accounts-body', items.length ? items.map((item) => `<tr>
           <td class="mono">${escapeHtml(item.account)}</td><td>${chip(item.status, stateKind(item.status))}</td><td>${escapeHtml(present(item.access_type))}</td>
           <td>${escapeHtml(present(item.currency))}</td><td>${chip(item.allowlisted ? 'Yes' : 'No', item.allowlisted ? 'ok' : 'bad')}</td><td>${time(item.observed_at)}</td>
-        </tr>`).join('') : emptyRow(6, 'No allowlisted account observation has been captured.');
+        </tr>`).join('') : emptyRow(6, 'No allowlisted account observation has been captured.'));
       }
 
       function renderAccountPnl(items) {
-        document.getElementById('account-pnl-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('account-pnl-body', items.length ? items.map((item) => `<tr>
           <td class="mono">${escapeHtml(item.account)}</td><td>${money(item.account_balance, item.currency)}</td><td>${money(item.day_total_pnl, item.currency)}</td>
           <td>${money(item.available_buying_power, item.currency)}</td><td>${money(item.margin_balance, item.currency)}</td>
           <td>${chip(item.freshness, stateKind(item.freshness))}</td><td>${time(item.received_at)}</td>
-        </tr>`).join('') : emptyRow(7, 'No account-level P&L observation has been captured.');
+        </tr>`).join('') : emptyRow(7, 'No account-level P&L observation has been captured.'));
       }
 
       function renderPositions(items) {
-        document.getElementById('positions-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('positions-body', items.length ? items.map((item) => `<tr>
           <td class="mono">${escapeHtml(item.account)}</td><td><strong>${escapeHtml(present(item.symbol))}</strong> <span class="submetric">${escapeHtml(present(item.exchange, ''))}</span></td>
           <td>${number(item.net_quantity)}</td><td>${money(item.average_open_fill_price)}</td><td>${money(item.open_position_pnl, item.currency)}</td>
           <td>${money(item.day_total_pnl, item.currency)}</td><td>${number(item.working_buy_quantity)} / ${number(item.working_sell_quantity)}</td><td>${time(item.received_at)}</td>
-        </tr>`).join('') : emptyRow(8, 'No instrument P&L or position observation has been captured.');
+        </tr>`).join('') : emptyRow(8, 'No instrument P&L or position observation has been captured.'));
       }
 
       function renderOrders(items) {
-        document.getElementById('orders-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('orders-body', items.length ? items.map((item) => `<tr>
           <td>${time(item.received_at)}</td><td class="mono">${escapeHtml(item.account)}</td><td class="mono">${escapeHtml(item.order)}</td>
           <td><strong>${escapeHtml(present(item.symbol))}</strong> ${escapeHtml(present(item.exchange, ''))}</td><td>${escapeHtml(present(item.side))}</td><td>${escapeHtml(present(item.order_type))}</td>
           <td>${number(item.quantity)}</td><td>${number(item.total_fill_size)}</td><td>${chip(item.state, stateKind(item.state))}</td>
           <td>${money(item.average_fill_price ?? item.fill_price ?? item.limit_price)}</td><td>${escapeHtml(present(item.source_kind))}</td>
-        </tr>`).join('') : emptyRow(11, 'No order lifecycle observation has been captured.');
+        </tr>`).join('') : emptyRow(11, 'No order lifecycle observation has been captured.'));
       }
 
       function renderExecutions(items) {
-        document.getElementById('executions-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('executions-body', items.length ? items.map((item) => `<tr>
           <td>${time(item.executed_at || item.received_at)}</td><td class="mono">${escapeHtml(item.account)}</td><td class="mono">${escapeHtml(item.order)}</td><td class="mono">${escapeHtml(item.execution)}</td>
           <td>${chip(item.kind, stateKind(item.kind))}</td><td>${escapeHtml(present(item.side))}</td><td>${number(item.quantity)}</td><td>${number(item.effective_quantity_delta)}</td>
           <td>${money(item.price)}</td><td>${money(item.commission)}</td><td>${escapeHtml(present(item.source_kind))}</td>
-        </tr>`).join('') : emptyRow(11, 'No execution observation has been captured.');
+        </tr>`).join('') : emptyRow(11, 'No execution observation has been captured.'));
       }
 
       function renderRisk(items) {
-        document.getElementById('risk-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('risk-body', items.length ? items.map((item) => `<tr>
           <td class="mono">${escapeHtml(item.account)}</td><td>${escapeHtml(present(item.scope))}</td><td>${escapeHtml(present(item.product_code))}</td>
           <td>${chip(item.status, stateKind(item.status))}</td><td>${money(item.loss_limit, item.currency)}</td><td>${boolText(item.auto_liquidate)}</td>
           <td>${number(item.max_order_quantity)}</td><td>${time(item.received_at)}</td>
-        </tr>`).join('') : emptyRow(8, 'No RMS observation has been captured.');
+        </tr>`).join('') : emptyRow(8, 'No RMS observation has been captured.'));
       }
 
       function renderBrackets(items) {
-        document.getElementById('brackets-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('brackets-body', items.length ? items.map((item) => `<tr>
           <td>${time(item.received_at)}</td><td class="mono">${escapeHtml(item.account)}</td><td class="mono">${escapeHtml(item.parent_order)}</td>
           <td>${escapeHtml(present(item.bracket_type))}</td><td>${chip(item.status, stateKind(item.status))}</td>
           <td>${number(item.target_released_quantity)} / ${number(item.target_total_quantity)}</td><td>${number(item.stop_released_quantity)} / ${number(item.stop_total_quantity)}</td>
-        </tr>`).join('') : emptyRow(7, 'No bracket observation has been captured.');
+        </tr>`).join('') : emptyRow(7, 'No bracket observation has been captured.'));
       }
 
       function renderContracts(items) {
-        document.getElementById('contracts-body').innerHTML = items.length ? items.map((item) => `<tr>
+        setHtml('contracts-body', items.length ? items.map((item) => `<tr>
           <td>${time(item.received_at)}</td><td><strong>${escapeHtml(present(item.symbol))}</strong></td><td>${escapeHtml(present(item.exchange))}</td>
           <td>${escapeHtml(present(item.product_code))}</td><td>${escapeHtml(present(item.expiration_date))}</td><td>${escapeHtml(present(item.instrument_type))}</td>
           <td>${money(item.minimum_quoted_price_change)}</td><td>${money(item.single_point_value, item.currency)}</td>
           <td>${boolText(item.tradable)}</td><td>${escapeHtml(present(item.source_kind))}</td>
-        </tr>`).join('') : emptyRow(10, 'No contract reference observation has been captured. Ticker Plant reference queries are optional.');
+        </tr>`).join('') : emptyRow(10, 'No contract reference observation has been captured. Ticker Plant reference queries are optional.'));
       }
 
       async function loadOverview() {
@@ -939,20 +997,23 @@
         loading = true;
         refreshButton.disabled = true;
         refreshButton.textContent = 'Refreshing…';
-        document.getElementById('error-box').classList.remove('visible');
+        byId('error-box').classList.remove('visible');
         try {
+          const needsCopier = ['overview', 'accounts', 'system'].includes(dashboardView);
+          const needsControl = ['overview', 'copier', 'accounts'].includes(dashboardView);
+          const needsAudit = dashboardView === 'copier';
           const [data, copier, control, audit] = await Promise.all([
             api('/v2/operations/overview?limit=40'),
-            api('/v2/copier/status'),
-            api('/v2/copier/control'),
-            api('/v2/copier/control/audit?limit=100'),
+            needsCopier ? api('/v2/copier/status') : Promise.resolve(null),
+            needsControl ? api('/v2/copier/control') : Promise.resolve(null),
+            needsAudit ? api('/v2/copier/control/audit?limit=100') : Promise.resolve(null),
           ]);
           currentOperations = data;
           currentCopier = copier;
           currentControl = control;
           renderSummary(data); renderCapture(data.capture || {}); renderPlants(data.plants || []);
           renderCopier(copier || {});
-          renderAccountCards(data, copier || {}, control || {}); renderControls(control || {}); renderAudit(audit.items || []); renderCopyEvidence(data.copy_execution || {});
+          renderAccountCards(data, copier || {}, control || {}); renderControls(control || {}); renderAudit(audit?.items || []); renderCopyEvidence(data.copy_execution || {});
           renderReconciliation(data.reconciliation || []); renderAccounts(data.accounts || []); renderAccountPnl(data.account_pnl || []);
           renderPositions(data.positions || []); renderOrders(data.orders || []); renderExecutions(data.executions || []);
           renderRisk(data.risk || []); renderBrackets(data.brackets || []); renderContracts(data.contracts || []);
@@ -960,7 +1021,7 @@
           setText('last-refresh', refreshedAt);
           setText('last-refresh-top', refreshedAt);
         } catch (error) {
-          const box = document.getElementById('error-box');
+          const box = byId('error-box');
           box.textContent = error.message || 'The V2 observation dashboard could not be loaded.';
           box.classList.add('visible');
         } finally {
@@ -973,7 +1034,7 @@
       const themeToggle = document.getElementById('theme-toggle');
       const flattenDialog = document.getElementById('flatten-dialog');
 
-      document.getElementById('follower-controls-body').addEventListener('click', async (event) => {
+      byId('follower-controls-body')?.addEventListener('click', async (event) => {
         const actionButton = event.target.closest('[data-control-action]');
         if (actionButton) {
           const action = actionButton.dataset.controlAction;
@@ -1001,7 +1062,7 @@
         document.getElementById('flatten-confirmation').focus();
       });
 
-      document.getElementById('global-pause-toggle').addEventListener('click', async () => {
+      byId('global-pause-toggle')?.addEventListener('click', async () => {
         if (!currentControl) return;
         const paused = !currentControl.global_paused;
         if (!paused && !window.confirm('Clear the global pause? Any individually enabled follower may then accept new entries once the separate Test execution service is authorized and running.')) return;
@@ -1013,12 +1074,12 @@
         });
       });
 
-      document.getElementById('flatten-cancel').addEventListener('click', () => {
+      byId('flatten-cancel')?.addEventListener('click', () => {
         pendingFlatten = null;
         flattenDialog.close();
       });
 
-      document.getElementById('flatten-confirm').addEventListener('click', async () => {
+      byId('flatten-confirm')?.addEventListener('click', async () => {
         if (!pendingFlatten) return;
         const confirmationInput = document.getElementById('flatten-confirmation');
         const confirmation = confirmationInput.value.trim();
@@ -1038,7 +1099,7 @@
           reason_code: reason,
         });
       });
-      document.getElementById('flatten-confirmation').addEventListener('input', (event) => event.target.setCustomValidity(''));
+      byId('flatten-confirmation')?.addEventListener('input', (event) => event.target.setCustomValidity(''));
 
       function syncThemeButton() {
         const dark = document.documentElement.dataset.theme === 'dark';
@@ -1051,43 +1112,6 @@
         syncThemeButton();
       });
 
-      const technicalDrawers = [...document.querySelectorAll('.technical-stack > details')];
-      function drawerFromHash() {
-        const targetId = window.location.hash.slice(1);
-        const target = targetId ? document.getElementById(targetId) : null;
-        return technicalDrawers.includes(target) ? target : null;
-      }
-      function openTechnicalDrawer(target) {
-        technicalDrawers.forEach((drawer) => { drawer.open = drawer === target; });
-      }
-      technicalDrawers.forEach((drawer) => drawer.addEventListener('toggle', () => {
-        if (!drawer.open) return;
-        technicalDrawers.forEach((other) => {
-          if (other !== drawer) other.open = false;
-        });
-      }));
-      openTechnicalDrawer(drawerFromHash());
-
-      const navLinks = [...document.querySelectorAll('.sidebar a[href^="#"]')];
-      navLinks.forEach((link) => link.addEventListener('click', () => {
-        navLinks.forEach((item) => item.classList.toggle('active', item === link));
-        const target = document.querySelector(link.getAttribute('href'));
-        if (technicalDrawers.includes(target)) openTechnicalDrawer(target);
-      }));
-      window.addEventListener('hashchange', () => {
-        const target = drawerFromHash();
-        if (target) openTechnicalDrawer(target);
-      });
-      navLinks[0]?.classList.add('active');
-      const observedSections = navLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
-      if ('IntersectionObserver' in window) {
-        const sectionObserver = new IntersectionObserver((entries) => {
-          const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-          if (!visible) return;
-          navLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${visible.target.id}`));
-        }, { rootMargin: '-18% 0px -68% 0px', threshold: [0.01, 0.15] });
-        observedSections.forEach((section) => sectionObserver.observe(section));
-      }
       refreshButton.addEventListener('click', loadOverview);
       syncThemeButton();
       loadOverview();

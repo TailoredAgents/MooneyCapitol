@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -20,6 +20,51 @@ PUBLIC_SITE_URL = "https://mooneytrading.com"
 env = Environment(
     loader=FileSystemLoader("app/templates"), autoescape=select_autoescape(["html", "xml"])
 )
+
+DASHBOARD_PAGES = {
+    "overview": {
+        "path": "/dashboard",
+        "title": "Operations overview",
+        "eyebrow": "Command center",
+        "description": "Five-account posture, capital readiness, and the highest-priority operating signals in one view.",
+        "number": "01",
+    },
+    "copier": {
+        "path": "/dashboard/copier",
+        "title": "Copy control",
+        "eyebrow": "Operator authority",
+        "description": "Global and per-follower controls with revision checks, typed flatten confirmation, and immutable history.",
+        "number": "02",
+    },
+    "accounts": {
+        "path": "/dashboard/accounts",
+        "title": "Accounts",
+        "eyebrow": "Capital network",
+        "description": "Equity, margin, daily performance, positions, and readiness across the master and four followers.",
+        "number": "03",
+    },
+    "activity": {
+        "path": "/dashboard/activity",
+        "title": "Activity",
+        "eyebrow": "Execution evidence",
+        "description": "Copy lifecycle, broker orders, fills, and reconciliation findings in a focused activity ledger.",
+        "number": "04",
+    },
+    "risk": {
+        "path": "/dashboard/risk",
+        "title": "Risk & protection",
+        "eyebrow": "Parity control",
+        "description": "Follower targets, achieved risk parity, broker RMS state, and protective bracket evidence.",
+        "number": "05",
+    },
+    "system": {
+        "path": "/dashboard/system",
+        "title": "System",
+        "eyebrow": "Broker infrastructure",
+        "description": "Rithmic connectivity, reconciliation, copier readiness, contract references, and enforced boundaries.",
+        "number": "06",
+    },
+}
 
 
 def _render_login(error: str | None = None, status_code: int = 200) -> HTMLResponse:
@@ -359,8 +404,25 @@ def logout(request: Request):
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
+    return _render_dashboard(request, "overview")
+
+
+@router.get("/dashboard/{view_name}", response_class=HTMLResponse)
+def dashboard_page(request: Request, view_name: str):
+    if view_name not in DASHBOARD_PAGES:
+        raise HTTPException(status_code=404, detail="Dashboard page not found")
+    return _render_dashboard(request, view_name)
+
+
+def _render_dashboard(request: Request, view_name: str) -> HTMLResponse:
     if not is_dashboard_authenticated(request):
         return RedirectResponse("/login", status_code=303)
     template = env.get_template("rithmic_dashboard.html")
-    return template.render()
+    return HTMLResponse(
+        template.render(
+            active_view=view_name,
+            active_page=DASHBOARD_PAGES[view_name],
+            dashboard_pages=DASHBOARD_PAGES,
+        )
+    )
 

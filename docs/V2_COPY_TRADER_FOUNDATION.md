@@ -84,7 +84,7 @@ The master trade's actual risk fraction must itself be within the follower polic
 - `POST /v2/copier/cumulative-preview`: authenticated, non-persisting total-position/delta and funding-adequacy calculation for supplied authoritative state.
 - `GET /v2/copier/control` and `/control/audit`: authenticated state and audit reads.
 - `/v2/copier/control/*` mutation endpoints: authenticated, CSRF-protected for dashboard sessions, and revision-checked.
-- `/dashboard`: read-only Shadow copier readiness alongside Rithmic observations.
+- `/dashboard` and its authenticated `/dashboard/{copier,accounts,activity,risk,system}` workspaces: the premium operator overview, protected desired-state copy controls, and read-only Rithmic observations. No dashboard route can construct a writer or submit an order.
 
 The preview endpoint is a calculator. It does not read broker credentials, observe a live master event, persist copy intent, or call Rithmic. Control mutations change only durable internal intent. In particular, flatten-and-disable becomes `FLATTEN_REQUESTED`; only the future execution system may confirm broker-flat reconciliation and transition it to `DISABLED`.
 

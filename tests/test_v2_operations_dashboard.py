@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -41,7 +42,8 @@ def test_primary_dashboard_is_rithmic_operator_console() -> None:
     assert "Immutable control history" in html
     assert "REQUEST_FLATTEN_AND_DISABLE" in html
     assert "flatten-confirmation" in html
-    assert "Copy lifecycle and parity evidence" in html
+    assert "Follower parity targets" in html
+    assert "Copy lifecycle and reconciliation" in html
     assert "Master-relative sizing" in html
     assert "/dashboard/legacy" not in html
     assert "Legacy V1" not in html
@@ -69,15 +71,74 @@ def test_primary_dashboard_is_rithmic_operator_console() -> None:
     assert 'class="hero-status"' in html
     assert 'id="hero-gate-state"' in html
     assert 'class="follower-control-grid"' in html
-    assert 'class="technical-stack"' in html
-    assert '<details class="data-drawer" id="connectivity">' in html
+    assert 'class="workspace-stack"' in html
+    assert '<section class="workspace-section" id="connectivity">' in html
+    assert '<details class="data-drawer"' not in html
+    assert 'href="{{ page.path }}"' in html
+    assert 'data-dashboard-view="{{ active_view }}"' in html
+    assert "['overview', 'accounts', 'system'].includes(dashboardView)" in html
+    assert "['overview', 'copier', 'accounts'].includes(dashboardView)" in html
     assert "mooney-command-center-theme-v1" in html
     assert "mooney-v2-dashboard-theme" not in html
-    assert "openTechnicalDrawer(drawerFromHash())" in html
-    assert "if (other !== drawer) other.open = false" in html
+    assert "openTechnicalDrawer" not in html
     assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
     assert "@media (prefers-reduced-motion: reduce)" in css
     assert "Secure credentials and the capture endpoint have not been attached." in html
+
+
+def test_dashboard_navigation_renders_six_focused_workspaces(monkeypatch) -> None:
+    _clear_auth(monkeypatch)
+    from app.api.pages import router as pages_router
+
+    app = FastAPI()
+    app.include_router(pages_router)
+    client = TestClient(app)
+    pages = {
+        "/dashboard": ("Operations overview", "account-cards"),
+        "/dashboard/copier": ("Copy control", "follower-controls-body"),
+        "/dashboard/accounts": ("Accounts", "account-pnl-body"),
+        "/dashboard/activity": ("Activity", "orders-body"),
+        "/dashboard/risk": ("Risk &amp; protection", "risk-body"),
+        "/dashboard/system": ("System", "plants-body"),
+    }
+
+    for path, (title, required_id) in pages.items():
+        response = client.get(path)
+        assert response.status_code == 200
+        assert title in response.text
+        assert f'id="{required_id}"' in response.text
+        assert f'href="{path}" class="active" aria-current="page"' in response.text
+        assert "<details" not in response.text
+        rendered_ids = re.findall(r'\sid="([^"]+)"', response.text)
+        assert len(rendered_ids) == len(set(rendered_ids))
+
+    assert 'id="follower-controls-body"' not in client.get("/dashboard").text
+    assert 'id="account-cards"' not in client.get("/dashboard/copier").text
+    assert 'id="orders-body"' not in client.get("/dashboard/risk").text
+    assert client.get("/dashboard/legacy").status_code == 404
+
+
+def test_dashboard_workspaces_share_the_operator_session_gate(monkeypatch) -> None:
+    _clear_auth(monkeypatch)
+    monkeypatch.setenv(OPERATOR_USERNAME_ENV, "operator")
+    monkeypatch.setenv(OPERATOR_PASSWORD_ENV, "secret")
+    from app.api.pages import router as pages_router
+
+    app = FastAPI()
+    app.include_router(pages_router)
+    client = TestClient(app)
+
+    for path in (
+        "/dashboard",
+        "/dashboard/copier",
+        "/dashboard/accounts",
+        "/dashboard/activity",
+        "/dashboard/risk",
+        "/dashboard/system",
+    ):
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 303
+        assert response.headers["location"] == "/login"
 
 
 def test_operator_login_uses_the_command_center_visual_system() -> None:
