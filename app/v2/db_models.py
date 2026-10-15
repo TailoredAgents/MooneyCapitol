@@ -1814,3 +1814,227 @@ class V2RithmicReconciliationCheckpoint(Base):
             "recorded_at",
         ),
     )
+
+
+class V2CopyLifecycleIntent(Base):
+    __tablename__ = "v2_copy_lifecycle_intents"
+    intent_id = Column(String(96), primary_key=True)
+    profile_id = Column(
+        String(96), ForeignKey("v2_copy_profiles.profile_id"), nullable=False
+    )
+    source_event_id = Column(String(96), nullable=False)
+    source_fingerprint = Column(String(64), nullable=False)
+    master_order_id = Column(String(96), nullable=False)
+    master_revision = Column(Integer, nullable=False)
+    master_event_kind = Column(String(32), nullable=False)
+    follower_connection_id = Column(String(96), nullable=False)
+    directive = Column(String(32), nullable=False)
+    status = Column(String(32), nullable=False)
+    allowed = Column(Boolean, nullable=False)
+    reason = Column(String(96), nullable=False)
+    contract_id = Column(String(96), nullable=False)
+    symbol = Column(String(64), nullable=False)
+    exchange = Column(String(32), nullable=False)
+    current_signed_quantity = Column(Integer, nullable=False)
+    evaluated_target_signed_quantity = Column(Integer, nullable=True)
+    achievable_target_signed_quantity = Column(Integer, nullable=False)
+    delta_signed_quantity = Column(Integer, nullable=False)
+    desired_quantity = Column(MONEY, nullable=False)
+    desired_risk_dollars = Column(MONEY, nullable=False)
+    achievable_risk_dollars = Column(MONEY, nullable=False)
+    desired_risk_fraction = Column(MONEY, nullable=False)
+    achievable_risk_fraction = Column(MONEY, nullable=False)
+    desired_exposure_fraction = Column(MONEY, nullable=False)
+    achievable_exposure_fraction = Column(MONEY, nullable=False)
+    risk_parity_error = Column(MONEY, nullable=False)
+    exposure_parity_error = Column(MONEY, nullable=False)
+    parity_error = Column(MONEY, nullable=False)
+    over_target = Column(Boolean, nullable=False)
+    target_margin_required = Column(MONEY, nullable=False)
+    revision = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "source_event_id",
+            "follower_connection_id",
+            name="uq_v2_copy_lifecycle_source_follower",
+        ),
+        CheckConstraint("master_revision >= 1", name="ck_v2_copy_lifecycle_master_rev"),
+        CheckConstraint("revision >= 1", name="ck_v2_copy_lifecycle_revision"),
+        CheckConstraint(
+            "master_event_kind IN "
+            "('NEW', 'REPLACE', 'CANCEL', 'PARTIAL_FILL', 'FILL', "
+            "'REJECT', 'POSITION_TARGET')",
+            name="ck_v2_copy_lifecycle_master_kind",
+        ),
+        CheckConstraint(
+            "directive IN ('SYNC_POSITION', 'REPLACE_WORKING', "
+            "'CANCEL_WORKING', 'SUBMIT_BRACKET', 'SUBMIT_OCO')",
+            name="ck_v2_copy_lifecycle_directive",
+        ),
+        CheckConstraint(
+            "status IN ('PLANNED', 'BLOCKED', 'DISPATCHING', 'DISPATCHED', "
+            "'ACKNOWLEDGED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELLED', "
+            "'REJECTED', 'FAILED', 'DIVERGED')",
+            name="ck_v2_copy_lifecycle_status",
+        ),
+        CheckConstraint(
+            "follower_connection_id IN "
+            "('follower-1', 'follower-2', 'follower-3', 'follower-4')",
+            name="ck_v2_copy_lifecycle_follower",
+        ),
+        CheckConstraint(
+            "desired_quantity >= 0 AND desired_risk_dollars >= 0 "
+            "AND achievable_risk_dollars >= 0 "
+            "AND desired_risk_fraction >= 0 "
+            "AND achievable_risk_fraction >= 0 "
+            "AND desired_exposure_fraction >= 0 "
+            "AND achievable_exposure_fraction >= 0 "
+            "AND risk_parity_error >= 0 "
+            "AND exposure_parity_error >= 0 "
+            "AND parity_error >= 0 AND target_margin_required >= 0",
+            name="ck_v2_copy_lifecycle_nonnegative",
+        ),
+        Index(
+            "ix_v2_copy_lifecycle_follower_status",
+            "follower_connection_id",
+            "status",
+            "updated_at",
+        ),
+        Index(
+            "ix_v2_copy_lifecycle_master",
+            "master_order_id",
+            "master_revision",
+        ),
+    )
+
+
+class V2CopyLifecycleCommand(Base):
+    __tablename__ = "v2_copy_lifecycle_commands"
+    command_id = Column(String(96), primary_key=True)
+    idempotency_key = Column(String(96), nullable=False, unique=True)
+    intent_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_intents.intent_id"),
+        nullable=False,
+    )
+    ordinal = Column(Integer, nullable=False)
+    action = Column(String(32), nullable=False)
+    status = Column(String(32), nullable=False)
+    contract_id = Column(String(96), nullable=False)
+    symbol = Column(String(64), nullable=False)
+    exchange = Column(String(32), nullable=False)
+    side = Column(String(8), nullable=True)
+    quantity = Column(Integer, nullable=False)
+    order_type = Column(String(24), nullable=False)
+    duration = Column(String(8), nullable=False)
+    limit_price = Column(MONEY, nullable=True)
+    trigger_price = Column(MONEY, nullable=True)
+    stop_ticks = Column(Integer, nullable=True)
+    target_ticks = Column(Integer, nullable=True)
+    bracket_operation = Column(String(16), nullable=True)
+    existing_broker_order_id = Column(String(256), nullable=True)
+    broker_order_id = Column(String(256), nullable=True)
+    broker_order_ids_json = Column(Text, nullable=False, default="[]")
+    depends_on_command_id = Column(
+        String(96), ForeignKey("v2_copy_lifecycle_commands.command_id"), nullable=True
+    )
+    cumulative_filled_quantity = Column(Integer, nullable=False, default=0)
+    attempt_count = Column(Integer, nullable=False, default=0)
+    revision = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        UniqueConstraint("intent_id", "ordinal", name="uq_v2_copy_command_ordinal"),
+        CheckConstraint("ordinal >= 1", name="ck_v2_copy_command_ordinal"),
+        CheckConstraint(
+            "action IN ('SUBMIT', 'MODIFY', 'CANCEL', 'BRACKET', 'OCO', "
+            "'EXIT_POSITION')",
+            name="ck_v2_copy_command_action",
+        ),
+        CheckConstraint(
+            "status IN ('PLANNED', 'BLOCKED', 'DISPATCHING', 'DISPATCHED', "
+            "'ACKNOWLEDGED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELLED', "
+            "'REJECTED', 'FAILED', 'DIVERGED')",
+            name="ck_v2_copy_command_status",
+        ),
+        CheckConstraint(
+            "side IS NULL OR side IN ('BUY', 'SELL')",
+            name="ck_v2_copy_command_side",
+        ),
+        CheckConstraint(
+            "order_type IN ('MARKET', 'LIMIT', 'STOP_MARKET', 'STOP_LIMIT')",
+            name="ck_v2_copy_command_order_type",
+        ),
+        CheckConstraint(
+            "duration IN ('DAY', 'GTC', 'IOC', 'FOK')",
+            name="ck_v2_copy_command_duration",
+        ),
+        CheckConstraint(
+            "bracket_operation IS NULL OR bracket_operation IN "
+            "('AFOCCA', 'FOCCA', 'CCA', 'FCA')",
+            name="ck_v2_copy_command_bracket_operation",
+        ),
+        CheckConstraint(
+            "quantity >= 0 AND cumulative_filled_quantity >= 0 "
+            "AND cumulative_filled_quantity <= quantity",
+            name="ck_v2_copy_command_quantities",
+        ),
+        CheckConstraint(
+            "attempt_count >= 0 AND revision >= 1",
+            name="ck_v2_copy_command_revision",
+        ),
+        Index("ix_v2_copy_command_intent_status", "intent_id", "status", "ordinal"),
+    )
+
+
+class V2CopyLifecycleEvent(Base):
+    __tablename__ = "v2_copy_lifecycle_events"
+    lifecycle_event_id = Column(String(96), primary_key=True)
+    source_receipt_id = Column(String(96), nullable=True, unique=True)
+    intent_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_intents.intent_id"),
+        nullable=False,
+    )
+    command_id = Column(
+        String(96),
+        ForeignKey("v2_copy_lifecycle_commands.command_id"),
+        nullable=True,
+    )
+    event_kind = Column(String(32), nullable=False)
+    previous_status = Column(String(32), nullable=True)
+    resulting_status = Column(String(32), nullable=False)
+    command_revision = Column(Integer, nullable=True)
+    broker_order_id = Column(String(256), nullable=True)
+    cumulative_filled_quantity = Column(Integer, nullable=False, default=0)
+    fill_price = Column(MONEY, nullable=True)
+    rejection_code = Column(String(128), nullable=True)
+    occurred_at = Column(DateTime(timezone=True), nullable=False)
+    recorded_at = Column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "event_kind IN ('INTENT_CREATED', 'DISPATCH_STARTED', 'DISPATCHED', "
+            "'ACKNOWLEDGED', 'PARTIAL_FILL', 'FILL', 'CANCELLED', "
+            "'REJECTED', 'TRANSPORT_FAILURE', 'DIVERGED')",
+            name="ck_v2_copy_event_kind",
+        ),
+        CheckConstraint(
+            "resulting_status IN ('PLANNED', 'BLOCKED', 'DISPATCHING', "
+            "'DISPATCHED', 'ACKNOWLEDGED', 'PARTIALLY_FILLED', 'FILLED', "
+            "'CANCELLED', 'REJECTED', 'FAILED', 'DIVERGED')",
+            name="ck_v2_copy_event_resulting_status",
+        ),
+        CheckConstraint(
+            "command_revision IS NULL OR command_revision >= 1",
+            name="ck_v2_copy_event_revision",
+        ),
+        CheckConstraint(
+            "cumulative_filled_quantity >= 0",
+            name="ck_v2_copy_event_fill",
+        ),
+        Index("ix_v2_copy_event_intent_time", "intent_id", "recorded_at"),
+        Index("ix_v2_copy_event_command_time", "command_id", "recorded_at"),
+    )

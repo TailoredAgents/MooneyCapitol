@@ -36,6 +36,18 @@ For local operation, choose exactly one source:
 
 Do not set more than one source. `RITHMIC_PROTOCOL_SDK_PATH` is not a runtime dependency; use the generator's `--sdk-path` argument at private build time.
 
+### Separate Test-write bindings
+
+Phase 5 adds a second generator for the isolated execution writer. It produces only the official new/modify/cancel/OCO/bracket/exit request and response bindings and a separate `rithmic_write_bindings_manifest.json`:
+
+```powershell
+python -m app.tools.generate_rithmic_write_bindings `
+  --sdk-path "C:\Users\xenon\OneDrive\Desktop\Rithmic official docs\RProtocolAPI.0.90.0.0\0.90.0.0" `
+  --output "C:\private\mooney-rithmic\generated-write"
+```
+
+That output is not loaded by the capture process and must never be placed in its read-only binding directory. The writer is not attached to a deployed runtime, accepts no live mode, and requires explicit Rithmic Test authorization plus an injected Test transport. Generating these bindings does not authorize or activate order submission. A separate write-path activation runbook will be required after Phase 6 recovery/fencing and before credentials are exercised.
+
 ## Render deployment
 
 `render.yaml` defines a single-instance `mooney-rithmic-capture` web service. It runs the additive migrations before starting, exposes `/health`, `/ready`, and aggregate-only `/metrics`, and allows 60 seconds for graceful shutdown. Its committed defaults are deliberately offline:

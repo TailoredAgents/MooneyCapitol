@@ -1,14 +1,14 @@
 # V2 copy trader foundation
 
-Status: five-account configuration, supervision/simulation, durable controls, cumulative production sizing, and funding adequacy implemented; lifecycle orchestration, live driver, and broker submission not implemented
+Status: five-account configuration/simulation, durable controls, cumulative sizing, lifecycle orchestration, and an isolated Test-only write boundary implemented; live driver/runtime attachment and production submission not implemented
 
-Updated: 2026-10-14
+Updated: 2026-10-15
 
 ## What this is
 
 The V2 copy trader is intended to observe one Mooney Capital master futures account and reproduce eligible master trades across exactly four operationally independent follower accounts. All five are separate AMP accounts. The application does not assume AMP subaccounts, one legal entity, one portal, one Rithmic user, or shared credentials. Every account receives its own exact broker selector and independently configurable credential/connection bundle. The initial product set is NQ and MNQ. Account ownership does not replace AMP/Rithmic permissions, credentials, session limits, or conformance requirements.
 
-The implemented sizing phase is deterministic and Shadow-only. It calculates each follower's desired total, evaluated whole-contract target, achievable total, required signed delta, and the reason it would be allowed or blocked. It cannot submit, modify, cancel, or flatten a broker order. Requesting `TEST` or `LIVE` mode makes the effective mode `OFF` and reports `broker_submission_not_implemented`.
+The implemented sizing phase is deterministic and Shadow-only. It calculates each follower's desired total, evaluated whole-contract target, achievable total, required signed delta, and the reason it would be allowed or blocked. A separate lifecycle layer carries those immutable facts into committed per-follower intents and deterministic ordered commands before any adapter call. The standalone execution process still cannot submit, modify, cancel, or flatten a broker order: requesting `TEST` or `LIVE` through its current configuration makes the effective mode `OFF`. An isolated Rithmic writer exists only as an unattached `OFF`/`SHADOW`/explicit-Test boundary; its enum has no live value.
 
 The forward implementation order is defined in [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md). The immediate target is a credential-ready copier built and simulated without waiting for the five credential bundles. Broker validation and live readiness remain later gates.
 
@@ -45,7 +45,7 @@ Production sizing starts from the master's authoritative total signed position r
 
 An open follower contract is pinned by exact identity until flat. If the best flat-account choice would switch NQ/MNQ, the existing contract is retained or safely closed; it is never converted implicitly. An expiry mismatch is blocked and reported rather than interpreted as permission to roll. Master-flat exposure produces a close delta even when entry gates are active. Other risk-reducing deltas may pass entry-only kill/loss gates, while adds and reversals still require full new-risk eligibility.
 
-Every cumulative result records desired risk/exposure, evaluated whole-contract quantity, achievable risk/exposure, current and target signed quantity, delta, parity error, margin requirement, action, and reason. These immutable plan facts are ready for the durable copy intents introduced in Phase 5; the preview endpoint itself remains non-persisting.
+Every cumulative result records desired risk/exposure, evaluated whole-contract quantity, achievable risk/exposure, current and target signed quantity, delta, parity error, margin requirement, action, and reason. The Phase 5 bridge preserves those facts in durable copy intents; the preview endpoint itself remains non-persisting.
 
 Each follower also receives a one-MNQ funding report. It calculates the stop-defined risk of one exact-expiry MNQ, minimum equity needed to avoid exceeding master-relative risk/exposure, per-trade and concurrent-risk capacity, minimum available margin after headroom, and the current shortfalls. Operational blockers are reported separately from whether the account is economically large enough.
 
@@ -71,7 +71,11 @@ The master trade's actual risk fraction must itself be within the follower polic
 - `app/v2/execution/connection_supervisor.py`: independent per-account discovery plus ten generation-fenced Order/PnL session states, heartbeat/staleness checks, broker-neutral fresh-data gates, failure isolation, and deterministic simulation fixtures.
 - `app/v2/execution/copier_config.py`: fail-closed Shadow/risk configuration composed with the independent account topology.
 - `app/v2/execution/copy_control.py` and `copy_control_store.py`: fixed copy-profile membership, explicit follower transitions, restart directives, optimistic revisions, row-locked serialization, and controlled reason codes.
+- `app/v2/execution/lifecycle.py`, `lifecycle_bridge.py`, `lifecycle_store.py`, and `lifecycle_service.py`: deterministic master/follower correlation, committed revisioned intents, ordered commands, duplicate/stale-event protection, monotonic receipts, follower-isolated concurrent dispatch, and close-before-open reversal sequencing.
+- `app/v2/brokers/rithmic_write.py`: official R|Protocol 0.90 request mapping for market/limit/stop, bracket/OCO, modify/cancel, and position exit, with no live mode and explicit Test authorization, external-binding, and injected-transport gates.
+- `app/tools/generate_rithmic_write_bindings.py`: separate external-only generation for the official write request/response schemas; licensed schemas and derivatives remain outside Git.
 - migration `0012_v2_copy_control`: globally paused/follower-disabled defaults plus database-enforced append-only audit history.
+- migration `0013_v2_copy_lifecycle`: per-follower intent, command, broker-correlation, and append-only lifecycle-event persistence.
 - `GET /v2/copier/status`: authenticated, redacted readiness and blocker status.
 - `POST /v2/copier/preview`: authenticated, non-persisting Shadow calculation for supplied hypothetical state.
 - `POST /v2/copier/cumulative-preview`: authenticated, non-persisting total-position/delta and funding-adequacy calculation for supplied authoritative state.
@@ -119,11 +123,11 @@ The repository deliberately does not hard-code website margin figures. The opera
 
 The repository does not yet contain:
 
-- live master-order detection and lifecycle orchestration;
+- live master-order detection and attachment to the implemented lifecycle orchestration;
 - the live Rithmic driver that feeds the implemented five-account supervisor and publishes its runtime health;
-- a Rithmic write adapter or any follower order submission;
-- durable copy intents, an outbox, active-instance lease, or crash recovery for writes;
-- parent/child, partial-fill, replace, cancel, bracket/OCO, flatten, or disconnect handling for copied orders;
+- configured credential-backed Rithmic Test order submission or production/live order authority;
+- a durable outbox, production active-instance lease/fence, or crash recovery for writes;
+- broker-authoritative reconnect reconciliation, protection repair, or disconnect recovery;
 - actual-fill rebalancing or execution-quality reconciliation;
 - measured end-to-end copy latency; or
 - completed Rithmic Test write conformance and production approval.
@@ -132,7 +136,7 @@ Low latency must come from a persistent event-driven Rithmic connection and imme
 
 ## Delivery and activation sequence
 
-1. Build lifecycle orchestration, the separate write adapter, recovery/fencing, latency telemetry, and the minimal operator UI on the implemented account, supervision, simulation, controls, and cumulative-sizing foundation without waiting for credentials.
+1. Build recovery/reconciliation/fencing, latency telemetry, and the minimal operator UI on the implemented account, supervision, simulation, controls, cumulative-sizing, lifecycle, and Test-write foundation without waiting for credentials.
 2. Complete automated simulation and failure injection for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
 3. Obtain the five exact AMP/Rithmic credential bundles and confirm each account's API/session permissions and authorized operators.
 4. Insert credentials only through secret management and complete the existing read-only Rithmic Test runbook for every independent connection.

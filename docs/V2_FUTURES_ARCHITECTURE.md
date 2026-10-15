@@ -1,7 +1,7 @@
 # MooneyCapitol V2 futures architecture
 
-Status: execution submission disabled; Rithmic read-only capture, Shadow copy planning, and `conner_nq_v1` observation foundations implemented
-Canonical as of: 2026-10-14
+Status: production execution submission disabled; Rithmic read-only capture, durable copy lifecycle, isolated Test-write boundary, and `conner_nq_v1` observation foundations implemented
+Canonical as of: 2026-10-15
 
 ## Purpose and boundary
 
@@ -37,7 +37,9 @@ Hard constraints include:
 - model output can never weaken a hard risk limit;
 - lifecycle revisions are monotonic and terminal order states cannot roll backward.
 
-The execution process remains a boundary skeleton. Immutable configuration rejects submission enablement, readiness remains false, and the execution-side Rithmic placeholder's submission methods raise. The pure Shadow copier planner calculates one-master/four-follower NQ/MNQ plans from the master's actual stop-defined risk fraction and point-exposure fraction. It enforces mandatory protective stops, integer contracts, same-expiry mappings, parity tolerance, current margin capacity, loss limits, and kill switches without observing live master events or producing broker side effects. No work in `conner_nq_v1` changes that limitation. See [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md).
+The standalone execution process remains fail-closed: immutable configuration rejects submission enablement, readiness remains false, and the execution-side placeholder's submission methods raise. The pure Shadow planner calculates one-master/four-follower NQ/MNQ targets from the master's actual stop-defined risk fraction and point-exposure fraction. The durable lifecycle layer carries a cumulative result into one committed intent per source event and follower, compiles deterministic ordered commands, protects against duplicate/stale revisions, records monotonic partial-fill/terminal transitions, and isolates concurrent follower dispatch. Reversals require the close command to fill before the open command becomes dispatchable.
+
+The separate `rithmic_write` boundary maps commands to the official R|Protocol 0.90 new/modify/cancel/OCO/bracket/exit schemas. Its mode type contains only `OFF`, `SHADOW`, and `TEST`; Test construction additionally requires an explicit authorization boolean, checksum-pinned external write bindings, an injected transport, and a Rithmic Test environment. It is not attached to the standalone execution process. The structurally read-only observer remains unchanged, and no work in `conner_nq_v1` enters this dependency path. See [V2_COPY_TRADER_FOUNDATION.md](V2_COPY_TRADER_FOUNDATION.md).
 
 V2 names its deterministic local copy/request identity `client_intent_id`. The broker-neutral `client_order_id` property remains only a compatibility alias for existing callers; it is not a guaranteed Rithmic broker-side idempotency key. Rithmic `user_tag` and `user_msg` values likewise remain correlation or origin evidence rather than ownership or idempotency proof.
 
@@ -51,7 +53,7 @@ For each new connection generation, the service subscribes to live Order/bracket
 
 The observer has no order, modify, cancel, flatten, exit, bracket/OCO send, link, target/stop change, or follower method. A default-deny outbound template guard runs at the final transport boundary and rejects all known broker-mutation templates. This is a structural boundary, not an operator convention or environment flag.
 
-The implemented observer currently consumes one configured credential bundle and an exact account allowlist. That is a description of current code, not the final copier topology. The planned copier will supervise an independent Order/PnL connection bundle for each distinct credential while preserving the observer as a separate structurally read-only component.
+The implemented observer currently consumes one configured credential bundle and an exact account allowlist. That is a description of current code, not the final copier topology. The connection supervisor and lifecycle contracts model independent bundles, but their live runtime driver is not attached. That later attachment must preserve the observer as a separate structurally read-only component.
 
 Optional Ticker Plant request/response support provides exact symbol, exchange/product, expiration, tick-table, point-value, and tradability facts. Normal capture requires only Order and PnL once exact contract mappings are validated. Continuous Rithmic market-data streaming, History Plant strategy data, and Scout integration are outside this phase.
 
@@ -159,9 +161,13 @@ Migration `0010_conner_nq_scout` adds 13 observation/learning tables for specifi
 
 Migration `0011_rithmic_read_capture` adds 11 tables for independent connection generations, replay batches, immutable broker events, account/order/execution/bracket/reference/P&L/RMS observations, and reconciliation checkpoints. BigInteger columns retain official 64-bit quantities; Numeric columns retain monetary facts without inventing a generic equity interpretation. Native IDs, unknown statuses, source/provenance, fill busts/corrections, replay terminals, and account metadata are append-only. PostgreSQL triggers reject update/delete operations on broker history.
 
-All three migrations are additive. V1 records are not altered or converted. The `0010` constraints encode cutoff ordering, point-in-time availability, explicit missingness, unknown/unlabeled defaults, evidenced positive/pass labels, task isolation, Shadow-only outputs, lead-time rules, and walk-forward chronology.
+Migration `0012_v2_copy_control` adds the fail-closed fixed copy profile, four follower controls, and immutable operator-control audit.
 
-PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and produced zero V2 metadata drift through that revision. Migrations `0011` and `0012` have automated schema/model validation; their live PostgreSQL upgrade remains part of deployment validation.
+Migration `0013_v2_copy_lifecycle` adds revisioned per-follower intents, ordered commands with deterministic local idempotency keys and broker-order correlation, plus append-only lifecycle events. PostgreSQL rejects updates/deletes of lifecycle event history; application transitions prevent terminal rollback and cumulative-fill regression.
+
+All five V2 migrations are additive. V1 records are not altered or converted. The `0010` constraints encode cutoff ordering, point-in-time availability, explicit missingness, unknown/unlabeled defaults, evidenced positive/pass labels, task isolation, Shadow-only outputs, lead-time rules, and walk-forward chronology.
+
+PostgreSQL 16 validation upgraded `0001` through `0010`, downgraded/re-upgraded `0010`, and produced zero V2 metadata drift through that revision. Migrations `0011` through `0013` have automated schema/model validation; their live PostgreSQL upgrade remains part of deployment validation.
 
 The Rithmic capture process has a durable journal/projection writer. The schema does not yet provide a durable high-volume strategy market-data ingestion process or production Scout repository/orchestrator; those remain next-phase components.
 
@@ -179,9 +185,9 @@ The cumulative planner applies that same parity engine to the master's authorita
 
 The repository still has no:
 
-- completed Rithmic Test conformance or any broker order submission/mutation;
+- completed Rithmic Test conformance or credential-backed broker submission;
 - the live driver/runtime attachment for the implemented five-account connection supervisor;
-- live master-event orchestration, durable copy intents, or real follower order placement;
+- live master-event ingestion or real follower order placement;
 - complete Conner strategy or handcrafted trade rule;
 - live Scout service or live candidate-generation loop;
 - trained futures model, selected ranking objective, or promoted artifact;
@@ -192,6 +198,6 @@ The repository still has no:
 
 ## Exact next step
 
-Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Typed account configuration, deterministic multi-account supervision/simulation, durable controls, cumulative-position parity sizing, and funding-adequacy reporting are complete. Next build durable lifecycle orchestration and the separate Test-gated write adapter, then reconciliation/recovery/fencing, latency telemetry, the minimal operational UI, and complete simulated acceptance testing.
+Follow [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md) and make the copier credential-ready without waiting for the five account credentials. Typed account configuration, deterministic multi-account supervision/simulation, durable controls, cumulative-position parity sizing, funding-adequacy reporting, lifecycle orchestration, and the separate Test-gated write boundary are complete. Next build broker-authoritative reconciliation, crash recovery/outbox/fencing, and latency telemetry, then the minimal operational UI and complete simulated acceptance testing.
 
-When credentials arrive, validate all independent connections against Rithmic Test, complete required conformance and AMP authorization, and use a supervised one-follower minimum-size live canary before staged expansion. The dashboard information-architecture/aesthetic pass follows the operational copier. Learning and Conner-focused read-only agents follow later; trustworthy execution and master-lifecycle facts must be retained from day one. Production readiness has not been declared, and all Rithmic broker mutation remains disabled in the current code.
+When credentials arrive, privately generate the external write bindings, attach an approved Test transport, validate all independent connections against Rithmic Test, complete required conformance and AMP authorization, and use a supervised one-follower minimum-size live canary only after later live gates exist. The dashboard information-architecture/aesthetic pass follows the operational copier. Learning and Conner-focused read-only agents follow later; trustworthy execution and master-lifecycle facts must be retained from day one. Production readiness has not been declared, the current runtime cannot activate writes, and the isolated adapter has no live mode.

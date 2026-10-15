@@ -2,7 +2,7 @@
 
 Status: canonical forward plan
 
-Updated: 2026-10-14
+Updated: 2026-10-15
 
 ## Authority
 
@@ -47,6 +47,8 @@ Implemented now:
 - deterministic supervision for five independent discoveries and ten Order/PnL sessions, with generation fencing, heartbeat/staleness tracking, failure isolation, and credential-free simulation;
 - a durable fail-closed copy profile with four follower state machines, global pause, optimistic revisions, CSRF-protected control APIs, restart directives, and append-only audit history;
 - cumulative total-position sizing across adds, reductions, closes, and reversals, with exact-contract pinning and per-follower one-MNQ funding-adequacy reports;
+- durable per-master-event/per-follower lifecycle intents, deterministic command identities, monotonic partial-fill/terminal transitions, and close-before-open reversal ordering;
+- a separate official-schema R|Protocol write boundary for market, limit, stop, bracket/OCO, modify, cancel, and position-exit requests, limited in code to `OFF`, `SHADOW`, and explicitly authorized Test use;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
 - a read-only operations dashboard that shows capture and Shadow readiness;
 - fail-closed environment and Render defaults; and
@@ -55,15 +57,14 @@ Implemented now:
 Not implemented yet:
 
 - the live Rithmic connection driver and runtime-health attachment for the five supervised account connections;
-- live master lifecycle orchestration;
-- durable copy intents and master/follower order correlation;
-- a Rithmic write adapter or any follower broker mutation;
+- live master-event ingestion and runtime attachment of lifecycle orchestration;
+- configured external write bindings/transport and credential-backed Rithmic Test submission;
 - write-path crash recovery, production fencing, and execution reconciliation;
 - measured copy latency;
 - the functional copier control UI; or
 - Rithmic Test, conformance, or live validation.
 
-The current read-only observer must remain structurally read-only. Write capability will be added through a separate execution adapter/service boundary rather than weakening its outbound template denylist.
+The current read-only observer remains structurally read-only. The new write capability is a separate execution adapter/service boundary and does not weaken the observer's outbound template denylist. The normal execution process still rejects submission configuration and does not attach the Test writer.
 
 ## Safety and behavior contract
 
@@ -164,7 +165,7 @@ Status: **complete**
 
 ### Phase 5 — Durable lifecycle copier and Rithmic write boundary
 
-Status: **next**
+Status: **complete**
 
 - Create durable, revisioned copy intents before follower actions.
 - Correlate each master lifecycle with each independent follower lifecycle.
@@ -173,6 +174,8 @@ Status: **next**
 - Keep follower failures isolated and report exact divergence.
 - Build the write adapter from the official external Rithmic materials behind `OFF`, `SHADOW`, and Test-only gates.
 - Preserve a compile/runtime boundary that makes live activation impossible until later authorization gates exist.
+
+Implementation note: migration `0013_v2_copy_lifecycle` stores revisioned intents, ordered commands, all broker IDs returned for multi-order requests, and append-only lifecycle events. Deterministic local IDs prevent command recreation on duplicate source events; Rithmic `user_tag`/`user_msg` remain correlation evidence only. A separate external-binding generator covers only the official write request/response schemas. The adapter contains no live mode, Test construction requires an explicit authorization gate plus injected codec/transport, and the production execution entry point remains submission-disabled. Crash recovery, broker-authoritative reconciliation, durable outbox semantics, and runtime fencing intentionally remain Phase 6.
 
 ### Phase 6 — Reconciliation, recovery, fencing, and latency
 
@@ -284,8 +287,8 @@ Also finalize owner-approved per-trade risk, concurrent-risk, daily realized-los
 
 ## Progress checkpoint
 
-Current checkpoint: Phase 4 cumulative production sizing and funding adequacy complete. The pure Decimal planner now sizes toward total follower positions, derives only the required signed delta for adds/reductions/closes/reversals, pins every open copied contract until flat, blocks expiry mismatch rather than auto-rolling, permits safe reductions through entry risk gates, records desired/evaluated/achievable exposure plus exact reason codes, and quantifies the equity, risk-capacity, and available-margin shortfall for one MNQ.
+Current checkpoint: Phase 5 durable lifecycle copier and isolated Rithmic Test-write boundary complete. Cumulative sizing facts flow into committed per-follower intents before dispatch. Deterministic ordered commands and append-only transition facts cover market/limit/stop orders, bracket/OCO, replace/cancel, partial fills, scales, exits, rejects, duplicates, follower-isolated failures, and close-before-open reversals. The separate official-schema adapter has no live mode and is not attached to the production execution runtime.
 
-Next implementation task: Phase 5, durable master/follower lifecycle orchestration and the separate Test-gated Rithmic write boundary.
+Next implementation task: Phase 6, broker-authoritative reconciliation, restart/crash recovery, durable outbox and active-instance fencing, plus copy-latency telemetry.
 
 Do not skip directly to UI polish, learning, AI agents, Rithmic Test, or live activation while an earlier execution milestone remains incomplete.
