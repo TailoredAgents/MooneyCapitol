@@ -283,6 +283,19 @@ def test_broker_neutral_master_and_follower_data_require_fresh_ready_generation(
             now=NOW + timedelta(seconds=2),
         )
     with pytest.raises(ConnectionDataUnavailable, match="stale connection data"):
+        supervisor.accept_follower_state(
+            NormalizedFollowerAccountState(
+                connection_id="follower-1",
+                generation_id="follower-1:pnl:1",
+                observed_at=NOW,
+                equity=Decimal("500"),
+                available_margin=Decimal("450"),
+                daily_realized_pnl=Decimal("5"),
+                daily_total_pnl=Decimal("7"),
+            ),
+            now=NOW + timedelta(seconds=16),
+        )
+    with pytest.raises(ConnectionDataUnavailable, match="stale connection data"):
         supervisor.accept_master_event(
             MasterEventEnvelope(
                 "master",

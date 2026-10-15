@@ -279,6 +279,65 @@ def test_global_pause_uses_profile_revision_and_is_audited() -> None:
         session.close()
 
 
+def test_four_followers_keep_independent_enable_pause_and_flatten_state() -> None:
+    session = _session()
+    try:
+        store = SqlAlchemyCopyControlStore(session)
+        for number in range(1, 5):
+            store.transition_follower(
+                profile_id=DEFAULT_COPY_PROFILE_ID,
+                connection_id=f"follower-{number}",
+                action=FollowerControlAction.ENABLE,
+                expected_revision=1,
+                actor="acceptance-operator",
+                auth_method="api_token",
+                request_id=f"acceptance-enable-{number}",
+                reason_code="simulation",
+            )
+
+        store.transition_follower(
+            profile_id=DEFAULT_COPY_PROFILE_ID,
+            connection_id="follower-2",
+            action=FollowerControlAction.PAUSE,
+            expected_revision=2,
+            actor="acceptance-operator",
+            auth_method="api_token",
+            request_id="acceptance-pause-2",
+            reason_code="operator_requested",
+        )
+        store.transition_follower(
+            profile_id=DEFAULT_COPY_PROFILE_ID,
+            connection_id="follower-3",
+            action=FollowerControlAction.REQUEST_FLATTEN_AND_DISABLE,
+            expected_revision=2,
+            actor="acceptance-operator",
+            auth_method="api_token",
+            request_id="acceptance-flatten-3",
+            reason_code="emergency",
+        )
+        active = store.set_global_pause(
+            profile_id=DEFAULT_COPY_PROFILE_ID,
+            paused=False,
+            expected_revision=7,
+            actor="acceptance-operator",
+            auth_method="api_token",
+            request_id="acceptance-global-resume",
+            reason_code="simulation",
+        )
+
+        assert [item.state for item in active.followers] == [
+            FollowerControlState.ENABLED,
+            FollowerControlState.PAUSED,
+            FollowerControlState.FLATTEN_REQUESTED,
+            FollowerControlState.ENABLED,
+        ]
+        assert [item.revision for item in active.followers] == [2, 3, 3, 2]
+        assert active.entry_enabled_connection_ids == ("follower-1", "follower-4")
+        assert len(store.list_audit(profile_id=DEFAULT_COPY_PROFILE_ID, limit=20)) == 7
+    finally:
+        session.close()
+
+
 def test_database_rejects_uncontrolled_reason_codes() -> None:
     session = _session()
     try:

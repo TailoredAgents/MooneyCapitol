@@ -1,6 +1,6 @@
 # V2 copy trader foundation
 
-Status: five-account configuration/simulation, durable controls, cumulative sizing, lifecycle orchestration, fenced recovery/reconciliation, latency telemetry, and an isolated Test-only write boundary implemented; live driver/runtime attachment and production submission not implemented
+Status: credential-ready in deterministic simulation; five-account configuration, durable controls, cumulative sizing, lifecycle orchestration, fenced recovery/reconciliation, latency telemetry, functional operator UI, isolated Test-only write boundary, and acceptance gate implemented; credential-backed broker validation and production submission not implemented
 
 Updated: 2026-10-15
 
@@ -10,7 +10,7 @@ The V2 copy trader is intended to observe one Mooney Capital master futures acco
 
 The implemented sizing phase is deterministic and Shadow-only. It calculates each follower's desired total, evaluated whole-contract target, achievable total, required signed delta, and the reason it would be allowed or blocked. A separate lifecycle layer carries those immutable facts into committed per-follower intents, deterministic ordered commands, and durable outbox records before any adapter call. Every dispatch claim requires the current database-backed owner/fence. A transport-ambiguous or abandoned claim is never resent blindly: a fresh, complete broker snapshot must explain orders, executions, positions, and protection first, otherwise that follower is locked. The standalone execution process still cannot submit, modify, cancel, or flatten a broker order: requesting `TEST` or `LIVE` through its current configuration makes the effective mode `OFF`. An isolated Rithmic writer exists only as an unattached `OFF`/`SHADOW`/explicit-Test boundary; its enum has no live value.
 
-The forward implementation order is defined in [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md). The immediate target is a credential-ready copier built and simulated without waiting for the five credential bundles. Broker validation and live readiness remain later gates.
+The forward implementation order is defined in [PROJECT_IMPLEMENTATION_PLAN.md](PROJECT_IMPLEMENTATION_PLAN.md). The copier has passed the [credential-ready simulation and failure-injection gate](V2_CREDENTIAL_READY_ACCEPTANCE.md). Credential-backed Rithmic Test validation and live readiness remain later, separate gates.
 
 ## Sizing objective
 

@@ -34,7 +34,7 @@ The project uses three distinct readiness terms:
 2. **Broker-validated:** the copier has passed the documented scenario suite against Rithmic Test using actual credentials and observed protocol behavior.
 3. **Live-ready:** required conformance and permissions are complete, a minimum-size live canary has passed, and the operator has explicitly approved staged expansion.
 
-The immediate objective is credential-ready. Account creation and credentials are parallel external work, not a reason to delay implementation.
+The credential-ready objective is complete in deterministic simulation. Account creation, secure credential insertion, and Rithmic Test validation are the next external gate.
 
 ## Current repository baseline
 
@@ -54,6 +54,7 @@ Implemented now:
 - a separate official-schema R|Protocol write boundary for market, limit, stop, bracket/OCO, modify, cancel, and position-exit requests, limited in code to `OFF`, `SHADOW`, and explicitly authorized Test use;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
 - an authenticated operator dashboard with five-account readiness, revision-checked copy controls, typed flatten confirmation, parity/lifecycle/recovery evidence, redacted immutable audit history, and read-only broker observations;
+- a credential-ready release gate with a fixed requirement-to-test manifest, four-follower concurrent dispatch evidence, rejection failure injection, and local JUnit output;
 - fail-closed environment and Render defaults; and
 - `conner_nq_v1` observation, labeling, replay, ranking-contract, and learning-data foundations with no trained or live model.
 
@@ -211,7 +212,7 @@ Implementation note: the authenticated `/dashboard` merges the fixed five-slot r
 
 ### Phase 8 — Credential-ready acceptance suite
 
-Status: **planned**
+Status: **complete in credential-free simulation; Rithmic Test remains Phase 9**
 
 The system is credential-ready only after automated simulation and failure injection cover:
 
@@ -231,6 +232,8 @@ The system is credential-ready only after automated simulation and failure injec
 - latency instrumentation under concurrent follower load.
 
 The repository must remain unable to activate live order submission at this milestone.
+
+Implementation note: `python -m app.tools.v2_credential_ready_acceptance` runs the fixed acceptance manifest and writes an ignored local JUnit report. The gate covers all 15 requirements above through 37 production-component tests, including all four follower adapters entering dispatch concurrently with persisted timing evidence. It also adds a lifecycle invariant that prevents a rejected master event from creating or increasing follower exposure. See [V2_CREDENTIAL_READY_ACCEPTANCE.md](V2_CREDENTIAL_READY_ACCEPTANCE.md) for the matrix and the boundary between simulated credential readiness and broker validation.
 
 ### Phase 9 — Credential insertion and broker validation
 
@@ -293,8 +296,8 @@ Also finalize owner-approved per-trade risk, concurrent-risk, daily realized-los
 
 ## Progress checkpoint
 
-Current checkpoint: Phase 7 minimal functional operator UI complete. The dashboard now presents the one-master/four-follower topology, configuration versus observed connection readiness, broker-observed equity/margin/P&L/position/protection facts, latest target-versus-known quantity and parity facts, lifecycle/delivery/reconciliation/latency state, safe desired-state controls, explicit flatten confirmation, and redacted immutable control history. The separate official-schema adapter still has no live mode and is not attached to the dashboard or production execution runtime.
+Current checkpoint: Phase 8 credential-ready acceptance complete in deterministic simulation. The fixed release gate passed all 37 selected tests, including four-way concurrent dispatch/timing, independent follower controls, rejection isolation, recovery/fencing, stale-state handling, security/redaction, and proof that live submission remains impossible. The separate official-schema adapter still has no live mode and is not attached to the dashboard or production execution runtime.
 
-Next implementation task: Phase 8, the credential-ready automated simulation and failure-injection acceptance suite.
+Next gated task: Phase 9 credential insertion and Rithmic Test validation after the five credential bundles, exact account selectors, licensed bindings, and broker approval are available through secure channels.
 
-Do not skip directly to UI polish, learning, AI agents, Rithmic Test, or live activation while an earlier execution milestone remains incomplete.
+Do not treat simulated credential readiness as broker validation or live readiness. Rithmic Test, conformance, measured gateway latency, and a later explicitly authorized live canary remain separate gates.

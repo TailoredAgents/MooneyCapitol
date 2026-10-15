@@ -267,6 +267,14 @@ class FollowerLifecyclePlan:
             CopyDirective.CANCEL_WORKING,
         } and not (self.existing_broker_order_id or "").strip():
             raise ValueError("replace/cancel requires an existing broker order ID")
+        if (
+            self.event.kind == MasterEventKind.REJECT
+            and self.allowed
+            and self.directive != CopyDirective.CANCEL_WORKING
+        ):
+            raise ValueError(
+                "rejected master events may only cancel an existing follower order"
+            )
         if self.directive == CopyDirective.SUBMIT_BRACKET and not (
             self.stop_ticks
         ):

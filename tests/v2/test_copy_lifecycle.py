@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.db.models import Base
+from app.v2.brokers.rithmic_write import RithmicWriteRejected
 from app.v2.db_models import (
     V2CopyDeliveryEvent,
     V2CopyLatency,
@@ -292,6 +293,24 @@ def test_bracket_oco_replace_cancel_and_stop_limit_contracts() -> None:
     assert cancel.action == CopyAction.CANCEL
 
 
+def test_master_rejection_can_only_cancel_an_existing_follower_order() -> None:
+    rejected = _event("master-rejected", kind=MasterEventKind.REJECT)
+    cancel = compile_commands(
+        _plan(
+            event=rejected,
+            current=0,
+            target=0,
+            directive=CopyDirective.CANCEL_WORKING,
+            existing_broker_order_id="follower-working-order",
+        )
+    )
+    assert len(cancel) == 1
+    assert cancel[0].action == CopyAction.CANCEL
+
+    with pytest.raises(ValueError, match="rejected master events"):
+        _plan(event=rejected, current=0, target=1)
+
+
 def test_position_increase_cannot_be_compiled_without_attached_stop_policy() -> None:
     with pytest.raises(ValueError, match="protective stop"):
         _plan(stop_ticks=None, bracket_operation=None)
@@ -473,6 +492,39 @@ class _FakeAdapter:
         )
 
 
+class _RejectingAdapter(_FakeAdapter):
+    async def dispatch(self, command):
+        self.commands.append(command)
+        raise RithmicWriteRejected("simulated follower rejection")
+
+
+class _ConcurrentDispatchGate:
+    def __init__(self, expected: int) -> None:
+        self.expected = expected
+        self.entered: set[str] = set()
+        self.ready = asyncio.Event()
+
+    async def arrive(self, connection_id: str) -> None:
+        self.entered.add(connection_id)
+        if len(self.entered) == self.expected:
+            self.ready.set()
+        await asyncio.wait_for(self.ready.wait(), timeout=1)
+
+
+class _ConcurrentAdapter(_FakeAdapter):
+    def __init__(self, connection_id: str, gate: _ConcurrentDispatchGate) -> None:
+        super().__init__(connection_id)
+        self.gate = gate
+
+    async def dispatch(self, command):
+        self.commands.append(command)
+        await self.gate.arrive(self.connection_id)
+        return SimpleNamespace(
+            transmitted=True,
+            broker_order_ids=(f"broker-{command.command_id}",),
+        )
+
+
 def test_parallel_dispatch_isolates_one_follower_failure() -> None:
     session = _session()
     try:
@@ -502,6 +554,75 @@ def test_parallel_dispatch_isolates_one_follower_failure() -> None:
         assert failed.status == LifecycleStatus.DISPATCHING
         assert failed.commands[0].outbox_status == OutboxStatus.UNCERTAIN
         assert len(first.commands) == len(second.commands) == 1
+    finally:
+        session.close()
+
+
+def test_follower_broker_rejection_is_terminal_and_isolated() -> None:
+    session = _session()
+    try:
+        store = SqlAlchemyLifecycleStore(session)
+        healthy = _FakeAdapter("follower-1")
+        rejected = _RejectingAdapter("follower-2")
+        copier = DurableLifecycleCopier(
+            store,
+            {"follower-1": healthy, "follower-2": rejected},
+            lease_token=_lease(session),
+        )
+        event = _event("follower-rejection-event")
+        outcomes = asyncio.run(
+            copier.persist_and_dispatch(
+                (
+                    _plan("follower-1", event=event),
+                    _plan("follower-2", event=event),
+                )
+            )
+        )
+
+        assert outcomes[0].succeeded and outcomes[0].transmitted
+        assert outcomes[1].error_type == "RithmicWriteRejected"
+        assert (
+            store.get_intent(outcomes[0].intent_id).status
+            == LifecycleStatus.DISPATCHED
+        )
+        assert (
+            store.get_intent(outcomes[1].intent_id).status
+            == LifecycleStatus.REJECTED
+        )
+    finally:
+        session.close()
+
+
+def test_four_followers_dispatch_concurrently_with_latency_instrumentation() -> None:
+    session = _session()
+    try:
+        store = SqlAlchemyLifecycleStore(session)
+        gate = _ConcurrentDispatchGate(expected=4)
+        adapters = {
+            f"follower-{number}": _ConcurrentAdapter(f"follower-{number}", gate)
+            for number in range(1, 5)
+        }
+        copier = DurableLifecycleCopier(
+            store,
+            adapters,
+            lease_token=_lease(session),
+        )
+        event = _event("four-follower-concurrent-event")
+        outcomes = asyncio.run(
+            copier.persist_and_dispatch(
+                tuple(
+                    _plan(f"follower-{number}", event=event)
+                    for number in range(1, 5)
+                )
+            )
+        )
+
+        assert gate.entered == {f"follower-{number}" for number in range(1, 5)}
+        assert all(item.succeeded and item.transmitted for item in outcomes)
+        latency_rows = session.execute(select(V2CopyLatency)).scalars().all()
+        assert {item.follower_connection_id for item in latency_rows} == gate.entered
+        assert all(item.submission_started_at is not None for item in latency_rows)
+        assert all(item.dispatch_response_at is not None for item in latency_rows)
     finally:
         session.close()
 
