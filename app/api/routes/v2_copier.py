@@ -237,6 +237,7 @@ def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
                 "role": account.role.value,
                 "follower_number": account.follower_number,
                 "environment": account.environment,
+                "required_plants": ["ORDER", "PNL"],
                 "account_selector_present": account.account_id_present,
                 "credentials_present": account.credentials_present,
                 "connection_settings_present": (
@@ -263,6 +264,10 @@ def build_shadow_copier_status(config: ShadowCopierConfig) -> dict[str, Any]:
             and config.mnq_initial_margin > Decimal("0")
         ),
         "planner_implemented": True,
+        "connection_supervisor_implemented": True,
+        "simulated_connections_implemented": True,
+        "required_supervised_session_count": len(topology.accounts) * 2,
+        "supervisor_runtime_health_attached": False,
         "master_event_orchestration_implemented": False,
         "execution_adapter_implemented": False,
         "blockers": list(config.preflight_blockers),

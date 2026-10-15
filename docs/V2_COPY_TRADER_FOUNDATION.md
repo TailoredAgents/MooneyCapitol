@@ -1,6 +1,6 @@
 # V2 copy trader foundation
 
-Status: five-account secret-reference configuration and Shadow planner implemented; connection supervision and broker submission not implemented
+Status: five-account configuration, deterministic connection supervision, simulation, and Shadow planner implemented; live connection driver and broker submission not implemented
 
 Updated: 2026-10-14
 
@@ -58,6 +58,7 @@ The master trade's actual risk fraction must itself be within the follower polic
 
 - `app/v2/execution/copier.py`: pure Decimal-based parity planning with no broker dependency or side effect.
 - `app/v2/execution/account_config.py`: typed master/follower connection slots, per-account secret references, redacted resolution, and fail-closed Test-connectivity readiness.
+- `app/v2/execution/connection_supervisor.py`: independent per-account discovery plus ten generation-fenced Order/PnL session states, heartbeat/staleness checks, broker-neutral fresh-data gates, failure isolation, and deterministic simulation fixtures.
 - `app/v2/execution/copier_config.py`: fail-closed Shadow/risk configuration composed with the independent account topology.
 - `GET /v2/copier/status`: authenticated, redacted readiness and blocker status.
 - `POST /v2/copier/preview`: authenticated, non-persisting Shadow calculation for supplied hypothetical state.
@@ -102,7 +103,7 @@ The repository deliberately does not hard-code website margin figures. The opera
 The repository does not yet contain:
 
 - live master-order detection and lifecycle orchestration;
-- independent connection/session supervision for all five configured bundles;
+- the live Rithmic driver that feeds the implemented five-account supervisor and publishes its runtime health;
 - persistent per-follower enable, pause, flatten, lock, and audit state;
 - a Rithmic write adapter or any follower order submission;
 - durable copy intents, an outbox, active-instance lease, or crash recovery for writes;
@@ -116,7 +117,7 @@ Low latency must come from a persistent event-driven Rithmic connection and imme
 
 ## Delivery and activation sequence
 
-1. Build the independent account/secret configuration, simulated connection supervision, persistent controls, production sizing, lifecycle orchestrator, separate write adapter, recovery/fencing, latency telemetry, and minimal operator UI without waiting for credentials.
+1. Build persistent controls, production sizing, lifecycle orchestration, the separate write adapter, recovery/fencing, latency telemetry, and the minimal operator UI on the implemented account configuration and simulated connection-supervision foundation without waiting for credentials.
 2. Complete automated simulation and failure injection for entries, stops, targets, partial fills, cancel/replace, scale changes, flatten, rejection, reconnect, follower controls, duplication, staleness, and crash recovery.
 3. Obtain the five exact AMP/Rithmic credential bundles and confirm each account's API/session permissions and authorized operators.
 4. Insert credentials only through secret management and complete the existing read-only Rithmic Test runbook for every independent connection.

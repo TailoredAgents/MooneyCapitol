@@ -44,6 +44,7 @@ Implemented now:
 - a direct R|Protocol 0.90 **read-only** observer with independent Order/PnL plants, recovery, journaling, reconciliation, and append-only projections;
 - a pure one-master/four-follower Shadow planner for same-expiry NQ/MNQ stop-risk and point-exposure parity;
 - typed, redacted secret-reference configuration for one master and four independent follower connections;
+- deterministic supervision for five independent discoveries and ten Order/PnL sessions, with generation fencing, heartbeat/staleness tracking, failure isolation, and credential-free simulation;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
 - a read-only operations dashboard that shows capture and Shadow readiness;
 - fail-closed environment and Render defaults; and
@@ -51,7 +52,7 @@ Implemented now:
 
 Not implemented yet:
 
-- five independently supervised credential/connection sessions;
+- the live Rithmic connection driver and runtime-health attachment for the five supervised account connections;
 - persistent follower enable/pause/flatten controls;
 - live master lifecycle orchestration;
 - durable copy intents and master/follower order correlation;
@@ -131,7 +132,7 @@ Status: **complete**
 
 ### Phase 2 — Multi-account connection supervision
 
-Status: **planned**
+Status: **complete**
 
 - Supervise independent Order and PnL sessions per credential bundle.
 - Track authentication, heartbeat, reconnect generation, discovery, readiness, and staleness independently.
@@ -142,7 +143,7 @@ Status: **planned**
 
 ### Phase 3 — Durable copy control plane
 
-Status: **planned**
+Status: **next**
 
 - Add copy profile, account membership, follower state, control revision, and immutable audit records.
 - Implement authenticated, CSRF-protected, revision-checked control APIs.
@@ -283,8 +284,8 @@ Also finalize owner-approved per-trade risk, concurrent-risk, daily realized-los
 
 ## Progress checkpoint
 
-Current checkpoint: Phase 1 independent account and secret-reference configuration complete. The code now has five fixed typed connection slots, per-account environment/endpoint/system/gateway settings, indirect secret resolution, uniqueness validation, redacted status output, and separate simulation versus Test-connectivity readiness.
+Current checkpoint: Phase 2 deterministic multi-account connection supervision complete. The code now models independent discovery and Order/PnL sessions for all five accounts, generation-fences reconnects, tracks authentication/reconciliation/heartbeats/staleness, accepts broker-neutral master events and follower account state only from fresh ready generations, isolates follower failures, blocks globally on master failure, and runs the same state machine through credential-free simulation fixtures.
 
-Next implementation task: Phase 2, deterministic multi-account connection supervision and simulated connections without broker credentials.
+Next implementation task: Phase 3, durable copy profiles, per-follower controls, optimistic revisions, and immutable audit history.
 
 Do not skip directly to UI polish, learning, AI agents, Rithmic Test, or live activation while an earlier execution milestone remains incomplete.

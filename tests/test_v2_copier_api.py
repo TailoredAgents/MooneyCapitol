@@ -85,6 +85,11 @@ def test_v2_copier_status_requires_auth_and_redacts_configuration(
     assert len(body["accounts"]) == 5
     assert body["accounts"][0]["connection"] == "Master"
     assert body["planner_implemented"] is True
+    assert body["connection_supervisor_implemented"] is True
+    assert body["simulated_connections_implemented"] is True
+    assert body["required_supervised_session_count"] == 10
+    assert body["supervisor_runtime_health_attached"] is False
+    assert body["accounts"][0]["required_plants"] == ["ORDER", "PNL"]
     assert body["execution_adapter_implemented"] is False
     assert "raw-private-account" not in response.text
     assert "raw-private-user" not in response.text
