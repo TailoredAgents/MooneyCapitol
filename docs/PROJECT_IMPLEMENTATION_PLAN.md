@@ -53,7 +53,7 @@ Implemented now:
 - persisted event/decision/submission/response/acknowledgement/fill timing and aggregate or per-follower p50/p95/p99 reporting;
 - a separate official-schema R|Protocol write boundary for market, limit, stop, bracket/OCO, modify, cancel, and position-exit requests, limited in code to `OFF`, `SHADOW`, and explicitly authorized Test use;
 - authenticated `GET /v2/copier/status` and non-persisting `POST /v2/copier/preview` endpoints;
-- an authenticated operator dashboard with five-account readiness, revision-checked copy controls, typed flatten confirmation, parity/lifecycle/recovery evidence, redacted immutable audit history, and read-only broker observations;
+- an authenticated premium operator command center with five-account readiness, revision-checked copy controls, typed flatten confirmation, parity/lifecycle/recovery evidence, redacted immutable audit history, responsive layouts, and read-only broker observations;
 - a credential-ready release gate with a fixed requirement-to-test manifest, four-follower concurrent dispatch evidence, rejection failure injection, and local JUnit output;
 - fail-closed environment and Render defaults; and
 - `conner_nq_v1` observation, labeling, replay, ranking-contract, and learning-data foundations with no trained or live model.
@@ -258,12 +258,14 @@ Status: **future gate**
 
 ### Phase 11 — Dashboard structure and aesthetics
 
-Status: **after the copier is operationally proven**
+Status: **credential-free visual/hierarchy pass complete early; populated workflow refinement follows Phase 9 validation**
 
 - Rework information architecture around real operator workflows.
 - Separate trading operations, risk, accounts, performance, history/audit, research/learning, settings, and administration.
 - Establish a consistent visual system, responsive behavior, accessible controls, and clear healthy/warning/blocked states.
 - Keep the execution hot path independent of dashboard availability.
+
+Implementation note: while credentials were pending, the dashboard and login were rebuilt around a consistent dark institutional command-center system. The opening view now prioritizes system posture, copy gate, account network, capital/readiness facts, follower controls, and exceptions. All five accounts share a deliberate responsive grid; follower actions are presented as an immediate control deck; dense capture, configuration, account, activity, risk, contract, and boundary evidence remains available in compact technical drawers. Empty and credential-pending states stay explicit rather than displaying fabricated balances, performance, or activity. The authenticated APIs, CSRF/revision checks, typed flatten confirmation, audit behavior, and isolated execution boundary are unchanged. Real Rithmic Test data will drive the later populated-state usability refinement and any deeper page separation.
 
 ### Phase 12 — Learning and Conner-focused AI agents
 

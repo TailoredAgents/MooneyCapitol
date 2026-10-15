@@ -27,6 +27,7 @@ def _clear_auth(monkeypatch) -> None:
 
 def test_primary_dashboard_is_rithmic_operator_console() -> None:
     html = Path("app/templates/rithmic_dashboard.html").read_text(encoding="utf-8")
+    css = Path("app/static/rithmic_console.css").read_text(encoding="utf-8")
 
     assert "Five-account copy operator console" in html
     assert "Rithmic Test / operator controls" in html
@@ -62,6 +63,31 @@ def test_primary_dashboard_is_rithmic_operator_console() -> None:
     assert "/pnl/refresh" not in html
     assert "kill-switch" not in html
     assert "Webull" not in html
+    assert 'href="/static/rithmic_console.css"' in html
+    assert "One strategy." in html
+    assert "Five independent accounts." in html
+    assert 'class="hero-status"' in html
+    assert 'id="hero-gate-state"' in html
+    assert 'class="follower-control-grid"' in html
+    assert 'class="technical-stack"' in html
+    assert '<details class="data-drawer" id="connectivity">' in html
+    assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
+    assert "@media (prefers-reduced-motion: reduce)" in css
+    assert "Secure credentials and the capture endpoint have not been attached." in html
+
+
+def test_operator_login_uses_the_command_center_visual_system() -> None:
+    html = Path("app/templates/login.html").read_text(encoding="utf-8")
+    css = Path("app/static/operator_login.css").read_text(encoding="utf-8")
+
+    assert 'href="/static/operator_login.css"' in html
+    assert "Operator command center" in html
+    assert "Precision in motion." in html
+    assert "One master. Four independent followers." in html
+    assert "Enter command center" in html
+    assert "Live routing" in html
+    assert "@media (max-width: 820px)" in css
+    assert "@media (prefers-reduced-motion: reduce)" in css
 
 
 def test_account_alias_is_stable_and_does_not_expose_broker_id() -> None:

@@ -1,6 +1,6 @@
 # V2 copy trader foundation
 
-Status: credential-ready in deterministic simulation; five-account configuration, durable controls, cumulative sizing, lifecycle orchestration, fenced recovery/reconciliation, latency telemetry, functional operator UI, isolated Test-only write boundary, and acceptance gate implemented; credential-backed broker validation and production submission not implemented
+Status: credential-ready in deterministic simulation; five-account configuration, durable controls, cumulative sizing, lifecycle orchestration, fenced recovery/reconciliation, latency telemetry, premium credential-free operator UI, isolated Test-only write boundary, and acceptance gate implemented; credential-backed broker validation and production submission not implemented
 
 Updated: 2026-10-15
 

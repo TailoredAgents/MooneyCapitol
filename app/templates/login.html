@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MooneyCapitol Login</title>
+    <title>Secure Operations | Mooney Capital</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/static/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
@@ -88,25 +88,43 @@
         font-weight: 600;
       }
     </style>
+    <link rel="stylesheet" href="/static/operator_login.css" />
   </head>
   <body>
-    <main>
-      <h1>MooneyCapitol</h1>
-      <p>Sign in to open the operator dashboard.</p>
-      {% if error %}
-      <div class="error">{{ error }}</div>
-      {% endif %}
-      <form method="post" action="/login">
-        <label>
-          Username
-          <input name="username" autocomplete="username" autofocus required />
-        </label>
-        <label>
-          Password
-          <input name="password" type="password" autocomplete="current-password" required />
-        </label>
-        <button type="submit">Sign in</button>
-      </form>
+    <main class="login-shell">
+      <section class="login-brand-panel" aria-labelledby="login-brand-title">
+        <div class="login-brand"><span class="login-mark" aria-hidden="true">MC</span><div><strong>Mooney Capital</strong><span>Private futures operations</span></div></div>
+        <div class="login-story">
+          <div class="login-kicker">Operator command center</div>
+          <h1 id="login-brand-title">Precision in motion.<br><span>Control at every step.</span></h1>
+          <p>One master. Four independent followers. Deterministic risk parity, broker-authoritative evidence, and fail-closed controls in one operating system.</p>
+        </div>
+        <div class="login-proof" aria-label="Platform boundaries">
+          <div><span>Topology</span><strong>1 master · 4 followers</strong></div>
+          <div><span>Execution</span><strong>Rithmic Test boundary</strong></div>
+          <div><span>Live routing</span><strong>Structurally disabled</strong></div>
+        </div>
+      </section>
+      <section class="login-form-panel" aria-labelledby="login-title">
+        <div class="secure-label">Authorized access</div>
+        <h2 id="login-title">Welcome back.</h2>
+        <p>Sign in to enter the private operator console. Access attempts and control changes are audited.</p>
+        {% if error %}
+        <div class="error" role="alert">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login">
+          <label>
+            Operator username
+            <input name="username" autocomplete="username" autofocus required />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <button type="submit">Enter command center</button>
+        </form>
+        <div class="login-boundary">Private system · no public account access · live broker submission is not available from this application.</div>
+      </section>
     </main>
   </body>
 </html>

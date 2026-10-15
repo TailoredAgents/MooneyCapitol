@@ -11,8 +11,7 @@
     <script>
       (() => {
         const stored = localStorage.getItem('mooney-v2-dashboard-theme');
-        const preferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.dataset.theme = stored || (preferred ? 'dark' : 'light');
+        document.documentElement.dataset.theme = stored || 'dark';
       })();
     </script>
     <style>
@@ -300,14 +299,21 @@
       }
       @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
     </style>
+    <link rel="stylesheet" href="/static/rithmic_console.css" />
   </head>
   <body>
+    <a class="skip-link" href="#overview">Skip to operations</a>
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">MC</span>
         <div><strong>Mooney Capital</strong><span>V2 futures operations</span></div>
       </div>
+      <div class="topbar-context" aria-label="Environment status">
+        <span class="environment-badge">RITHMIC TEST</span>
+        <span><strong>Live routing disabled</strong> · five-account topology</span>
+      </div>
       <div class="header-actions">
+        <button class="refresh" id="refresh" type="button">Refresh data</button>
         <button class="header-button" id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
         <form class="logout-form" action="/logout" method="post"><button class="header-button" type="submit">Log out</button></form>
       </div>
@@ -326,16 +332,32 @@
         <a href="#orders">Orders &amp; fills</a>
         <a href="#risk">Risk &amp; brackets</a>
         <a href="#contracts">Contracts</a>
+        <div class="sidebar-status">
+          <div class="sidebar-label">System posture</div>
+          <strong id="sidebar-posture">Checking system</strong>
+          <span>Test boundary active. Live submission has no construction path.</span>
+        </div>
       </nav>
 
       <main>
         <section class="hero" id="overview">
-          <div>
+          <div class="hero-copy">
             <div class="eyebrow">Rithmic Test / operator controls</div>
-            <h1>Five-account copy operator console</h1>
-            <p>One master and four independent follower connections, with fail-closed copy controls, risk-parity evidence, recovery status, and redacted broker observations.</p>
+            <h1>One strategy.<br><span>Five independent accounts.</span></h1>
+            <p>Five-account copy operator console for one master and four followers—with fail-closed controls, risk-parity evidence, broker-authoritative recovery, and every critical action accounted for.</p>
+            <div class="hero-foot"><span class="pulse-mark" aria-hidden="true"></span><strong>Credential-ready simulation</strong><span>Execution remains isolated from this dashboard</span></div>
           </div>
-          <button class="refresh" id="refresh" type="button">Refresh observations</button>
+          <aside class="hero-status" aria-label="Current system posture">
+            <div class="hero-status-label">System posture</div>
+            <div class="hero-status-value" id="hero-posture">Checking infrastructure</div>
+            <p class="hero-status-copy" id="hero-posture-detail">Loading connection and control evidence.</p>
+            <div class="hero-status-grid">
+              <div><span>Copy gate</span><strong id="hero-gate-state">Checking</strong></div>
+              <div><span>Mode</span><strong id="hero-mode-state">Shadow</strong></div>
+              <div><span>Accounts</span><strong id="hero-account-state">0 / 5 observed</strong></div>
+              <div><span>Last refresh</span><strong id="last-refresh-top">Pending</strong></div>
+            </div>
+          </aside>
         </section>
 
         <div class="safety-banner">
@@ -353,37 +375,39 @@
         </section>
 
         <section class="section" id="account-operations">
-          <div class="section-heading"><div><h2>Master and follower readiness</h2><p>Exactly five fixed internal connection slots. Broker account identifiers and credentials never appear here.</p></div></div>
+          <div class="section-heading"><div><div class="section-kicker">Account network</div><h2>Master and follower readiness</h2><p>Exactly five fixed internal connection slots. Broker account identifiers and credentials never appear here.</p></div></div>
           <div class="account-grid" id="account-cards"><article class="panel empty">Loading five-account state...</article></div>
         </section>
 
         <section class="section" id="controls">
-          <div class="section-heading"><div><h2>Copy controls</h2><p>Follower state changes are revision-checked and audited. Pause stops new entries; flatten is a separate explicit request.</p></div></div>
-          <article class="panel">
-            <div class="control-toolbar">
-              <div><div class="account-role">Global entry gate</div><div id="global-control-state" class="metric">Loading</div></div>
+          <div class="section-heading"><div><div class="section-kicker">Operator authority</div><h2>Copy controls</h2><p>Follower state changes are revision-checked and audited. Pause stops new entries; flatten remains a separate explicit request.</p></div></div>
+          <div class="operations-grid">
+            <article class="panel global-gate-panel">
+              <div class="account-role">Global entry gate</div>
+              <div id="global-control-state" class="metric">Loading</div>
+              <div class="gate-visual" aria-hidden="true"></div>
               <button class="action-button danger" id="global-pause-toggle" type="button" disabled>Loading controls</button>
-            </div>
-            <p class="control-note">A global pause blocks new follower entries without flattening or abandoning lifecycle management for positions already open.</p>
-            <div class="control-message" id="control-message" role="status"></div>
-          </article>
-          <article class="panel section">
-            <div class="panel-head"><h2>Follower controls</h2><span class="status-chip">Revision checked</span></div>
-            <div class="scroll"><table><thead><tr><th>Follower</th><th>State</th><th>New entries</th><th>Lifecycle</th><th>Reason</th><th>Updated</th><th>Actions</th><th>Flatten</th></tr></thead><tbody id="follower-controls-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div>
-          </article>
-          <article class="panel section">
-            <div class="panel-head"><h2>Immutable control history</h2><span class="status-chip">Redacted / newest first</span></div>
-            <div class="scroll"><table><thead><tr><th>Occurred</th><th>Scope</th><th>Action</th><th>Previous</th><th>Result</th><th>Reason</th><th>Actor</th><th>Request</th></tr></thead><tbody id="control-audit-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div>
-          </article>
+              <p class="control-note">Global pause blocks new entries without abandoning stop, target, reduction, or exit management for open copied exposure.</p>
+              <div class="control-message" id="control-message" role="status"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>Follower control deck</h2><span class="status-chip">Revision checked</span></div>
+              <div class="follower-control-grid" id="follower-controls-body"><div class="empty">Loading follower controls...</div></div>
+            </article>
+          </div>
+          <details class="data-drawer section">
+            <summary><div><h2>Immutable control history</h2><p>Redacted, append-only operator and system actions.</p></div><span class="status-chip">Newest first</span></summary>
+            <div class="drawer-content"><div class="scroll"><table><thead><tr><th>Occurred</th><th>Scope</th><th>Action</th><th>Previous</th><th>Result</th><th>Reason</th><th>Actor</th><th>Request</th></tr></thead><tbody id="control-audit-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div></div>
+          </details>
         </section>
 
         <section class="section" id="copy-evidence">
-          <div class="section-heading"><div><h2>Copy lifecycle and parity evidence</h2><p>Latest persisted intent per follower plus recent lifecycle and reconciliation evidence. No row authorizes a broker write.</p></div></div>
+          <div class="section-heading"><div><div class="section-kicker">Execution evidence</div><h2>Copy lifecycle and parity evidence</h2><p>Latest persisted intent per follower plus recent lifecycle and reconciliation evidence. No row authorizes a broker write.</p></div></div>
           <article class="panel">
             <div class="panel-head"><h2>Latest follower targets</h2><span class="status-chip">Target versus known state</span></div>
             <div class="scroll"><table><thead><tr><th>Follower</th><th>Updated</th><th>Contract</th><th>Status</th><th>Target / known qty</th><th>Exposure target / actual</th><th>Stop risk target / actual</th><th>Parity error</th><th>Protection</th></tr></thead><tbody id="copy-intents-body"><tr><td colspan="9" class="empty">Loading...</td></tr></tbody></table></div>
           </article>
-          <div class="grid-two section">
+          <div class="grid-two copy-overview-grid section">
             <article class="panel">
               <div class="panel-head"><h2>Recent lifecycle</h2><span class="status-chip">Newest first</span></div>
               <div class="scroll"><table><thead><tr><th>Recorded</th><th>Follower</th><th>Event</th><th>Status</th><th>Fill</th><th>Rejection</th></tr></thead><tbody id="copy-events-body"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody></table></div>
@@ -395,9 +419,10 @@
           </div>
         </section>
 
-        <section class="section" id="connectivity">
-          <div class="section-heading"><div><h2>Connectivity and reconciliation</h2><p>Independent plant generations and subscribe-first recovery state.</p></div></div>
-          <div class="grid-two">
+        <div class="technical-stack" aria-label="Technical operations detail">
+        <details class="data-drawer" id="connectivity">
+          <summary><div><h2>Connectivity and reconciliation</h2><p>Independent plant generations and subscribe-first recovery state.</p></div><span class="status-chip">System detail</span></summary>
+          <div class="drawer-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Capture service</h2><span id="capture-chip" class="status-chip"><span class="dot"></span>Checking</span></div>
               <div id="capture-details" class="key-values loading">Loading capture health…</div>
@@ -410,12 +435,12 @@
           <article class="panel section">
             <div class="panel-head"><h2>Latest reconciliation checkpoints</h2><span class="status-chip">Per account and plant</span></div>
             <div class="scroll"><table><thead><tr><th>Account</th><th>Plant</th><th>Phase</th><th>Status</th><th>Ready</th><th>Discrepancies</th><th>Recorded</th></tr></thead><tbody id="reconciliation-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
-          </article>
-        </section>
+          </article></div>
+        </details>
 
-        <section class="section" id="copier">
-          <div class="section-heading"><div><h2>Copier readiness</h2><p>One master, four followers, mandatory stop-defined risk, same-expiry NQ/MNQ parity, and Test-only execution boundaries.</p></div></div>
-          <div class="grid-two">
+        <details class="data-drawer" id="copier">
+          <summary><div><h2>Copier readiness</h2><p>Configuration, parity policy, and Test-only execution boundaries.</p></div><span class="status-chip">Readiness detail</span></summary>
+          <div class="drawer-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Configuration</h2><span id="copier-chip" class="status-chip"><span class="dot"></span>Checking</span></div>
               <div id="copier-details" class="key-values loading">Loading shadow copier statusâ€¦</div>
@@ -428,12 +453,12 @@
                 <div class="limit-card"><strong>Test-only write path</strong><span>The fenced execution adapter exists for Rithmic Test validation, but live activation remains impossible.</span></div>
               </div>
             </article>
-          </div>
-        </section>
+          </div></div>
+        </details>
 
-        <section class="section" id="accounts">
-          <div class="section-heading"><div><h2>Accounts, balances, and positions</h2><p>Latest append-only observations; account identifiers are replaced with stable aliases.</p></div></div>
-          <div class="grid-two">
+        <details class="data-drawer" id="accounts">
+          <summary><div><h2>Accounts, balances, and positions</h2><p>Latest append-only observations with stable redacted aliases.</p></div><span class="status-chip">Broker facts</span></summary>
+          <div class="drawer-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Observed accounts</h2><span class="status-chip" id="accounts-chip">0 latest</span></div>
               <div class="scroll"><table><thead><tr><th>Account</th><th>Status</th><th>Access</th><th>Currency</th><th>Allowlisted</th><th>Observed</th></tr></thead><tbody id="accounts-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div>
@@ -446,24 +471,24 @@
           <article class="panel section">
             <div class="panel-head"><h2>Instrument positions</h2><span class="status-chip">Latest per account / contract</span></div>
             <div class="scroll"><table><thead><tr><th>Account</th><th>Contract</th><th>Net qty</th><th>Average open</th><th>Open P&amp;L</th><th>Day P&amp;L</th><th>Working buy / sell</th><th>Received</th></tr></thead><tbody id="positions-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody></table></div>
-          </article>
-        </section>
+          </article></div>
+        </details>
 
-        <section class="section" id="orders">
-          <div class="section-heading"><div><h2>Orders and executions</h2><p>Observed broker lifecycle only. Rows do not imply ownership or authorization to act.</p></div></div>
-          <article class="panel">
+        <details class="data-drawer" id="orders">
+          <summary><div><h2>Orders and executions</h2><p>Observed broker lifecycle only; no row authorizes action.</p></div><span class="status-chip">Activity ledger</span></summary>
+          <div class="drawer-content"><article class="panel">
             <div class="panel-head"><h2>Recent order observations</h2><span class="status-chip">Newest first</span></div>
             <div class="scroll"><table><thead><tr><th>Received</th><th>Account</th><th>Order</th><th>Contract</th><th>Side</th><th>Type</th><th>Qty</th><th>Filled</th><th>State</th><th>Price</th><th>Source</th></tr></thead><tbody id="orders-body"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody></table></div>
           </article>
           <article class="panel section">
             <div class="panel-head"><h2>Recent execution observations</h2><span class="status-chip">Fills and corrections</span></div>
             <div class="scroll"><table><thead><tr><th>Executed</th><th>Account</th><th>Order</th><th>Fill</th><th>Kind</th><th>Side</th><th>Qty</th><th>Effective Δ</th><th>Price</th><th>Commission</th><th>Source</th></tr></thead><tbody id="executions-body"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody></table></div>
-          </article>
-        </section>
+          </article></div>
+        </details>
 
-        <section class="section" id="risk">
-          <div class="section-heading"><div><h2>RMS and bracket observations</h2><p>Read-only risk and protective-order facts reported by the broker.</p></div></div>
-          <div class="grid-two">
+        <details class="data-drawer" id="risk">
+          <summary><div><h2>RMS and bracket observations</h2><p>Read-only risk and protective-order facts reported by the broker.</p></div><span class="status-chip">Protection detail</span></summary>
+          <div class="drawer-content"><div class="grid-two">
             <article class="panel">
               <div class="panel-head"><h2>Risk management state</h2><span class="status-chip">Latest per scope</span></div>
               <div class="scroll"><table><thead><tr><th>Account</th><th>Scope</th><th>Product</th><th>Status</th><th>Loss limit</th><th>Auto-liquidate</th><th>Max qty</th><th>Received</th></tr></thead><tbody id="risk-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody></table></div>
@@ -472,24 +497,25 @@
               <div class="panel-head"><h2>Recent brackets</h2><span class="status-chip">Observed only</span></div>
               <div class="scroll"><table><thead><tr><th>Received</th><th>Account</th><th>Parent</th><th>Type</th><th>Status</th><th>Target qty</th><th>Stop qty</th></tr></thead><tbody id="brackets-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
             </article>
-          </div>
-        </section>
+          </div></div>
+        </details>
 
-        <section class="section" id="contracts">
-          <div class="section-heading"><div><h2>Contract reference observations</h2><p>Exact symbol, exchange, expiry, tick, and point-value facts when Ticker Plant queries are enabled.</p></div></div>
-          <article class="panel">
+        <details class="data-drawer" id="contracts">
+          <summary><div><h2>Contract reference observations</h2><p>Exact symbol, exchange, expiry, tick, and point-value facts.</p></div><span class="status-chip">Reference data</span></summary>
+          <div class="drawer-content"><article class="panel">
             <div class="scroll"><table><thead><tr><th>Received</th><th>Symbol</th><th>Exchange</th><th>Product</th><th>Expiration</th><th>Type</th><th>Tick</th><th>Point value</th><th>Tradable</th><th>Source</th></tr></thead><tbody id="contracts-body"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody></table></div>
-          </article>
-        </section>
+          </article></div>
+        </details>
 
-        <section class="section panel" aria-labelledby="limits-title">
-          <div class="panel-head"><h2 id="limits-title">Current V2 boundaries</h2><span class="status-chip warn">Foundation phase</span></div>
-          <div class="limitations">
+        <details class="data-drawer" aria-labelledby="limits-title">
+          <summary><div><h2 id="limits-title">Current V2 boundaries</h2><p>What this milestone intentionally cannot do.</p></div><span class="status-chip warn">Credential-ready</span></summary>
+          <div class="drawer-content"><div class="limitations">
             <div class="limit-card"><strong>No live broker mutations</strong><span>The execution service is outside the dashboard, limited to Rithmic Test, and has no live construction path.</span></div>
             <div class="limit-card"><strong>No live V2 Scout</strong><span>The current Conner NQ work is an observation and learning-data foundation, not a completed strategy or signal service.</span></div>
             <div class="limit-card"><strong>No production claim</strong><span>Rithmic Test conformance and manual R|Trader-to-API visibility validation still have to be completed.</span></div>
-          </div>
-        </section>
+          </div></div>
+        </details>
+        </div>
 
         <div class="footer-note">Last dashboard refresh: <span id="last-refresh">never</span> · automatic refresh every 15 seconds</div>
       </main>
@@ -619,6 +645,7 @@
       function renderSummary(data) {
         const capture = data.capture || {};
         const storage = data.storage || {};
+        const posture = capture.ready ? 'Operational' : capture.live ? 'Recovering' : capture.reachable ? 'Action required' : 'Awaiting broker link';
         setText('capture-state', capture.ready ? 'Ready' : capture.live ? 'Live' : capture.reachable ? 'Blocked' : 'Offline');
         setText('capture-detail', capture.configured ? (capture.lifecycle || capture.status) : 'Health URL not configured');
         setText('event-count', number(storage.events));
@@ -626,6 +653,12 @@
         setText('order-count', number(storage.orders));
         setText('execution-count', number(storage.executions));
         setText('account-count', number(storage.accounts));
+        setText('hero-posture', posture);
+        setText('sidebar-posture', posture);
+        setText('hero-account-state', `${number(storage.accounts)} / 5 observed`);
+        setText('hero-posture-detail', capture.configured
+          ? (capture.ready ? 'All required capture evidence is ready.' : 'Connection evidence is present but not fully ready.')
+          : 'Secure credentials and the capture endpoint have not been attached.');
       }
 
       function renderCapture(capture) {
@@ -653,6 +686,7 @@
         const chipNode = document.getElementById('copier-chip');
         chipNode.className = `status-chip ${ready ? 'ok' : 'warn'}`;
         chipNode.innerHTML = `<span class="dot"></span>${escapeHtml(ready ? 'Shadow ready' : 'Configuration blocked')}`;
+        setText('hero-mode-state', present(copier.effective_mode, 'SHADOW'));
         const blockers = (copier.blockers || []).length ? copier.blockers.join(', ') : 'None reported';
         const connectivityBlockers = (copier.connectivity_blockers || []).length ? copier.connectivity_blockers.join(', ') : 'None reported';
         document.getElementById('copier-details').className = 'key-values';
@@ -730,27 +764,25 @@
           const follower = (control?.followers || []).find((item) => item.connection_id === id);
           const configured = account.ready_for_test_connectivity === true;
           const ready = configured && readyPlants >= 2;
-          const readiness = ready ? 'Ready' : configured ? 'Awaiting sessions' : 'Not configured';
+          const readiness = ready ? 'Connected' : configured ? 'Awaiting plants' : 'Credential pending';
           const positionText = position ? `${present(position.symbol)} ${number(position.net_quantity)}` : 'Unavailable';
           const protection = bracket ? `Broker: ${present(bracket.status)}` : intent?.command?.stop_ticks ? `Planned: ${number(intent.command.stop_ticks)} ticks` : 'Unavailable';
           const quantity = intent ? `${number(intent.achievable_target_signed_quantity)} / ${number(intent.current_signed_quantity)}` : '—';
           const controlState = follower ? follower.state : account.role === 'MASTER' ? 'MASTER' : 'Unavailable';
-          return `<article class="panel account-card">
+          const roleClass = account.role === 'MASTER' ? 'master' : 'follower';
+          return `<article class="panel account-card ${roleClass}">
             <div class="panel-head"><div><div class="account-role">${escapeHtml(account.role === 'MASTER' ? 'Master' : `Follower ${account.follower_number}`)}</div><h2>${escapeHtml(present(account.connection))}</h2></div>${chip(readiness, ready ? 'ok' : 'warn')}</div>
-            <div class="fact-grid">
-              <div class="fact"><span>Control state</span><strong>${escapeHtml(controlState)}</strong></div>
-              <div class="fact"><span>Order / PnL plants</span><strong>${number(readyPlants)} / 2 ready</strong></div>
-              <div class="fact"><span>Equity</span><strong>${money(pnl?.account_balance, pnl?.currency)}</strong></div>
-              <div class="fact"><span>Available margin</span><strong>${money(pnl?.available_buying_power, pnl?.currency)}</strong></div>
-              <div class="fact"><span>Daily return</span><strong>${dailyReturn(pnl)}</strong></div>
-              <div class="fact"><span>Position</span><strong>${escapeHtml(positionText)}</strong></div>
-              <div class="fact"><span>Protection</span><strong>${escapeHtml(protection)}</strong></div>
-              <div class="fact"><span>Target / known qty</span><strong>${escapeHtml(quantity)}</strong></div>
-              <div class="fact"><span>Latest lifecycle</span><strong>${escapeHtml(present(intent?.status))}</strong></div>
-              <div class="fact"><span>Delivery</span><strong>${escapeHtml(present(delivery?.status))}</strong></div>
-              <div class="fact"><span>Reconciliation</span><strong>${escapeHtml(present(reconciliation?.status))}</strong></div>
-              <div class="fact"><span>Latest latency</span><strong>${escapeHtml(latestLatency(latency))}</strong></div>
+            <div class="account-equity"><span>Account equity</span><strong>${money(pnl?.account_balance, pnl?.currency)}</strong><small>${dailyReturn(pnl)} today · ${money(pnl?.available_buying_power, pnl?.currency)} buying power</small></div>
+            <div class="account-signal-grid">
+              <div class="account-signal"><span>Control</span><strong>${escapeHtml(controlState)}</strong></div>
+              <div class="account-signal"><span>Position</span><strong>${escapeHtml(positionText)}</strong></div>
+              <div class="account-signal"><span>Protection</span><strong>${escapeHtml(protection)}</strong></div>
+              <div class="account-signal"><span>Target / actual</span><strong>${escapeHtml(quantity)}</strong></div>
             </div>
+            <div class="account-status-line"><span>Order / PnL plants</span><strong>${number(readyPlants)} / 2 ready</strong></div>
+            <div class="account-status-line"><span>Lifecycle / delivery</span><strong>${escapeHtml(present(intent?.status))} / ${escapeHtml(present(delivery?.status))}</strong></div>
+            <div class="account-status-line"><span>Reconciliation</span><strong>${escapeHtml(present(reconciliation?.status))}</strong></div>
+            <div class="account-status-line"><span>Latency</span><strong>${escapeHtml(latestLatency(latency))}</strong></div>
           </article>`;
         });
         document.getElementById('account-cards').innerHTML = cards.length ? cards.join('') : '<article class="panel empty">The fixed five-account topology is unavailable.</article>';
@@ -759,10 +791,12 @@
       function renderControls(control) {
         currentControl = control;
         setText('global-control-state', control.global_paused ? 'Paused' : 'Active');
+        setText('hero-gate-state', control.global_paused ? 'Paused' : 'Active');
         const globalButton = document.getElementById('global-pause-toggle');
         globalButton.disabled = false;
         globalButton.textContent = control.global_paused ? 'Clear global pause' : 'Pause all new entries';
         globalButton.className = `action-button ${control.global_paused ? 'primary' : 'danger'}`;
+        document.querySelector('.gate-visual')?.classList.toggle('active', !control.global_paused);
         document.getElementById('follower-controls-body').innerHTML = (control.followers || []).map((item) => {
           let ordinary = '';
           if (item.state === 'DISABLED' || item.state === 'PAUSED') ordinary = `<button class="action-button primary" data-control-action="ENABLE" data-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}">Enable</button>`;
@@ -771,8 +805,18 @@
           else ordinary = '<span class="submetric">Await system</span>';
           const mayFlatten = ['ENABLED', 'PAUSED', 'LOCKED'].includes(item.state);
           const flatten = mayFlatten ? `<button class="action-button danger" data-flatten-connection="${escapeHtml(item.connection_id)}" data-revision="${item.revision}" data-follower="${item.follower_number}">Flatten...</button>` : '<span class="submetric">—</span>';
-          return `<tr><td><strong>Follower ${item.follower_number}</strong></td><td>${chip(item.state, stateKind(item.state))}</td><td>${chip(item.permits_new_entries && !control.global_paused ? 'Allowed' : 'Blocked', item.permits_new_entries && !control.global_paused ? 'ok' : 'warn')}</td><td>${escapeHtml(present(item.restart_directive))}</td><td>${escapeHtml(present(item.reason_code))}</td><td>${time(item.updated_at)}</td><td><div class="control-actions">${ordinary}</div></td><td>${flatten}</td></tr>`;
-        }).join('') || emptyRow(8, 'Follower control state is unavailable.');
+          const entryAllowed = item.permits_new_entries && !control.global_paused;
+          return `<article class="follower-control-card">
+            <div class="follower-control-head"><span class="follower-control-title">Follower ${item.follower_number}</span>${chip(item.state, stateKind(item.state))}</div>
+            <div class="follower-control-meta">
+              <div><span>New entries</span><strong>${entryAllowed ? 'Allowed' : 'Blocked'}</strong></div>
+              <div><span>Restart policy</span><strong>${escapeHtml(present(item.restart_directive))}</strong></div>
+              <div><span>Reason</span><strong>${escapeHtml(present(item.reason_code))}</strong></div>
+              <div><span>Updated</span><strong>${time(item.updated_at)}</strong></div>
+            </div>
+            <div class="control-actions">${ordinary}${flatten}</div>
+          </article>`;
+        }).join('') || '<div class="empty">Follower control state is unavailable.</div>';
       }
 
       function renderAudit(items) {
@@ -912,7 +956,9 @@
           renderReconciliation(data.reconciliation || []); renderAccounts(data.accounts || []); renderAccountPnl(data.account_pnl || []);
           renderPositions(data.positions || []); renderOrders(data.orders || []); renderExecutions(data.executions || []);
           renderRisk(data.risk || []); renderBrackets(data.brackets || []); renderContracts(data.contracts || []);
-          setText('last-refresh', new Date().toLocaleTimeString());
+          const refreshedAt = new Date().toLocaleTimeString();
+          setText('last-refresh', refreshedAt);
+          setText('last-refresh-top', refreshedAt);
         } catch (error) {
           const box = document.getElementById('error-box');
           box.textContent = error.message || 'The V2 observation dashboard could not be loaded.';
@@ -920,7 +966,7 @@
         } finally {
           loading = false;
           refreshButton.disabled = false;
-          refreshButton.textContent = 'Refresh observations';
+          refreshButton.textContent = 'Refresh data';
         }
       }
 
@@ -1004,6 +1050,22 @@
         localStorage.setItem('mooney-v2-dashboard-theme', document.documentElement.dataset.theme);
         syncThemeButton();
       });
+      const navLinks = [...document.querySelectorAll('.sidebar a[href^="#"]')];
+      navLinks.forEach((link) => link.addEventListener('click', () => {
+        navLinks.forEach((item) => item.classList.toggle('active', item === link));
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target?.tagName === 'DETAILS') target.open = true;
+      }));
+      navLinks[0]?.classList.add('active');
+      const observedSections = navLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+      if ('IntersectionObserver' in window) {
+        const sectionObserver = new IntersectionObserver((entries) => {
+          const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (!visible) return;
+          navLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${visible.target.id}`));
+        }, { rootMargin: '-18% 0px -68% 0px', threshold: [0.01, 0.15] });
+        observedSections.forEach((section) => sectionObserver.observe(section));
+      }
       refreshButton.addEventListener('click', loadOverview);
       syncThemeButton();
       loadOverview();
